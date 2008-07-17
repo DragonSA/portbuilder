@@ -1,0 +1,14 @@
+Future release:
+ - Add static caching of ports information
+ - Make portsdir settable from env and cmdline
+
+0.1:
+ - Expand documentation for ports library
+ - Add exception handling
+ - Add logging
+ - Add queueing logic
+   - Fitler multiple items (prevent duplicates?)
+   - Handle different queue items (build, stats)
+ - Add a Port's cache
+ + Add a Port class (for containing ports information)
+ + Add a dependency resolver
