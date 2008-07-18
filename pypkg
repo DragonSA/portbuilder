@@ -1,4 +1,13 @@
-#!/usr/bin/env python -O
+#!/usr/bin/env python
 """
 Controller for various ports operations
 """
+
+from ports import ports
+ports['x11/xorg']
+
+for name, port in ports.iteritems():
+  print name, port._depends
+
+from sys import exit
+exit()

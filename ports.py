@@ -54,16 +54,16 @@ class PortCache(dict):
 
     with self._lock:
       try:
-        value = dict.__getitem__(key)
+        value = dict.__getitem__(self, key)
       except KeyError:
-        self.add([self.get, key])
+        self.add(key)
         value = None
       if not value:
         self._lock.release()
         ports_queue.join()
         self._lock.acquire()
 
-        value = dict.__getitem__(key)
+        value = dict.__getitem__(self, key)
         if not value:
           # TODO: critical error
           raise KeyError, key
@@ -90,7 +90,7 @@ class PortCache(dict):
     with self._lock:
       if not self.has_key(key):
         self[key] = None
-        ports_queue.put_nowait((self.get, key))
+        ports_queue.put_nowait((self.get, [key]))
 
   def get(self, k):
     """
@@ -119,7 +119,7 @@ class PortCache(dict):
       if not value:
         self[k] = port
         value = port
-      return port
+      return value
 
 ports = PortCache()
 

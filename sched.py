@@ -30,6 +30,8 @@ class WorkerPool(object):
     self._queue = queue
 
     self._pool = [Thread(target=self.worker) for i in xrange(number)]
+    for i in self._pool:
+      i.start()
 
   def __len__(self):
     """
@@ -44,8 +46,6 @@ class WorkerPool(object):
     """
     while True:
       cmd = self._queue.get()
-      if type(cmd) != type(list) or type(cmd) != type(tuple):
-        cmd = (cmd)
       if len(cmd) == 1:
         func = cmd[0]
         args = []
