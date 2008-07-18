@@ -1,14 +1,22 @@
 Future release:
  - Add static caching of ports information
  - Make portsdir settable from env and cmdline
+ - WorkerPool:
+   - Allocate on demand
+   - Terminate when idle
+   - Resize pool
 
 0.1:
  - Expand documentation for ports library
  - Add exception handling
  - Add logging
- - Add queueing logic
+ + Add queueing logic
    - Fitler multiple items (prevent duplicates?)
-   - Handle different queue items (build, stats)
- - Add a Port's cache
+   * Handle different queue items (build, info)
+ * Add a Port's cache
  + Add a Port class (for containing ports information)
- + Add a dependency resolver
+   - Add generic method for getting arbitary items of information
+   - Add port status
+   - Add a port filter (for resolving information and calling dependants to be
+     constructed)
+ * Add a dependency resolver
