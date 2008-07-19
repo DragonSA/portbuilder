@@ -21,6 +21,6 @@ Future release:
    * Terminate when idle
    * Resize pool
    * Terminate if pool oversized
-   - Check if global lock could be a lock
+   * Check if global rlock could be a lock
  - queue: Provide defaults for queue sizes
  - Make portsdir settable from env and cmdline

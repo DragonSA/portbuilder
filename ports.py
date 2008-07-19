@@ -73,8 +73,8 @@ class PortCache(dict):
     """
     dict.__init__(self)
 
-    from threading import RLock
-    self._lock = RLock()
+    from threading import Lock
+    self._lock = Lock()
 
   def __getitem__(self, key):
     """
@@ -95,7 +95,7 @@ class PortCache(dict):
         if value:
           return value
       except KeyError:
-        self.add(key)
+        self._add(key)
         value = None
       else:
         if value == False:
@@ -124,16 +124,29 @@ class PortCache(dict):
     with self._lock:
       dict.__setitem__(self, key, value)
 
+  def _add(self, key):
+    """
+       Adds a port to be contructed if not already in the cache or queued for
+       construction
+
+       @param key: The port for queueing
+       @type key: C{str}
+    """
+    from queue import ports_queue
+    if not self.has_key(key):
+      dict.__setitem__(self, key, None)
+      ports_queue.put_nowait((self.get, [key]))
+
   def add(self, key):
     """
        Adds a port to be contructed if not already in the cache or queued for
        construction
+
+       @param key: The port for queueing
+       @type key: C{str}
     """
-    from queue import ports_queue
     with self._lock:
-      if not self.has_key(key):
-        self[key] = None
-        ports_queue.put_nowait((self.get, [key]))
+      self._add(key)
 
   def get(self, k):
     """
@@ -152,7 +165,7 @@ class PortCache(dict):
         if value:
           return value
       except KeyError:
-        self[k] = None
+        dict.__setitem__(self, k, None)
       else:
         if value == False:
           raise KeyError, k
@@ -163,13 +176,13 @@ class PortCache(dict):
     except BaseException:
       # TODO: Something went wrong
       with self._lock:
-        self[k] = False
+        dict.__setitem__(self, k, False)
         raise KeyError, k
     else:
       with self._lock:
         value = dict.__getitem__(self, k)
         if not value:
-          self[k] = port
+          dict.__setitem__(self, k, port)
           value = port
         return value
 
@@ -190,7 +203,11 @@ def port_status(origin):
   if pkg_version.wait() != 0:
     return Port.ABSENT
 
-  info = pkg_version.stdout.read().split()[1]
+  info = pkg_version.stdout.read().split()
+  if len(info) > 2:
+    # TODO:
+    pass
+  info = info[1]
   if info == '<':
     return Port.OLDER
   elif info == '>':

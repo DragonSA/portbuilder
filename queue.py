@@ -23,9 +23,9 @@ class WorkerQueue(Queue):
        @type idle: C{int}
     """
     Queue.__init__(self)
-    from threading import RLock
+    from threading import Lock
     self._idle = idle  #: The idle count for a worker
-    self._lock = RLock()  #: Global lock for the class
+    self._lock = Lock()  #: Global lock for the class
     self._name = name  #: The name of this queue
     self._workers = workers  #: The (maximum) number of workers
 
