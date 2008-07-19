@@ -4,7 +4,7 @@ Controller for various ports operations
 """
 
 from ports import ports
-ports['x11/xorg']
+ports['ftp/wget']
 
 for name, port in ports.iteritems():
   print name, port._depends
