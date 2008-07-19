@@ -7,6 +7,7 @@ from __future__ import with_statement # Used for locking
 
 ports = {}  #: A cache of ports available with auto creation features
 ports_dir = "/usr/ports/"  #: The location of the ports tree
+port_filter = 0  #: The ports filter, if ports status matches then not 'loaded'
 
 class Port(object):
   """
@@ -14,15 +15,15 @@ class Port(object):
      dependancies and dependants
   """
 
-  ABSENT    = 0x01
-  OLDER     = 0x02
-  CURRENT   = 0x04
-  NEWER     = 0x08
+  ABSENT    = 0x01  #: Status flag for a port that is not installed
+  OLDER     = 0x02  #: Status flag for a port that is old
+  CURRENT   = 0x04  #: Status flag for a port that is current
+  NEWER     = 0x08  #: Status flag for a port that is newer
 
-  CONFIGURE = 0x10
-  FETCH     = 0x20
-  BUILD     = 0x40
-  INSTALL   = 0x80
+  CONFIGURE = 0x10  #: Status flag for a port that is configuring
+  FETCH     = 0x20  #: Status flag for a port that is fetching sources
+  BUILD     = 0x40  #: Status flag for a port that is building
+  INSTALL   = 0x80  #: Status flag for a port that is installing
 
   INSTALL_STATUS = {ABSENT : "Not Installed", OLDER : "Older",
                       CURRENT : "Current", NEWER : "Newer"}
@@ -36,9 +37,11 @@ class Port(object):
        @param origin: The ports origin (within the ports tree)
        @type origin: C{str}
     """
-    self._origin = origin               #: The origin of the port
-    self._depends = get_depends(origin)  #: A list of all dependancies (Port's)
-    self._status = port_status(origin)
+    self._origin = origin  #: The origin of the port
+    self._status = port_status(origin)  #: The status of the port
+    self._depends = None  #: A list of all dependancies
+    if not port_filter & self._status:
+      self._depends = get_depends(origin)
 
   def status(self, string=False):
     """

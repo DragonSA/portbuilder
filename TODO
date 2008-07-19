@@ -12,14 +12,15 @@ Future release:
  + Add a Port class (for containing ports information)
    - Add generic method for getting arbitary items of information
    * Add port status
-   - Add a port filter (for resolving information and calling dependants to be
+   * Add a port filter (for resolving information and calling dependants to be
      constructed)
  * Add a dependency resolver
  * Merge WorkerPool and Queue
- * WorkerQueue:
+ + WorkerQueue:
    * Allocate on demand
    * Terminate when idle
    * Resize pool
    * Terminate if pool oversized
+   - Check if global lock could be a lock
  - queue: Provide defaults for queue sizes
  - Make portsdir settable from env and cmdline

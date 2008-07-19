@@ -3,8 +3,11 @@
 Controller for various ports operations
 """
 
-from ports import ports
-ports.get('ftp/wget')
+import ports
+from queue import ports_queue
+ports.port_filter = ports.Port.CURRENT | ports.Port.NEWER
+ports.ports.get('ftp/wget')
+ports_queue.join()
 
-for name, port in ports.iteritems():
+for name, port in ports.ports.iteritems():
   print name, port.status(True), port._depends

@@ -24,15 +24,15 @@ class WorkerQueue(Queue):
     """
     Queue.__init__(self)
     from threading import RLock
-    self._idle = idle
-    self._lock = RLock()
-    self._name = name
-    self._workers = workers
+    self._idle = idle  #: The idle count for a worker
+    self._lock = RLock()  #: Global lock for the class
+    self._name = name  #: The name of this queue
+    self._workers = workers  #: The (maximum) number of workers
 
-    self._worker_cnt = 0
-    self._job_cnt = 0
+    self._worker_cnt = 0  #: The number of workers created
+    self._job_cnt = 0  #: The number of jobs executed
 
-    self._pool = []
+    self._pool = []  #: The pool of workers
 
   def __len__(self):
     """
