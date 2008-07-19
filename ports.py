@@ -4,6 +4,9 @@ managing port information.
 """
 
 from __future__ import with_statement # Used for locking
+from logging import getLogger
+
+log = getLogger('pypkg.ports')
 
 ports = {}  #: A cache of ports available with auto creation features
 ports_dir = "/usr/ports/"  #: The location of the ports tree
@@ -54,12 +57,11 @@ class Port(object):
     """
     self._origin = origin  #: The origin of the port
     self._status = port_status(origin)  #: The status of the port
+    self._attr_map = {}  #: The ports attributes
 
-    if port_filter & self._status:
-      raise RuntimeError, "This class is filtered, can not be created"
-
-    self._attr_map = port_attr(origin)  #: The ports attributes
-    self._gen_attr()
+    if not port_filter & self._status:
+      self._attr_map = port_attr(origin)  #: The ports attributes
+      self._gen_attr()
 
   def _gen_attr(self):
     """
@@ -104,6 +106,8 @@ class PortCache(dict):
      (note: this is an inflight cache)
   """
 
+  _log = getLogger('pypkg.ports.cache')  #: Logger for this cache
+
   def __init__(self):
     """
        Initialise the cache of ports
@@ -143,8 +147,10 @@ class PortCache(dict):
       self._lock.acquire()
 
       value = dict.__getitem__(self, key)
-      if not value:
-        # TODO: critical error
+      if value == False:
+        raise KeyError, key
+      elif not value:
+        self._log.error("Port '%s' failed to be created" % key)
         raise KeyError, key
       else:
         return value
@@ -210,13 +216,10 @@ class PortCache(dict):
     try:
       # Time consuming task, done outside lock
       port = Port(k)
-    except RuntimeError:
-      with self._lock:
-        dict.pop(self, k)
-        raise KeyError, "Filtered: " + k
     except BaseException:
       with self._lock:
         dict.__setitem__(self, k, False)
+        self._log.exception("Error while creating port '%s'" % k)
         raise KeyError, k
     else:
       with self._lock:
@@ -224,6 +227,7 @@ class PortCache(dict):
         if not value:
           dict.__setitem__(self, k, port)
           value = port
+          self._log.info("Duplicate port '%s' detected" % k)
         return value
 
 ports = PortCache()
@@ -245,8 +249,7 @@ def port_status(origin):
 
   info = pkg_version.stdout.read().split()
   if len(info) > 2:
-    # TODO:
-    pass
+    log.warning("Multiple ports with same origin '%s'" % origin)
   info = info[1]
   if info == '<':
     return Port.OLDER
@@ -273,7 +276,7 @@ def port_attr(origin):
 
   make = Popen(args, stdout=PIPE, stderr=STDOUT)
   if make.wait() > 0:
-    # TODO
+    log.info("Error in obtaining information for port '%s'" % origin)
     return {}
 
   attr_map = {}

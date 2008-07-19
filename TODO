@@ -1,3 +1,8 @@
+Coding standard:
+ * Handle appropriate exceptions
+ * Log all relevent events
+ * Document all classes, methods, functions and (global|class) variables
+
 Future release:
  - Add static caching of ports information
  - Speed up port_version()
@@ -6,7 +11,7 @@ Future release:
 0.0.1:
  * Expand documentation for ports library
  * Add exception handling
- - Add logging
+ * Add logging
  * Add queueing logic
    * Fitler multiple items (prevent duplicates?)
    * Handle different queue items (build, info)

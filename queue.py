@@ -25,9 +25,10 @@ class WorkerQueue(Queue):
        @type number: C{int}
     """
     Queue.__init__(self)
+    from logging import getLogger
     from threading import Lock
     self._lock = Lock()  #: Global lock for this class
-    self._lock_term = Lock()  #: The lock used to terminate a class
+    self._log = getLogger("pypkg.queue." + name)  #: Logger of this queue
     self._name = name  #: The name of this queue
     self._workers = workers  #: The (maximum) number of workers
 
@@ -44,6 +45,15 @@ class WorkerQueue(Queue):
        @rtype: C{str}
     """
     return len(self._pool)
+
+  def logger(self):
+    """
+       The logger used by this queue
+
+       @return: The logger
+       @rtype:
+    """
+    return self._log
 
   def pool(self):
     """
@@ -102,6 +112,7 @@ class WorkerQueue(Queue):
     with self._lock:
       wid = self._worker_cnt
       self._worker_cnt += 1
+      self._log.debug("Worker %d: Created" % wid)
     while True:
       with self._lock:
         if self._workers < len(self._pool):
@@ -116,6 +127,7 @@ class WorkerQueue(Queue):
 
         jid = self._job_cnt
         self._job_cnt += 1
+        self._log.debug("Worker %d: Starting job %d" % (wid, jid))
 
       if len(cmd) == 1:
         func = cmd[0]
@@ -127,17 +139,19 @@ class WorkerQueue(Queue):
       elif len(cmd) == 3:
         func, args, kwargs = cmd
       else:
-        # TODO: Error
-        pass
+        self._log.error("Worker %d: Job %d is malformed" % (wid, jid))
+        self.task_done()
+        continue
 
       try:
         func(*args, **kwargs)
       except BaseException:
-        # TODO: Something went wrong...
-        pass
+        self._log.exception("Worker %d: Job %d threw an exception" % (wid, jid))
+      else:
+        self._log.debug("Worker %d: Finished job %d" % (wid, jid))
 
       self.task_done()
 
-build_queue = WorkerQueue("Build", ncpu)  #: Queue for building ports
-fetch_queue = WorkerQueue("Fetch", 1)  #: Queue for fetching distribution files
-ports_queue = WorkerQueue("Ports", ncpu * 2)  #: Queue for fetching port info
+build_queue = WorkerQueue("build", ncpu)  #: Queue for building ports
+fetch_queue = WorkerQueue("fetch", 1)  #: Queue for fetching distribution files
+ports_queue = WorkerQueue("ports", ncpu * 2)  #: Queue for fetching port info

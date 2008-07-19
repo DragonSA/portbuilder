@@ -1,1 +1,15 @@
- 
+0.0.1 - 2008 July 19:
+ * Port:
+   - Basic Port class created
+   - Version information about build and install status
+   - Generic attribute support
+   - Port creation filterable (to prevent all dependants being created at once)
+ * PortCache:
+   - Live cache of ports
+   - Handles adding ports to the queue for construction
+   - Creates a Port on-demand
+ * WorkerQueue:
+   - Dynamic pool of workers to execute jobs
+   - Workers created on-demand
+   - Worker pool (numbers) dynamically adjustable
+   - Workers terminate when idle
