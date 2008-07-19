@@ -1,51 +1,128 @@
 """
-The schedular module.  This module handles the execution of time consuming tasks
-in an effiecient manor.  It allows transparent concurrent task execution, this
-allows a speedup on many machines.  
+The Queue module.  This module handles the execution of time consuming tasks.
 """
+from __future__ import with_statement
+
 from Queue import Queue
 
-build_queue = Queue()  #: Queue for building ports
-fetch_queue = Queue()  #: Queue for fetching distribution files
-ports_queue = Queue()  #: Queue for fetching ports information
-
-class WorkerPool(object):
+class WorkerQueue(Queue):
   """
-     The WorkerPool class.  This class manages a pool of worker threads for a
-     specific queue.
+     The WorkerQueue class.  This class manages a pool of worker threads for
+     running jobs.
   """
 
-  def __init__(self, queue, number=1):
+  def __init__(self, name, workers=1, idle=1):
     """
        Initialise a worker thread pool
 
-       @param queue: The queue the workers work for
-       @type queue: C{Queue}
+       @param name: The name of this thread (used in logging)
+       @type name: C{str}
        @param number: The number of workers to allocate
        @type number: C{int}
+       @param idle: The idle time a worker waits before quits
+       @type idle: C{int}
     """
-    from threading import Thread, RLock
+    Queue.__init__(self)
+    from threading import RLock
+    self._idle = idle
     self._lock = RLock()
-    self._number = number
-    self._queue = queue
+    self._name = name
+    self._workers = workers
 
-    self._pool = [Thread(target=self.worker) for i in xrange(number)]
-    for i in self._pool:
-      i.start()
+    self._worker_cnt = 0
+    self._job_cnt = 0
+
+    self._pool = []
 
   def __len__(self):
     """
        The size of the worker pool
+
+       @return: The worker pool size
+       @rtype: C{str}
     """
     return len(self._pool)
+
+  def idle(self):
+    """
+       The idle time till a worker quits
+
+       @return: The idle time
+       @rtype: C{int}
+    """
+    return self._idle
+
+  def setidle(self, idle):
+    """
+       Sets the idle time till a worker quits (this will not affect workers that
+       are currently idle)
+
+       @param idle: The idle time
+       @type: C{str}
+    """
+    self._idle = idle
+
+  def pool(self):
+    """
+       The number of workers in the pool.  The actual number may vary but will
+       stabalise to this number under full load
+
+       @return: Number of workers
+       @rtype: C{int}
+    """
+    return len(self)
+
+  def setpool(self, workers):
+    """
+       Changes the number of workers in the pool.  If more workers are currently
+       running then some workers will be stopped after finishing their current
+       job.
+
+       @param workers: Number of workers
+       @type workers: C{int}
+    """
+    self._workers = workers
+
+  def put(self, item, block=True, timeout=0):
+    """
+       Places a job onto the queue, if insufficient workers are available one
+       will be started.
+
+       @param item: The job to execute
+       @type item: C{(func, (args), \{kwargs\})}
+    """
+    Queue.put(self, item, block, timeout)
+    with self._lock:
+      if self.qsize() > 0 and len(self._pool) < self._workers:
+        from threading import Thread
+        self._pool.append(Thread(target=self.worker))
+        self._pool[-1].start()
 
   def worker(self):
     """
        The worker.  It waits for a job from the queue and then executes the
        given command (with given parameters).
     """
+    from threading import currentThread
+    from Queue import Empty
+
+    with self._lock:
+      wid = self._worker_cnt
+      self._worker_cnt += 1
     while True:
-      cmd = self._queue.get()
+      with self._lock:
+        if self._workers > len(self._pool):
+          self._pool.remove(currentThread())
+          return
+
+        try:
+          cmd = self.get(timeout=self._idle)
+          jid = self._job_cnt
+          self._job_cnt += 1
+        except Empty:
+          self._pool.remove(currentThread())
+          return
+
       if len(cmd) == 1:
         func = cmd[0]
         args = []
@@ -59,10 +136,14 @@ class WorkerPool(object):
         # TODO: Error
         pass
 
-      func(*args, **kwargs)
+      try:
+        func(*args, **kwargs)
+      except BaseException:
+        # TODO: Something went wrong...
+        pass
 
-      self._queue.task_done()
+      self.task_done()
 
-build_pool = WorkerPool(build_queue)  #: Pool of port builder workers
-fetch_pool = WorkerPool(fetch_queue)  #: Pool of port distfiles fetcher workers
-ports_pool = WorkerPool(ports_queue)  #: Pool of port information workers
+build_queue = WorkerQueue("Build")  #: Queue for building ports
+fetch_queue = WorkerQueue("Fetch")  #: Queue for fetching distribution files
+ports_queue = WorkerQueue("Ports")  #: Queue for fetching ports information

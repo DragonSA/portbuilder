@@ -1,10 +1,11 @@
 Future release:
  - Add static caching of ports information
  - Make portsdir settable from env and cmdline
- - WorkerPool:
-   - Allocate on demand
-   - Terminate when idle
-   - Resize pool
+ * WorkerQueue:
+   * Allocate on demand
+   * Terminate when idle
+   * Resize pool
+   * Terminate if pool oversized
 
 0.1:
  - Expand documentation for ports library
@@ -20,3 +21,4 @@ Future release:
    - Add a port filter (for resolving information and calling dependants to be
      constructed)
  * Add a dependency resolver
+ - Merge WorkerPool and Queue

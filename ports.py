@@ -50,7 +50,7 @@ class PortCache(dict):
        @return: The port requested
        @rtype: C{Port}
     """
-    from sched import ports_queue
+    from queue import ports_queue
 
     with self._lock:
       try:
@@ -86,7 +86,7 @@ class PortCache(dict):
        Adds a port to be contructed if not already in the cache or queued for
        construction
     """
-    from sched import ports_queue
+    from queue import ports_queue
     with self._lock:
       if not self.has_key(key):
         self[key] = None
