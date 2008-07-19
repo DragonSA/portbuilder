@@ -1,8 +1,9 @@
 Future release:
  - Add static caching of ports information
+ - Speed up port_version()
  - Make portsdir settable from env and cmdline
 
-0.1:
+0.0.1:
  * Expand documentation for ports library
  * Add exception handling
  - Add logging
@@ -24,4 +25,4 @@ Future release:
    * Terminate if pool oversized
    * Check if global rlock could be a lock
    * Add stats information
- - queue: Provide defaults for queue sizes
+ * queue: Provide defaults for queue sizes

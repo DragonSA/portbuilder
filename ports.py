@@ -39,9 +39,11 @@ class Port(object):
     """
     self._origin = origin  #: The origin of the port
     self._status = port_status(origin)  #: The status of the port
-    self._depends = None  #: A list of all dependancies
-    if not port_filter & self._status:
-      self._depends = get_depends(origin)
+
+    if port_filter & self._status:
+      raise RuntimeError, "This class is filtered, can not be created"
+
+    self._depends = port_depends(origin)  #: A list of all dependancies
 
   def status(self, string=False):
     """
@@ -73,8 +75,8 @@ class PortCache(dict):
     """
     dict.__init__(self)
 
-    from threading import Lock
-    self._lock = Lock()
+    from threading import RLock
+    self._lock = RLock()
 
   def __getitem__(self, key):
     """
@@ -173,8 +175,11 @@ class PortCache(dict):
     try:
       # Time consuming task, done outside lock
       port = Port(k)
+    except RuntimeError:
+      with self._lock:
+        dict.pop(self, k)
+        raise KeyError, "Filtered: " + k
     except BaseException:
-      # TODO: Something went wrong
       with self._lock:
         dict.__setitem__(self, k, False)
         raise KeyError, k
@@ -198,8 +203,8 @@ def port_status(origin):
      @return: The port's status
      @rtype: C{int}
   """
-  from subprocess import Popen, PIPE
-  pkg_version = Popen(['pkg_version', '-O', origin], stdout=PIPE)
+  from subprocess import Popen, PIPE, STDOUT
+  pkg_version = Popen(['pkg_version', '-O', origin], stdout=PIPE, stderr=STDOUT)
   if pkg_version.wait() != 0:
     return Port.ABSENT
 
@@ -215,7 +220,7 @@ def port_status(origin):
   else: #info == '=' or info == '?' or info =='*'
     return Port.CURRENT
 
-def get_depends(origin):
+def port_depends(origin):
   """
      Retrieve a list of dependants given the ports origin
 

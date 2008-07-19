@@ -3,7 +3,11 @@ The Queue module.  This module handles the execution of time consuming tasks.
 """
 from __future__ import with_statement
 
+from subprocess import Popen, PIPE
 from Queue import Queue
+
+#: The number of CPU's available on this system
+ncpu = int(Popen(['sysctl', '-n', 'hw.ncpu'], stdout=PIPE).communicate()[0])
 
 class WorkerQueue(Queue):
   """
@@ -11,7 +15,7 @@ class WorkerQueue(Queue):
      running jobs.
   """
 
-  def __init__(self, name, workers=1, idle=1):
+  def __init__(self, name, workers=1):
     """
        Initialise a worker thread pool
 
@@ -19,13 +23,11 @@ class WorkerQueue(Queue):
        @type name: C{str}
        @param number: The number of workers to allocate
        @type number: C{int}
-       @param idle: The idle time a worker waits before quits
-       @type idle: C{int}
     """
     Queue.__init__(self)
     from threading import Lock
-    self._idle = idle  #: The idle count for a worker
-    self._lock = Lock()  #: Global lock for the class
+    self._lock = Lock()  #: Global lock for this class
+    self._lock_term = Lock()  #: The lock used to terminate a class
     self._name = name  #: The name of this queue
     self._workers = workers  #: The (maximum) number of workers
 
@@ -42,25 +44,6 @@ class WorkerQueue(Queue):
        @rtype: C{str}
     """
     return len(self._pool)
-
-  def idle(self):
-    """
-       The idle time till a worker quits
-
-       @return: The idle time
-       @rtype: C{int}
-    """
-    return self._idle
-
-  def setidle(self, idle):
-    """
-       Sets the idle time till a worker quits (this will not affect workers that
-       are currently idle)
-
-       @param idle: The idle time
-       @type: C{str}
-    """
-    self._idle = idle
 
   def pool(self):
     """
@@ -91,8 +74,8 @@ class WorkerQueue(Queue):
        @param item: The job to execute
        @type item: C{(func, (args), \{kwargs\})}
     """
-    Queue.put(self, item, block, timeout)
     with self._lock:
+      Queue.put(self, item, block, timeout)
       if self.qsize() > 0 and len(self._pool) < self._workers:
         from threading import Thread
         self._pool.append(Thread(target=self.worker))
@@ -121,17 +104,18 @@ class WorkerQueue(Queue):
       self._worker_cnt += 1
     while True:
       with self._lock:
-        if self._workers > len(self._pool):
+        if self._workers < len(self._pool):
           self._pool.remove(currentThread())
           return
 
         try:
-          cmd = self.get(timeout=self._idle)
-          jid = self._job_cnt
-          self._job_cnt += 1
+          cmd = self.get(False)
         except Empty:
           self._pool.remove(currentThread())
           return
+
+        jid = self._job_cnt
+        self._job_cnt += 1
 
       if len(cmd) == 1:
         func = cmd[0]
@@ -154,6 +138,6 @@ class WorkerQueue(Queue):
 
       self.task_done()
 
-build_queue = WorkerQueue("Build")  #: Queue for building ports
-fetch_queue = WorkerQueue("Fetch")  #: Queue for fetching distribution files
-ports_queue = WorkerQueue("Ports")  #: Queue for fetching ports information
+build_queue = WorkerQueue("Build", ncpu)  #: Queue for building ports
+fetch_queue = WorkerQueue("Fetch", 1)  #: Queue for fetching distribution files
+ports_queue = WorkerQueue("Ports", ncpu * 2)  #: Queue for fetching port info

@@ -6,10 +6,10 @@ Controller for various ports operations
 import ports
 from queue import ports_queue
 ports.port_filter = ports.Port.CURRENT | ports.Port.NEWER
-ports.ports.get('ftp/wget')
+ports.ports.get('x11/xorg')
 ports_queue.join()
 
 for name, port in ports.ports.iteritems():
-  print name, port.status(True), port._depends
+  print name, port.status(True)
 
 print ports_queue.stats()
