@@ -9,6 +9,21 @@ ports = {}  #: A cache of ports available with auto creation features
 ports_dir = "/usr/ports/"  #: The location of the ports tree
 port_filter = 0  #: The ports filter, if ports status matches then not 'loaded'
 
+ports_attr = {
+"name":     ["PORTNAME",     str],    # The port's name
+"version":  ["PORTVERSION",  str],    # The port's version
+"revision": ["PORTREVISION", str],    # The port's revision
+"epoch":    ["PORTEPOCH",    str],    # The port's epoch
+"categ":    ["CATEGORIES",   tuple],  # The port's categories
+"comment":  ["COMMENT",      str],    # The port's comment
+
+"depends":  ["_DEPEND_DIRS", tuple],  # The ports dependants
+} #: The attributes of the given port
+
+# The following are 'fixes' for various attributes
+ports_attr["depends"].append(lambda x: [i[len(ports_dir):] for i in x])
+ports_attr["depends"].append(lambda x: [i for i in x if not ports.add(i)])
+
 class Port(object):
   """
      The class that contains all information about a given port, such as status,
@@ -43,7 +58,27 @@ class Port(object):
     if port_filter & self._status:
       raise RuntimeError, "This class is filtered, can not be created"
 
-    self._depends = port_depends(origin)  #: A list of all dependancies
+    self._attr_map = port_attr(origin)  #: The ports attributes
+    self._gen_attr()
+
+  def _gen_attr(self):
+    """
+       Generates methods that map to the ports attributes
+    """
+    def gen_method(name):
+      ''' Generator: Create a method to retrieve attributes '''
+      return lambda: self._attr_map[name]
+    for i in self._attr_map.iterkeys():
+      setattr(self, i, gen_method(i))
+
+  def attr(self):
+    """
+       Returns the ports attributes, such as version, categories, etc
+
+       @return: The attributes
+       @rtype: C{\{str:str|(str)|\}}
+    """
+    return self._attr_map
 
   def status(self, string=False):
     """
@@ -75,8 +110,8 @@ class PortCache(dict):
     """
     dict.__init__(self)
 
-    from threading import RLock
-    self._lock = RLock()
+    from threading import Lock
+    self._lock = Lock()
 
   def __getitem__(self, key):
     """
@@ -220,23 +255,34 @@ def port_status(origin):
   else: #info == '=' or info == '?' or info =='*'
     return Port.CURRENT
 
-def port_depends(origin):
+def port_attr(origin):
   """
-     Retrieve a list of dependants given the ports origin
+     Retrieves the attributes for a given port
 
      @param origin: The port identifier
      @type origin: C{str}
-     @return: A list of dependentant ports
-     @rtype: C{[Port]}
+     @return: A dictionary of attributes
+     @rtype: C{\{str:str|(str)|\}}
   """
-  from subprocess import Popen, PIPE
+  from subprocess import Popen, PIPE, STDOUT
 
-  make = Popen(['make', '-C', ports_dir + origin, '-V', '_DEPEND_DIRS'],
-               stdout=PIPE)
-  make.wait()
-  depends = [i[len(ports_dir):] for i in make.stdout.read().split()]
+  args = ['make', '-C', ports_dir + origin]
+  for i in ports_attr.itervalues():
+    args.append('-V')
+    args.append(i[0])
 
-  for i in depends:
-    ports.add(i)
+  make = Popen(args, stdout=PIPE, stderr=STDOUT)
+  if make.wait() > 0:
+    # TODO
+    return {}
 
-  return depends
+  attr_map = {}
+  for name, value in ports_attr.iteritems():
+    if value[1] == str:
+      attr_map[name] = make.stdout.readline().strip()
+    else:
+      attr_map[name] = value[1](make.stdout.readline().split())
+    for i in value[2:]:
+      attr_map[name] = i(attr_map[name])
+
+  return attr_map

@@ -11,8 +11,8 @@ Future release:
    * Fitler multiple items (prevent duplicates?)
    * Handle different queue items (build, info)
  * Add a Port's cache
- + Port:
-   - Add generic method for getting arbitary items of information
+ * Port:
+   * Add generic method for getting arbitary items of information
    * Add port status
    * Add a port filter (for resolving information and calling dependants to be
      constructed)

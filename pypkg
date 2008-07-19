@@ -5,11 +5,19 @@ Controller for various ports operations
 
 import ports
 from queue import ports_queue
-ports.port_filter = ports.Port.CURRENT | ports.Port.NEWER
+#ports.port_filter = ports.Port.CURRENT | ports.Port.NEWER
 ports.ports.get('x11/xorg')
 ports_queue.join()
 
 for name, port in ports.ports.iteritems():
-  print name, port.status(True)
+  print """
+==============================================================================
+Origin:   %s
+------------------------------------------------------------------------------
+Name:     %s
+Version:  %s
+Revision: %s
+Comment:  ``%s''
+""" % (name, port.name(), port.version(), port.revision(), port.comment())
 
-print ports_queue.stats()
+print ports_queue.stats(), len(ports.ports)
