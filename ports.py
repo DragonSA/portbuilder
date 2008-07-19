@@ -14,6 +14,21 @@ class Port(object):
      dependancies and dependants
   """
 
+  ABSENT    = 0x01
+  OLDER     = 0x02
+  CURRENT   = 0x04
+  NEWER     = 0x08
+
+  CONFIGURE = 0x10
+  FETCH     = 0x20
+  BUILD     = 0x40
+  INSTALL   = 0x80
+
+  INSTALL_STATUS = {ABSENT : "Not Installed", OLDER : "Older",
+                      CURRENT : "Current", NEWER : "Newer"}
+  BUILD_STATUS   = {CONFIGURE : "Configuring", FETCH : "Fetching",
+                    BUILD : "Building", INSTALL : "Installing"}
+
   def __init__(self, origin):
     """
        Initialise the port and all its information
@@ -23,6 +38,25 @@ class Port(object):
     """
     self._origin = origin               #: The origin of the port
     self._depends = get_depends(origin)  #: A list of all dependancies (Port's)
+    self._status = port_status(origin)
+
+  def status(self, string=False):
+    """
+       Returns the status of the port, either as a number or a string
+
+       @param string: Wheather to return a string or number
+       @type string: C{bool}
+       @return: The ports status
+       @rtype: C{int} or C{bool}
+    """
+    if not string:
+      return self._status
+    else:
+      if Port.BUILD_STATUS.has_key(self._status & 0xf0):
+        return "%s and %s" % (Port.INSTALL_STATUS[self._status & 0x0f],
+                              Port.BUILD_STATUS[self._status & 0xf0])
+      else:
+        return Port.INSTALL_STATUS[self._status & 0x0f]
 
 class PortCache(dict):
   """
@@ -137,6 +171,29 @@ class PortCache(dict):
         return value
 
 ports = PortCache()
+
+def port_status(origin):
+  """
+     Get the current status of a port.  A port is either ABSENT, OLDER, CURRENT
+     or NEWER
+
+     @param origin: The origin of the port queried
+     @type origin: C{str}
+     @return: The port's status
+     @rtype: C{int}
+  """
+  from subprocess import Popen, PIPE
+  pkg_version = Popen(['pkg_version', '-O', origin], stdout=PIPE)
+  if pkg_version.wait() != 0:
+    return Port.ABSENT
+
+  info = pkg_version.stdout.read().split()[1]
+  if info == '<':
+    return Port.OLDER
+  elif info == '>':
+    return Port.NEWER
+  else: #info == '=' or info == '?' or info =='*'
+    return Port.CURRENT
 
 def get_depends(origin):
   """

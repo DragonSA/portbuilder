@@ -4,10 +4,7 @@ Controller for various ports operations
 """
 
 from ports import ports
-ports['ftp/wget']
+ports.get('ftp/wget')
 
 for name, port in ports.iteritems():
-  print name, port._depends
-
-from sys import exit
-exit()
+  print name, port.status(True), port._depends
