@@ -30,11 +30,11 @@ class PortCache(dict):
      (note: this is an inflight cache)
   """
 
-  def __init__(self, **args):
+  def __init__(self):
     """
        Initialise the cache of ports
     """
-    dict.__init__(self, **args)
+    dict.__init__(self)
 
     from threading import RLock
     self._lock = RLock()
@@ -55,19 +55,25 @@ class PortCache(dict):
     with self._lock:
       try:
         value = dict.__getitem__(self, key)
+        if value:
+          return value
       except KeyError:
         self.add(key)
         value = None
-      if not value:
-        self._lock.release()
-        ports_queue.join()
-        self._lock.acquire()
-
-        value = dict.__getitem__(self, key)
-        if not value:
-          # TODO: critical error
+      else:
+        if value == False:
           raise KeyError, key
-      return value
+
+      self._lock.release()
+      ports_queue.join()
+      self._lock.acquire()
+
+      value = dict.__getitem__(self, key)
+      if not value:
+        # TODO: critical error
+        raise KeyError, key
+      else:
+        return value
 
   def __setitem__(self, key, value):
     """
@@ -110,16 +116,25 @@ class PortCache(dict):
           return value
       except KeyError:
         self[k] = None
+      else:
+        if value == False:
+          raise KeyError, k
 
-    # Time consuming task, done outside lock
-    port = Port(k)
-
-    with self._lock:
-      value = dict.__getitem__(self, k)
-      if not value:
-        self[k] = port
-        value = port
-      return value
+    try:
+      # Time consuming task, done outside lock
+      port = Port(k)
+    except BaseException:
+      # TODO: Something went wrong
+      with self._lock:
+        self[k] = False
+        raise KeyError, k
+    else:
+      with self._lock:
+        value = dict.__getitem__(self, k)
+        if not value:
+          self[k] = port
+          value = port
+        return value
 
 ports = PortCache()
 
