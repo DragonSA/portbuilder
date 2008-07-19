@@ -11,3 +11,5 @@ ports_queue.join()
 
 for name, port in ports.ports.iteritems():
   print name, port.status(True), port._depends
+
+print ports_queue.stats()

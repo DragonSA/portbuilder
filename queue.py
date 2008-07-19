@@ -70,7 +70,7 @@ class WorkerQueue(Queue):
        @return: Number of workers
        @rtype: C{int}
     """
-    return len(self)
+    return self._workers
 
   def setpool(self, workers):
     """
@@ -97,6 +97,16 @@ class WorkerQueue(Queue):
         from threading import Thread
         self._pool.append(Thread(target=self.worker))
         self._pool[-1].start()
+
+  def stats(self):
+    """
+       Returns a tuple about activity on the queue.
+       (Workers running, Workers created, Jobs run(ning))
+
+       @return: The tuple of information
+       @rtype: C{(int, int, int)}
+    """
+    return (len(self), self._worker_cnt, self._job_cnt)
 
   def worker(self):
     """
