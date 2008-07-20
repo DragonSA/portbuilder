@@ -30,7 +30,7 @@ Future release:
  - Port:
    * Complete attribute tables and fixes
    + Implement proper dependant handling (mimic what ports does)
-   - Create handlers for various make targets
+   + Create handlers for various make targets
  - pypkg:
    - Add ability to update/install ports (basic)
    - Allow environment variables to be settable (like ports_dir)

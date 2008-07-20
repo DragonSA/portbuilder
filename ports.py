@@ -82,15 +82,16 @@ class Port(object):
   BUILD     = 0x40  #: Status flag for a port that is building
   INSTALL   = 0x80  #: Status flag for a port that is installing
 
-  FAILED = 0x100  #: Status flag for port build failure
+  FAILED  = 0x100  #: Status flag for port build failure
+  WORKING = 0x200  #: Status flag indicating port is working
 
   INSTALL_FLAGS = 0x0f  #: Filter for install flags
   INSTALL_STATUS = {ABSENT : "Not Installed", OLDER : "Older",
                       CURRENT : "Current", NEWER : "Newer"}
   #: Translation table for the install flags
   BUILD_FLAGS = 0xf0  #: Filter for build flags
-  BUILD_STATUS = {CONFIGURE : "Configuring", FETCH : "Fetching",
-                  BUILD : "Building", INSTALL : "Installing"}
+  BUILD_STATUS = {CONFIGURE : "Configure", FETCH : "Fetch",
+                  BUILD : "Build", INSTALL : "Install"}
   #: Translation table for the build flags
 
   _log = getLogger("pypkg.ports.Port")
@@ -119,6 +120,35 @@ class Port(object):
       return lambda: self._attr_map[name]
     for i in self._attr_map.iterkeys():
       setattr(self, i, gen_method(i))
+
+  def _build_check(self, flag):
+    """
+       Check if this port can undertake a build stage
+
+       @param flag: The stage to build
+       @type flag: C{int}
+       @return: Weather a build stage can be undertaken
+       @rtype: C{bool}
+    """
+    if self._status & Port.BUILD_FLAGS > flag or self._status & Port.WORKING:
+      self._log.error("Port '%s' already building, cannot run stage '%s'" %
+                      (self._origin, Port.BUILD_STATUS[flag]))
+      return False
+    if self._status & Port.FAILED:
+      self._log.error(
+        "Trying to build stage '%s' for port '%s' after having failed" &
+        (Port.BUILD_STATUS[flag], self._origin))
+      return False
+    return True
+
+  def _install_status(self, flag):
+    """
+       Set the current build status
+
+       @param flag: The flag to set
+       @type flag: C{int}
+    """
+    pass
 
   def attr(self):
     """
@@ -153,18 +183,19 @@ class Port(object):
     """
        Fetches the distribution files for this port
     """
-    if self._status & Port.BUILD_FLAGS:
-      self._log.error("Port '%s' already building" % self._origin)
+    if not self._build_check('fetch'):
       return
-    if self._status & Port.FAILED:
-      self._log.error("Trying to build port '%s' after having failed" &
-                      self._origin)
-      return
-    self._status = self._status & Port.INSTALL_FLAGS ^ Port.CONFIGURE
+    self._install_status(Port.FETCH)
     make = make_target(self._origin, 'checksum')
     if make.wait() > 0:
       self._log.error("Port '%s' failed to fetch distfiles" % self._origin)
       self._status ^= Port.FAILED
+
+  def config(self):
+    """
+       Configure the ports options
+    """
+    
 
 class PortCache(dict):
   """
