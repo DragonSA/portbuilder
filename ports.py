@@ -13,19 +13,44 @@ ports_dir = "/usr/ports/"  #: The location of the ports tree
 port_filter = 0  #: The ports filter, if ports status matches then not 'loaded'
 
 ports_attr = {
-"name":     ["PORTNAME",     str],    # The port's name
-"version":  ["PORTVERSION",  str],    # The port's version
-"revision": ["PORTREVISION", str],    # The port's revision
-"epoch":    ["PORTEPOCH",    str],    # The port's epoch
-"categ":    ["CATEGORIES",   tuple],  # The port's categories
-"comment":  ["COMMENT",      str],    # The port's comment
+# Port naming
+"name":     ["PORTNAME",     str], # The port's name
+"version":  ["PORTVERSION",  str], # The port's version
+"revision": ["PORTREVISION", str], # The port's revision
+"epoch":    ["PORTEPOCH",    str], # The port's epoch
 
-"depends":  ["_DEPEND_DIRS", tuple],  # The ports dependants
+# Port's package naming
+"pkgname": ["PKGNAME",       str], # The port's package name
+"prefix":  ["PKGNAMEPREFIX", str], # The port's package prefix
+"suffix":  ["PKGNAMESUFFIX", str], # The port's package suffix
+
+# Port's dependancies and conflicts
+"conflicts":      ["CONFLICTS",       tuple], # The port's conflictions
+"depend_build":   ["BUILD_DEPENDS",   tuple], # The port's build dependancies
+"depend_extract": ["EXTRACT_DEPENDS", tuple], # The port's extract dependancies
+"depend_fetch":   ["FETCH_DEPENDS",   tuple], # The port's fetch dependancies
+"depend_lib":     ["LIB_DEPENDS",     tuple], # The port's library dependancies
+"depend_run":     ["RUN_DEPENDS",     tuple], # The port's run dependancies
+"depend_patch":   ["PATCH_DEPENDS",   tuple], # The port's patch dependancies
+
+# Sundry port information
+"categ":      ["CATEGORIES", tuple], # The port's categories
+"comment":    ["COMMENT",    str],   # The port's comment
+"maintainer": ["MAINTAINER", str],   # The port's maintainer
+"options":    ["OPTIONS",    str],   # The port's options
+
+# Distribution information
+"distfiles": ["DISTFILES",   tuple], # The port's distfiles
+"subdir":    ["DIST_SUBDIR", str],   # The port's distfile's sub-directory
+
+
+"depends":  ["_DEPEND_DIRS", tuple], # The ports dependants
 } #: The attributes of the given port
 
 # The following are 'fixes' for various attributes
 ports_attr["depends"].append(lambda x: [i[len(ports_dir):] for i in x])
 ports_attr["depends"].append(lambda x: [i for i in x if not ports.add(i)])
+ports_attr["distfiles"].append(lambda x: [i.split(':', 1)[0] for i in x])
 
 class Port(object):
   """

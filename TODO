@@ -4,20 +4,52 @@ Coding standard:
  * Document all classes, methods, functions and (global|class) variables
 
 Future release:
- - Add static caching of ports information
  - Speed up port_version()
- - Make portsdir settable from env and cmdline
+ - Add options for either individually executing make targets or in baulk
+ - Allow KeyboardInterrupt to terminate program
+ - Port:
+   - Add distfiles checking (to optimise fetching)
+   - Add caching for port information (with refreshing checks)
+   - Handles ports that do not exist
+   - Allow information collection from alternative sources
+     (/var/db/pkg/* or portupgrade)
+   - Attributes:
+     - Check for a need of PATCHFILES
+     - ALWAYS_KEEP_DISTFILES
+     - Extend attributes for NO_*
+     - FORBIDDEN, BROKEN and IGNORE
+     - ONLY_FOR_ARCHS and NOT_FOR_ARCHS
+     - DEPRECIATION...
+     - etc
+   - Check all attributes are correctly formatted:
+     - Port categories
+     - Naming scheme
+
+0.0.2:
+ - Port:
+   * Complete attribute tables and fixes
+   - Implement proper dependant handling (mimic what ports does)
+   - Create handlers for various make targets
+ - pypkg:
+   - Add ability to update/install ports (basic)
+   - Allow environment variables to be settable (like ports_dir)
+ - ports:
+   - Make ports_dir settable from the env
+ - WorkerQueue:
+   - Add Condition (and a global Condition)
+ - Create ordering logic for building (and resolving dependants)
+ - Create target to build INDEX
 
 0.0.1:
  * Expand documentation for ports library
  * Add exception handling
  * Add logging
  * Add queueing logic
-   * Fitler multiple items (prevent duplicates?)
+   * Filter multiple items (prevent duplicates?)
    * Handle different queue items (build, info)
  * Add a Port's cache
  * Port:
-   * Add generic method for getting arbitary items of information
+   * Add generic method for getting arbitrary items of information
    * Add port status
    * Add a port filter (for resolving information and calling dependants to be
      constructed)
@@ -26,8 +58,8 @@ Future release:
  * WorkerQueue:
    * Allocate on demand
    * Terminate when idle
-   * Resize pool
+   * Re-size pool
    * Terminate if pool oversized
-   * Check if global rlock could be a lock
+   * Check if global RLock could be a Lock
    * Add stats information
  * queue: Provide defaults for queue sizes
