@@ -5,11 +5,14 @@ managing port information.
 
 from __future__ import with_statement # Used for locking
 from logging import getLogger
+from make import env
+from os import getenv
 
 log = getLogger('pypkg.ports')
 
 ports = {}  #: A cache of ports available with auto creation features
-ports_dir = "/usr/ports/"  #: The location of the ports tree
+ports_dir = getenv("PORTSDIR", "/usr/ports/")  #: The location of the ports tree
+ports_dir = env.get("PORTSDIR", ports_dir)
 port_filter = 0  #: The ports filter, if ports status matches then not 'loaded'
 
 ports_attr = {
