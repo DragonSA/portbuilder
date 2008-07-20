@@ -34,10 +34,13 @@ Future release:
  - pypkg:
    - Add ability to update/install ports (basic)
    - Allow environment variables to be settable (like ports_dir)
- - ports:
-   - Make ports_dir settable from the env
+ * ports:
+   * Make ports_dir settable from the env
  * WorkerQueue:
    * Add Condition (and a global Condition)
+ * make:
+   * Add handler for environment variables
+   * Generic handler for executing make targets
  - Create ordering logic for building (and resolving dependants)
  - Create target to build INDEX
 

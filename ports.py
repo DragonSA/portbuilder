@@ -5,7 +5,7 @@ managing port information.
 
 from __future__ import with_statement # Used for locking
 from logging import getLogger
-from make import env
+from make import env, make_target
 from os import getenv
 
 log = getLogger('pypkg.ports')
@@ -82,10 +82,18 @@ class Port(object):
   BUILD     = 0x40  #: Status flag for a port that is building
   INSTALL   = 0x80  #: Status flag for a port that is installing
 
+  FAILED = 0x100  #: Status flag for port build failure
+
+  INSTALL_FLAGS = 0x0f  #: Filter for install flags
   INSTALL_STATUS = {ABSENT : "Not Installed", OLDER : "Older",
                       CURRENT : "Current", NEWER : "Newer"}
-  BUILD_STATUS   = {CONFIGURE : "Configuring", FETCH : "Fetching",
-                    BUILD : "Building", INSTALL : "Installing"}
+  #: Translation table for the install flags
+  BUILD_FLAGS = 0xf0  #: Filter for build flags
+  BUILD_STATUS = {CONFIGURE : "Configuring", FETCH : "Fetching",
+                  BUILD : "Building", INSTALL : "Installing"}
+  #: Translation table for the build flags
+
+  _log = getLogger("pypkg.ports.Port")
 
   def __init__(self, origin):
     """
@@ -134,10 +142,29 @@ class Port(object):
       return self._status
     else:
       if Port.BUILD_STATUS.has_key(self._status & 0xf0):
-        return "%s and %s" % (Port.INSTALL_STATUS[self._status & 0x0f],
-                              Port.BUILD_STATUS[self._status & 0xf0])
+        return "%s and %s" % (Port.INSTALL_STATUS[self._status &
+                                                  Port.INSTALL_FLAGS],
+                              Port.BUILD_STATUS[self._status &
+                                                Port.BUILD_FLAGS])
       else:
         return Port.INSTALL_STATUS[self._status & 0x0f]
+
+  def fetch(self):
+    """
+       Fetches the distribution files for this port
+    """
+    if self._status & Port.BUILD_FLAGS:
+      self._log.error("Port '%s' already building" % self._origin)
+      return
+    if self._status & Port.FAILED:
+      self._log.error("Trying to build port '%s' after having failed" &
+                      self._origin)
+      return
+    self._status = self._status & Port.INSTALL_FLAGS ^ Port.CONFIGURE
+    make = make_target(self._origin, 'checksum')
+    if make.wait() > 0:
+      self._log.error("Port '%s' failed to fetch distfiles" % self._origin)
+      self._status ^= Port.FAILED
 
 class PortCache(dict):
   """
@@ -307,14 +334,12 @@ def port_attr(origin):
      @return: A dictionary of attributes
      @rtype: C{\{str:str|(str)|\}}
   """
-  from subprocess import Popen, PIPE, STDOUT
-
-  args = ['make', '-C', ports_dir + origin]
+  args = []
   for i in ports_attr.itervalues():
     args.append('-V')
     args.append(i[0])
 
-  make = Popen(args, stdout=PIPE, stderr=STDOUT)
+  make = make_target(origin, None, args)
   if make.wait() > 0:
     log.info("Error in obtaining information for port '%s'" % origin)
     return {}
