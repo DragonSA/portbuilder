@@ -26,6 +26,7 @@ ports_attr = {
 
 # Port's dependancies and conflicts
 "conflicts":      ["CONFLICTS",       tuple], # The port's conflictions
+"depends":        ["_DEPEND_DIRS",    tuple], # The port's dependency list
 "depend_build":   ["BUILD_DEPENDS",   tuple], # The port's build dependancies
 "depend_extract": ["EXTRACT_DEPENDS", tuple], # The port's extract dependancies
 "depend_fetch":   ["FETCH_DEPENDS",   tuple], # The port's fetch dependancies
@@ -49,8 +50,18 @@ ports_attr = {
 
 # The following are 'fixes' for various attributes
 ports_attr["depends"].append(lambda x: [i[len(ports_dir):] for i in x])
+ports_attr["depends"].append(lambda x: ([x.remove(i) for i in x
+                                         if x.count(i) > 1], x)[1])
 ports_attr["depends"].append(lambda x: [i for i in x if not ports.add(i)])
 ports_attr["distfiles"].append(lambda x: [i.split(':', 1)[0] for i in x])
+
+strip_depends = lambda x: [i.split(':', 1)[1][len(ports_dir):] for i in x]
+ports_attr["depend_build"].append(strip_depends)
+ports_attr["depend_extract"].append(strip_depends)
+ports_attr["depend_fetch"].append(strip_depends)
+ports_attr["depend_lib"].append(strip_depends)
+ports_attr["depend_run"].append(strip_depends)
+ports_attr["depend_patch"].append(strip_depends)
 
 class Port(object):
   """
