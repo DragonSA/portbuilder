@@ -179,17 +179,18 @@ class PortCache(dict):
           raise KeyError, key
 
       self._lock.release()
-      ports_queue.join()
-      self._lock.acquire()
-
-      value = dict.__getitem__(self, key)
-      if value == False:
-        raise KeyError, key
-      elif not value:
-        self._log.error("Port '%s' failed to be created" % key)
-        raise KeyError, key
-      else:
-        return value
+      cond = ports_queue.condition()
+      with cond:
+        while True:
+          value = dict.__getitem__(self, key)
+          if value == False:
+            self._lock.acquire()
+            raise KeyError, key
+          elif not value:
+            cond.wait()
+          else:
+            self._lock.acquire()
+            return value
 
   def __setitem__(self, key, value):
     """

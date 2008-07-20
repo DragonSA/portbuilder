@@ -26,10 +26,11 @@ class WorkerQueue(Queue):
     """
     Queue.__init__(self)
     from logging import getLogger
-    from threading import Lock
+    from threading import Condition, Lock
     self._lock = Lock()  #: Global lock for this class
+    self._condition = Condition(self._lock)
     self._log = getLogger("pypkg.queue." + name)  #: Logger of this queue
-    self._name = name  #: The name of this queue
+    #self._name = name  #: The name of this queue
     self._workers = workers  #: The (maximum) number of workers
 
     self._worker_cnt = 0  #: The number of workers created
@@ -46,12 +47,21 @@ class WorkerQueue(Queue):
     """
     return len(self._pool)
 
+  def condition(self):
+    """
+       The condition that is issued everytime a job finishes
+
+       @return: The condition object
+       @rtype: C{Condition}
+    """
+    return self._condition
+
   def logger(self):
     """
        The logger used by this queue
 
        @return: The logger
-       @rtype:
+       @rtype: C{Logger}
     """
     return self._log
 
@@ -118,7 +128,6 @@ class WorkerQueue(Queue):
         if self._workers < len(self._pool):
           self._pool.remove(currentThread())
           return
-
         try:
           cmd = self.get(False)
         except Empty:
@@ -151,6 +160,10 @@ class WorkerQueue(Queue):
         self._log.debug("Worker %d: Finished job %d" % (wid, jid))
 
       self.task_done()
+
+      # Signal that a job has finished
+      with self._condition:
+        self._condition.notifyAll()
 
 build_queue = WorkerQueue("build", ncpu)  #: Queue for building ports
 fetch_queue = WorkerQueue("fetch", 1)  #: Queue for fetching distribution files

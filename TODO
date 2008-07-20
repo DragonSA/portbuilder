@@ -13,6 +13,7 @@ Future release:
    - Handles ports that do not exist
    - Allow information collection from alternative sources
      (/var/db/pkg/* or portupgrade)
+   - Add logging of port targets
    - Attributes:
      - Check for a need of PATCHFILES
      - ALWAYS_KEEP_DISTFILES
@@ -28,15 +29,15 @@ Future release:
 0.0.2:
  - Port:
    * Complete attribute tables and fixes
-   - Implement proper dependant handling (mimic what ports does)
+   + Implement proper dependant handling (mimic what ports does)
    - Create handlers for various make targets
  - pypkg:
    - Add ability to update/install ports (basic)
    - Allow environment variables to be settable (like ports_dir)
  - ports:
    - Make ports_dir settable from the env
- - WorkerQueue:
-   - Add Condition (and a global Condition)
+ * WorkerQueue:
+   * Add Condition (and a global Condition)
  - Create ordering logic for building (and resolving dependants)
  - Create target to build INDEX
 
