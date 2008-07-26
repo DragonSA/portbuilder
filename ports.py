@@ -141,15 +141,6 @@ class Port(object):
       return False
     return True
 
-  def _install_status(self, flag):
-    """
-       Set the current build status
-
-       @param flag: The flag to set
-       @type flag: C{int}
-    """
-    pass
-
   def attr(self):
     """
        Returns the ports attributes, such as version, categories, etc
@@ -158,6 +149,18 @@ class Port(object):
        @rtype: C{\{str:str|(str)|\}}
     """
     return self._attr_map
+
+  def failed(self):
+    """
+       The failure status of this port.
+
+       @return: The failed port
+       @rtype: C{int}
+    """
+    if self._status & Port.FAILED:
+      return self._status & Port.BUILD_FLAGS
+    else:
+      return 0
 
   def status(self, string=False):
     """
@@ -171,7 +174,7 @@ class Port(object):
     if not string:
       return self._status
     else:
-      if Port.BUILD_STATUS.has_key(self._status & 0xf0):
+      if Port.BUILD_STATUS.has_key(self._status & Port.BUILD_FLAGS):
         return "%s and %s" % (Port.INSTALL_STATUS[self._status &
                                                   Port.INSTALL_FLAGS],
                               Port.BUILD_STATUS[self._status &
@@ -179,13 +182,25 @@ class Port(object):
       else:
         return Port.INSTALL_STATUS[self._status & 0x0f]
 
+  def working(self):
+    """
+       Status of the port.  Indicates if the port is busy working on a stage
+
+       @return: The build status
+       @rtype: C{bool}
+    """
+    if self._status & Port.WORKING:
+      return self._status & Port.BUILD_FLAGS
+    else:
+      return 0
+
   def fetch(self):
     """
        Fetches the distribution files for this port
     """
     if not self._build_check('fetch'):
       return
-    self._install_status(Port.FETCH)
+    #self._install_status(Port.FETCH)
     make = make_target(self._origin, 'checksum')
     if make.wait() > 0:
       self._log.error("Port '%s' failed to fetch distfiles" % self._origin)

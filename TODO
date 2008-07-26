@@ -7,6 +7,7 @@ Future release:
  - Speed up port_version()
  - Add options for either individually executing make targets or in baulk
  - Allow KeyboardInterrupt to terminate program
+ - Check spelling for all documentation
  - Port:
    - Add distfiles checking (to optimise fetching)
    - Add caching for port information (with refreshing checks)
