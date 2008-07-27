@@ -138,16 +138,19 @@ class WorkerQueue(Queue):
         self._job_cnt += 1
         self._log.debug("Worker %d: Starting job %d" % (wid, jid))
 
-      if len(cmd) == 1:
-        func = cmd[0]
-        args = []
-        kwargs = {}
-      elif len(cmd) == 2:
-        func, args = cmd
-        kwargs = {}
-      elif len(cmd) == 3:
-        func, args, kwargs = cmd
-      else:
+      try:
+        if len(cmd) == 1:
+          func = cmd[0]
+          args = []
+          kwargs = {}
+        elif len(cmd) == 2:
+          func, args = cmd
+          kwargs = {}
+        elif len(cmd) == 3:
+          func, args, kwargs = cmd
+        else:
+          raise Exception
+      except BaseException:
         self._log.error("Worker %d: Job %d is malformed" % (wid, jid))
         self.task_done()
         continue
