@@ -30,7 +30,7 @@ ports_attr = {
 # Port's dependancies and conflicts
 "conflicts":      ["CONFLICTS",       tuple], # The port's conflictions
 "depends":        ["_DEPEND_DIRS",    tuple], # The port's dependency list
-"depend_build":   ["BUILD_DEPENDS",   tuple], # The port's build dependancies
+"depend_build":   ["STAGE_DEPENDS",   tuple], # The port's build dependancies
 "depend_extract": ["EXTRACT_DEPENDS", tuple], # The port's extract dependancies
 "depend_fetch":   ["FETCH_DEPENDS",   tuple], # The port's fetch dependancies
 "depend_lib":     ["LIB_DEPENDS",     tuple], # The port's library dependancies
@@ -77,21 +77,21 @@ class Port(object):
   CURRENT   = 0x04  #: Status flag for a port that is current
   NEWER     = 0x08  #: Status flag for a port that is newer
 
-  CONFIGURE = 0x10  #: Status flag for a port that is configuring
-  FETCH     = 0x20  #: Status flag for a port that is fetching sources
-  BUILD     = 0x40  #: Status flag for a port that is building
-  INSTALL   = 0x80  #: Status flag for a port that is installing
+  CONFIG  = 0x10  #: Status flag for a port that is configuring
+  FETCH   = 0x20  #: Status flag for a port that is fetching sources
+  BUILD   = 0x40  #: Status flag for a port that is building
+  INSTALL = 0x80  #: Status flag for a port that is installing
 
   FAILED  = 0x100  #: Status flag for port build failure
   WORKING = 0x200  #: Status flag indicating port is working
 
   INSTALL_FLAGS = 0x0f  #: Filter for install flags
-  INSTALL_STATUS = {ABSENT : "Not Installed", OLDER : "Older",
+  INSTALL_NAME = {ABSENT : "Not Installed", OLDER : "Older",
                       CURRENT : "Current", NEWER : "Newer"}
   #: Translation table for the install flags
-  BUILD_FLAGS = 0xf0  #: Filter for build flags
-  BUILD_STATUS = {CONFIGURE : "Configure", FETCH : "Fetch",
-                  BUILD : "Build", INSTALL : "Install"}
+  STAGE_FLAGS = 0xf0  #: Filter for build flags
+  STAGE_NAME = {CONFIG : "Configure", FETCH : "Fetch", BUILD : "Build",
+                INSTALL : "Install"}
   #: Translation table for the build flags
 
   _log = getLogger("pypkg.ports.Port")
@@ -139,7 +139,7 @@ class Port(object):
        @rtype: C{int}
     """
     if self._status & Port.FAILED:
-      return self._status & Port.BUILD_FLAGS
+      return self._status & Port.STAGE_FLAGS
     else:
       return 0
 
@@ -153,7 +153,36 @@ class Port(object):
        @return: The proceed status
        @rtype: C{bool}
     """
-    pass
+    from queue import build_queue, fetch_queue
+    if self._status & Port.WORKING:
+      self._log.warn("Port '%s' is already busy and trying to start stage '%s'"
+                     % (self._origin, Port.STAGE_NAME[stage]))
+      return False
+    if self._status & Port.FAILED:
+      self._log.warn("Port '%s' has failed but trying to start stage '%s'"
+                     % (self._origin, Port.STAGE_NAME[stage]))
+      return False
+
+    queues = {Port.CONFIG : [build_queue, self.config],
+              Port.FETCH  : [fetch_queue, self.fetch]}
+    pre_stage = Port.CONFIG
+
+    while pre_stage < stage:
+      if not pre_stage > self._status & Port.STAGE_FLAGS:
+        continue
+      queue, func = queues[pre_stage]
+      cond = queue.condition()
+
+      queue.put([func])
+      while not self._status & pre_stage:
+        cond.wait()
+
+      if self._status & Port.FAILED:
+        self._log.warn("Port '%s' has failed but trying to start stage '%s'"
+                     % (self._origin, Port.STAGE_NAME[stage]))
+        return False
+
+    return True
 
   def status(self, string=False):
     """
@@ -167,13 +196,13 @@ class Port(object):
     if not string:
       return self._status
     else:
-      if Port.BUILD_STATUS.has_key(self._status & Port.BUILD_FLAGS):
-        return "%s and %s" % (Port.INSTALL_STATUS[self._status &
+      if Port.STAGE_NAME.has_key(self._status & Port.STAGE_FLAGS):
+        return "%s and %s" % (Port.INSTALL_NAME[self._status &
                                                   Port.INSTALL_FLAGS],
-                              Port.BUILD_STATUS[self._status &
-                                                Port.BUILD_FLAGS])
+                              Port.STAGE_NAME[self._status &
+                                                Port.STAGE_FLAGS])
       else:
-        return Port.INSTALL_STATUS[self._status & 0x0f]
+        return Port.INSTALL_NAME[self._status & 0x0f]
 
   def working(self):
     """
@@ -184,23 +213,30 @@ class Port(object):
        @rtype: C{bool}
     """
     if self._status & Port.WORKING:
-      return self._status & Port.BUILD_FLAGS
+      return self._status & Port.STAGE_FLAGS
     else:
       return 0
 
   def config(self):
     """
-       Configure the ports options
+       Configure the ports options.
+
+       @return: The success status
+       @rtype: C{bool}
     """
-    pass
+    if not self.prepare(self.CONFIG):
+      return False
 
   def fetch(self):
     """
        Fetches the distribution files for this port
+
+       @return: The success status
+       @rtype: C{bool}
     """
-    #if not self._build_check('fetch'):
-    #  return
-    #self._install_status(Port.FETCH)
+    if not self.prepare(self.FETCH):
+      return False
+
     make = make_target(self._origin, 'checksum')
     if make.wait() > 0:
       self._log.error("Port '%s' failed to fetch distfiles" % self._origin)
