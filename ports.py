@@ -121,26 +121,6 @@ class Port(object):
     for i in self._attr_map.iterkeys():
       setattr(self, i, gen_method(i))
 
-  def _build_check(self, flag):
-    """
-       Check if this port can undertake a build stage
-
-       @param flag: The stage to build
-       @type flag: C{int}
-       @return: Weather a build stage can be undertaken
-       @rtype: C{bool}
-    """
-    if self._status & Port.BUILD_FLAGS > flag or self._status & Port.WORKING:
-      self._log.error("Port '%s' already building, cannot run stage '%s'" %
-                      (self._origin, Port.BUILD_STATUS[flag]))
-      return False
-    if self._status & Port.FAILED:
-      self._log.error(
-        "Trying to build stage '%s' for port '%s' after having failed" &
-        (Port.BUILD_STATUS[flag], self._origin))
-      return False
-    return True
-
   def attr(self):
     """
        Returns the ports attributes, such as version, categories, etc
@@ -152,7 +132,8 @@ class Port(object):
 
   def failed(self):
     """
-       The failure status of this port.
+       The failure status of this port.  Indicates which stage the port failed
+       at.  
 
        @return: The failed port
        @rtype: C{int}
@@ -161,6 +142,18 @@ class Port(object):
       return self._status & Port.BUILD_FLAGS
     else:
       return 0
+
+  def prepare(self, stage):
+    """
+       Prepare the port to build the given stage.  All appropriate checks are
+       done and the proceed status is returned.
+
+       @param stage: The stage to check for
+       @type stage: C{int}
+       @return: The proceed status
+       @rtype: C{bool}
+    """
+    pass
 
   def status(self, string=False):
     """
@@ -184,8 +177,9 @@ class Port(object):
 
   def working(self):
     """
-       Status of the port.  Indicates if the port is busy working on a stage
-
+       The working status of the port.  Indicates which stage the port is busy
+       working on, if any.
+ 
        @return: The build status
        @rtype: C{bool}
     """
@@ -194,23 +188,23 @@ class Port(object):
     else:
       return 0
 
+  def config(self):
+    """
+       Configure the ports options
+    """
+    pass
+
   def fetch(self):
     """
        Fetches the distribution files for this port
     """
-    if not self._build_check('fetch'):
-      return
+    #if not self._build_check('fetch'):
+    #  return
     #self._install_status(Port.FETCH)
     make = make_target(self._origin, 'checksum')
     if make.wait() > 0:
       self._log.error("Port '%s' failed to fetch distfiles" % self._origin)
       self._status ^= Port.FAILED
-
-  def config(self):
-    """
-       Configure the ports options
-    """
-    
 
 class PortCache(dict):
   """

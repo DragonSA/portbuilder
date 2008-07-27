@@ -15,6 +15,7 @@ Future release:
    - Allow information collection from alternative sources
      (/var/db/pkg/* or portupgrade)
    - Add logging of port targets
+   - Check need for status
    - Attributes:
      - Check for a need of PATCHFILES
      - ALWAYS_KEEP_DISTFILES
