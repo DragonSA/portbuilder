@@ -168,6 +168,7 @@ class WorkerQueue(Queue):
       with self._condition:
         self._condition.notifyAll()
 
-build_queue = WorkerQueue("build", ncpu)  #: Queue for building ports
-fetch_queue = WorkerQueue("fetch", 1)  #: Queue for fetching distribution files
-ports_queue = WorkerQueue("ports", ncpu * 2)  #: Queue for fetching port info
+config_queue = WorkerQueue("config", 1)  #: Queue for configuring port options
+build_queue  = WorkerQueue("build", ncpu)  #: Queue for building ports
+fetch_queue  = WorkerQueue("fetch", 1)  #: Queue for fetching distribution files
+ports_queue  = WorkerQueue("ports", ncpu * 2)  #: Queue for fetching port info
