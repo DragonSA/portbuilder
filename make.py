@@ -4,7 +4,7 @@ The Make module.  This module provides an interface to `make'.
 
 env = {}  #: The environment flags to pass to make, aka -D...
 
-def make_target(origin, targets=None, args=[]):
+def make_target(origin, targets=None, args=[], pipe=True):
   """
      Run make to build a target with the given arguments and the appropriate
      addition settings
@@ -21,12 +21,17 @@ def make_target(origin, targets=None, args=[]):
   from ports import ports_dir
   from subprocess import Popen, PIPE, STDOUT
 
+  if pipe:
+    stdout, stderr = PIPE, STDOUT
+  else:
+    stdout, stderr = None, None
+
   args = args + ["%s=%s" % (k, v) for k, v in env.iteritems()]
   if type(targets) == str:
     targets = [targets]
   elif targets == None:
     targets = []
   make = Popen(['make', '-C', ports_dir + origin] + targets + args,
-               stdout=PIPE, stderr=STDOUT)
+               stdout=stdout, stderr=stderr)
 
   return make
