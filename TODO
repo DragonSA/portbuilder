@@ -8,6 +8,8 @@ Future release:
  - Add options for either individually executing make targets or in baulk
  - Allow KeyboardInterrupt to terminate program
  - Check spelling for all documentation
+ - make:
+   - Does make_target need env?
  - Port:
    - Add distfiles checking (to optimise fetching)
    - Add caching for port information (with refreshing checks)
@@ -27,6 +29,10 @@ Future release:
    - Check all attributes are correctly formatted:
      - Port categories
      - Naming scheme
+   - config:
+     - Check for caching of options (and add option to force config)
+ - WorkerQueue:
+    - Handle worker thread crashing
 
 0.0.2:
  - Port:

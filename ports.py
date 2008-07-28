@@ -111,6 +111,9 @@ class Port(object):
       self._attr_map = port_attr(origin)  #: The ports attributes
       self._gen_attr()
 
+      if not self._attr_map['options']:
+        self._status |= Port.CONFIG
+
   def _gen_attr(self):
     """
        Generates methods that map to the ports attributes
@@ -174,7 +177,8 @@ class Port(object):
       cond = queue.condition()
 
       queue.put([func])
-      while not self._status & pre_stage:
+      while not self._status & pre_stage or \
+            self._status & (pre_stage | Port.WORKING):
         cond.wait()
 
       if self._status & Port.FAILED:
@@ -226,6 +230,16 @@ class Port(object):
     """
     if not self.prepare(self.CONFIG):
       return False
+    self._status |= Port.CONFIG | Port.WORKING
+
+    make = make_target(self._origin, 'config', pipe=False)
+    if make.wait() > 0:
+      self._log.error("Failed to configure port '%s'" % self._origin)
+      self._status ^= Port.FAILED | Port.WORKING
+      return False
+    else:
+      self._status ^= Port.WORKING
+      return True
 
   def fetch(self):
     """
