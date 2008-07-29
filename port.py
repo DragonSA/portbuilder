@@ -136,7 +136,7 @@ class Port(object):
   def failed(self):
     """
        The failure status of this port.  Indicates which stage the port failed
-       at.  
+       at.
 
        @return: The failed port
        @rtype: C{int}
@@ -256,6 +256,43 @@ class Port(object):
     make = make_target(self._origin, 'checksum')
     if make.wait() > 0:
       self._log.error("Port '%s' failed to fetch distfiles" % self._origin)
+      self._status ^= Port.FAILED | Port.WORKING
+    else:
+      self._status ^= Port.WORKING
+      return True
+
+  def build(self):
+    """
+        Build the port.  This includes extracting, patching, configuring and
+        lastly building the port.
+
+        @return: The success status
+        @rtype: C{bool}
+    """
+    if not self.prepare(self.BUILD):
+      return False
+
+    make = make_target(self._origin, ['extract', 'patch', 'configure', 'build'])
+    if make.wait() > 0:
+      self._log.error("Port '%s' failed to build" % self._origin)
+      self._status ^= Port.FAILED | Port.WORKING
+    else:
+      self._status ^= Port.WORKING
+      return True
+
+  def install(self):
+    """
+        Install the port.
+
+        @return: The success status
+        @rtype: C{bool}
+    """
+    if not self.prepare(self.INSTALL):
+      return False
+
+    make = make_target(self._origin, 'install')
+    if make.wait() > 0:
+      self._log.error("Port '%s' failed to install" % self._origin)
       self._status ^= Port.FAILED | Port.WORKING
     else:
       self._status ^= Port.WORKING

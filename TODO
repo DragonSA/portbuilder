@@ -8,6 +8,8 @@ Future release:
  - Add options for either individually executing make targets or in baulk
  - Allow KeyboardInterrupt to terminate program
  - Check spelling for all documentation
+ - Define working standards for logging
+ - Increase level of logging
  - make:
    - Does make_target need env?
  - pypkg:
@@ -21,6 +23,7 @@ Future release:
      (/var/db/pkg/* or portupgrade)
    - Add logging of port targets
    - Check need for status
+   - Move prepare to a private method?
    - Attributes:
      - Check for a need of PATCHFILES
      - ALWAYS_KEEP_DISTFILES
@@ -41,7 +44,11 @@ Future release:
  - Port:
    * Complete attribute tables and fixes
    + Implement proper dependant handling (mimic what ports does)
-   + Create handlers for various make targets
+   + Create handlers for various make targets:
+     * config
+     + fetch
+     - build
+     - install
    - Refracture cleanup code for stages
  - pypkg:
    - Add ability to update/install ports (basic)
