@@ -18,7 +18,7 @@ def make_target(origin, targets=None, args=[], pipe=True):
      @return: The make process interface
      @rtype: C{Popen}
   """
-  from ports import ports_dir
+  from port import ports_dir
   from subprocess import Popen, PIPE, STDOUT
 
   if pipe:

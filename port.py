@@ -149,7 +149,8 @@ class Port(object):
   def prepare(self, stage):
     """
        Prepare the port to build the given stage.  All appropriate checks are
-       done and the proceed status is returned.
+       done and the proceed status is returned.  If the stage can be built then
+       the appropriate flags are tagged to indicated this.
 
        @param stage: The stage to check for
        @type stage: C{int}
@@ -186,27 +187,29 @@ class Port(object):
                      % (self._origin, Port.STAGE_NAME[stage]))
         return False
 
+    self._status |= stage | Port.WORKING
     return True
 
-  def status(self, string=False):
+  def status(self, stage=False, install=False):
     """
-       Returns the status of the port, either as a number or a string
+       Returns the status of the port.  The install status, the stage status
+       or both can be returns (default, both).
 
-       @param string: Wheather to return a string or number
-       @type string: C{bool}
+       @param stage: Indicate if the stage status should be returned
+       @type stage: C{bool}
+       @param install: Indicate if the install status should be returned
+       @type install: C{bool}
        @return: The ports status
-       @rtype: C{int} or C{bool}
+       @rtype: C{int}
     """
-    if not string:
-      return self._status
-    else:
-      if Port.STAGE_NAME.has_key(self._status & Port.STAGE_FLAGS):
-        return "%s and %s" % (Port.INSTALL_NAME[self._status &
-                                                  Port.INSTALL_FLAGS],
-                              Port.STAGE_NAME[self._status &
-                                                Port.STAGE_FLAGS])
-      else:
-        return Port.INSTALL_NAME[self._status & 0x0f]
+    s_filter = 0
+    if stage:
+      s_filter |= Port.STAGE_FLAGS
+    if install:
+      s_filter |= Port.INSTALL_FLAGS
+    if not stage and not install:
+      s_filter |= Port.STAGE_FLAGS | Port.INSTALL_FLAGS
+    return self._status & s_filter
 
   def working(self):
     """
@@ -230,7 +233,6 @@ class Port(object):
     """
     if not self.prepare(self.CONFIG):
       return False
-    self._status |= Port.CONFIG | Port.WORKING
 
     make = make_target(self._origin, 'config', pipe=False)
     if make.wait() > 0:
@@ -254,7 +256,10 @@ class Port(object):
     make = make_target(self._origin, 'checksum')
     if make.wait() > 0:
       self._log.error("Port '%s' failed to fetch distfiles" % self._origin)
-      self._status ^= Port.FAILED
+      self._status ^= Port.FAILED | Port.WORKING
+    else:
+      self._status ^= Port.WORKING
+      return True
 
 class PortCache(dict):
   """

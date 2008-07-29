@@ -3,13 +3,13 @@
 Controller for various ports operations
 """
 
-import ports
+from port import ports, Port
 from queue import ports_queue
 #ports.port_filter = ports.Port.CURRENT | ports.Port.NEWER
-ports.ports.get('x11/xorg')
+ports.get('x11/xorg')
 ports_queue.join()
 
-for name, port in ports.ports.iteritems():
+for name, port in ports.iteritems():
   print """
 ==============================================================================
 Origin:   %s
@@ -20,4 +20,11 @@ Revision: %s
 Comment:  ``%s''
 """ % (name, port.name(), port.version(), port.revision(), port.comment())
 
-print ports_queue.stats(), len(ports.ports)
+import make
+make.pre_target = ['echo']
+
+for i in ports.itervalues():
+  if not i._status & Port.CONFIG:
+    i.config()
+
+print ports_queue.stats(), len(ports)
