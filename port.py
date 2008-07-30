@@ -30,7 +30,7 @@ ports_attr = {
 # Port's dependancies and conflicts
 "conflicts":      ["CONFLICTS",       tuple], # The port's conflictions
 "depends":        ["_DEPEND_DIRS",    tuple], # The port's dependency list
-"depend_build":   ["STAGE_DEPENDS",   tuple], # The port's build dependancies
+"depend_build":   ["BUILD_DEPENDS",   tuple], # The port's build dependancies
 "depend_extract": ["EXTRACT_DEPENDS", tuple], # The port's extract dependancies
 "depend_fetch":   ["FETCH_DEPENDS",   tuple], # The port's fetch dependancies
 "depend_lib":     ["LIB_DEPENDS",     tuple], # The port's library dependancies
@@ -72,29 +72,26 @@ class Port(object):
      dependancies and dependants
   """
 
-  ABSENT    = 0x01  #: Status flag for a port that is not installed
-  OLDER     = 0x02  #: Status flag for a port that is old
-  CURRENT   = 0x04  #: Status flag for a port that is current
-  NEWER     = 0x08  #: Status flag for a port that is newer
+  ABSENT  = 0x01  #: Status flag for a port that is not installed
+  OLDER   = 0x02  #: Status flag for a port that is old
+  CURRENT = 0x04  #: Status flag for a port that is current
+  NEWER   = 0x08  #: Status flag for a port that is newer
 
-  CONFIG  = 0x10  #: Status flag for a port that is configuring
-  FETCH   = 0x20  #: Status flag for a port that is fetching sources
-  BUILD   = 0x40  #: Status flag for a port that is building
-  INSTALL = 0x80  #: Status flag for a port that is installing
+  CONFIG  = 0x01  #: Status flag for a port that is configuring
+  FETCH   = 0x02  #: Status flag for a port that is fetching sources
+  BUILD   = 0x04  #: Status flag for a port that is building
+  INSTALL = 0x08  #: Status flag for a port that is installing
+  DEPENDS = 0x10  #: Pseudo flag to indicate dependant failed
 
-  FAILED  = 0x100  #: Status flag for port build failure
-  WORKING = 0x200  #: Status flag indicating port is working
-
-  INSTALL_FLAGS = 0x0f  #: Filter for install flags
   INSTALL_NAME = {ABSENT : "Not Installed", OLDER : "Older",
                       CURRENT : "Current", NEWER : "Newer"}
+
   #: Translation table for the install flags
-  STAGE_FLAGS = 0xf0  #: Filter for build flags
-  STAGE_NAME = {CONFIG : "Configure", FETCH : "Fetch", BUILD : "Build",
-                INSTALL : "Install"}
+  STAGE_NAME = {CONFIG : "configure", FETCH : "fetch", BUILD : "build",
+                INSTALL : "install"}
   #: Translation table for the build flags
 
-  _log = getLogger("pypkg.ports.Port")
+  _log = getLogger("pypkg.port.Port")
 
   def __init__(self, origin):
     """
@@ -104,25 +101,23 @@ class Port(object):
        @type origin: C{str}
     """
     self._origin = origin  #: The origin of the port
-    self._status = port_status(origin)  #: The status of the port
+    self._install_status = port_status(origin) #: The install status of the port
+    self._stage_status = 0  #: The (build) stage progress of the port
     self._attr_map = {}  #: The ports attributes
+    self._working = False  #: Working flag
+    self._failed = False  #: Failed flag
 
-    if not port_filter & self._status:
-      self._attr_map = port_attr(origin)  #: The ports attributes
-      self._gen_attr()
+    if not port_filter & self._install_status:
+      self._attr_map = port_attr(origin)
+
+      def gen_method(name):
+        ''' Generator: Create a method to retrieve attributes '''
+        return lambda: self._attr_map[name]
+      for i in self._attr_map.iterkeys():
+        setattr(self, i, gen_method(i))
 
       if not self._attr_map['options']:
-        self._status |= Port.CONFIG
-
-  def _gen_attr(self):
-    """
-       Generates methods that map to the ports attributes
-    """
-    def gen_method(name):
-      ''' Generator: Create a method to retrieve attributes '''
-      return lambda: self._attr_map[name]
-    for i in self._attr_map.iterkeys():
-      setattr(self, i, gen_method(i))
+        self._stage_status = Port.CONFIG
 
   def attr(self):
     """
@@ -135,94 +130,42 @@ class Port(object):
 
   def failed(self):
     """
-       The failure status of this port.  Indicates which stage the port failed
-       at.
+       The failure status of this port.
 
-       @return: The failed port
-       @rtype: C{int}
-    """
-    if self._status & Port.FAILED:
-      return self._status & Port.STAGE_FLAGS
-    else:
-      return 0
-
-  def prepare(self, stage):
-    """
-       Prepare the port to build the given stage.  All appropriate checks are
-       done and the proceed status is returned.  If the stage can be built then
-       the appropriate flags are tagged to indicated this.
-
-       @param stage: The stage to check for
-       @type stage: C{int}
-       @return: The proceed status
+       @return: The failed stage
        @rtype: C{bool}
     """
-    from queue import build_queue, fetch_queue
-    if self._status & Port.WORKING:
-      self._log.warn("Port '%s' is already busy and trying to start stage '%s'"
-                     % (self._origin, Port.STAGE_NAME[stage]))
-      return False
-    if self._status & Port.FAILED:
-      self._log.warn("Port '%s' has failed but trying to start stage '%s'"
-                     % (self._origin, Port.STAGE_NAME[stage]))
-      return False
+    return self._failed
 
-    queues = {Port.CONFIG : [build_queue, self.config],
-              Port.FETCH  : [fetch_queue, self.fetch]}
-    pre_stage = Port.CONFIG
-
-    while pre_stage < stage:
-      if not pre_stage > self._status & Port.STAGE_FLAGS:
-        continue
-      queue, func = queues[pre_stage]
-      cond = queue.condition()
-
-      queue.put([func])
-      while not self._status & pre_stage or \
-            self._status & (pre_stage | Port.WORKING):
-        cond.wait()
-
-      if self._status & Port.FAILED:
-        self._log.warn("Port '%s' has failed but trying to start stage '%s'"
-                     % (self._origin, Port.STAGE_NAME[stage]))
-        return False
-
-    self._status |= stage | Port.WORKING
-    return True
-
-  def status(self, stage=False, install=False):
+  def install_status(self):
     """
-       Returns the status of the port.  The install status, the stage status
-       or both can be returns (default, both).
+       The install status of this port.
 
-       @param stage: Indicate if the stage status should be returned
-       @type stage: C{bool}
-       @param install: Indicate if the install status should be returned
-       @type install: C{bool}
-       @return: The ports status
+       @return: The install status
        @rtype: C{int}
     """
-    s_filter = 0
-    if stage:
-      s_filter |= Port.STAGE_FLAGS
-    if install:
-      s_filter |= Port.INSTALL_FLAGS
-    if not stage and not install:
-      s_filter |= Port.STAGE_FLAGS | Port.INSTALL_FLAGS
-    return self._status & s_filter
+    return self._install_status
+
+  def stage_status(self):
+    """
+       The (build) stage status of this port.
+
+       @return: The build status
+       @rtype: C{int}
+    """
+    stage_flag = 1
+    while stage_flag <= self._stage_status:
+      stage_flag <<= 1
+    return stage_flag >> 1
 
   def working(self):
     """
-       The working status of the port.  Indicates which stage the port is busy
-       working on, if any.
+       The working status of the port.
  
        @return: The build status
        @rtype: C{bool}
     """
-    if self._status & Port.WORKING:
-      return self._status & Port.STAGE_FLAGS
-    else:
-      return 0
+    return self._working
 
   def config(self):
     """
@@ -231,17 +174,11 @@ class Port(object):
        @return: The success status
        @rtype: C{bool}
     """
-    if not self.prepare(self.CONFIG):
+    if not self._prepare(Port.CONFIG):
       return False
 
     make = make_target(self._origin, 'config', pipe=False)
-    if make.wait() > 0:
-      self._log.error("Failed to configure port '%s'" % self._origin)
-      self._status ^= Port.FAILED | Port.WORKING
-      return False
-    else:
-      self._status ^= Port.WORKING
-      return True
+    return self._finalise(Port.CONFIG, make.wait() == 0)
 
   def fetch(self):
     """
@@ -250,16 +187,11 @@ class Port(object):
        @return: The success status
        @rtype: C{bool}
     """
-    if not self.prepare(self.FETCH):
+    if not self._prepare(Port.FETCH):
       return False
 
     make = make_target(self._origin, 'checksum')
-    if make.wait() > 0:
-      self._log.error("Port '%s' failed to fetch distfiles" % self._origin)
-      self._status ^= Port.FAILED | Port.WORKING
-    else:
-      self._status ^= Port.WORKING
-      return True
+    return self._finalise(Port.FETCH, make.wait() == 0)
 
   def build(self):
     """
@@ -269,16 +201,11 @@ class Port(object):
         @return: The success status
         @rtype: C{bool}
     """
-    if not self.prepare(self.BUILD):
+    if not self._prepare(Port.BUILD):
       return False
 
     make = make_target(self._origin, ['extract', 'patch', 'configure', 'build'])
-    if make.wait() > 0:
-      self._log.error("Port '%s' failed to build" % self._origin)
-      self._status ^= Port.FAILED | Port.WORKING
-    else:
-      self._status ^= Port.WORKING
-      return True
+    return self._finalise(Port.BUILD, make.wait() == 0)
 
   def install(self):
     """
@@ -287,16 +214,76 @@ class Port(object):
         @return: The success status
         @rtype: C{bool}
     """
-    if not self.prepare(self.INSTALL):
+    if not self._prepare(Port.INSTALL):
       return False
 
     make = make_target(self._origin, 'install')
-    if make.wait() > 0:
-      self._log.error("Port '%s' failed to install" % self._origin)
-      self._status ^= Port.FAILED | Port.WORKING
-    else:
-      self._status ^= Port.WORKING
-      return True
+    return self._finalise(Port.INSTALL, make.wait() == 0)
+
+  def _prepare(self, stage):
+    """
+       Prepare the port to build the given stage.  All appropriate checks are
+       done and the proceed status is returned.  If the stage can be built then
+       the appropriate flags are tagged to indicated this.
+
+       @param stage: The stage for which to prepare
+       @type stage: C{int}
+       @return: The proceed status
+       @rtype: C{bool}
+    """
+    from queue import build_queue, fetch_queue
+    if self._working:
+      self._log.warn("Port '%s' is already busy and trying to start stage '%s'"
+                     % (self._origin, Port.STAGE_NAME[stage]))
+      return False
+    if self._failed:
+      self._log.warn("Port '%s' has failed but trying to start stage '%s'"
+                     % (self._origin, Port.STAGE_NAME[stage]))
+      return False
+
+    queues = {Port.CONFIG : [build_queue, self.config],
+              Port.FETCH  : [fetch_queue, self.fetch]}
+    pre_stage = self.stage_status() << 1
+    if pre_stage == 0:
+      pre_stage = 1
+
+    while pre_stage < stage:
+      queue, func = queues[pre_stage]
+      cond = queue.condition()
+
+      queue.put([func])
+      with cond:
+        while not ((self._stage_status & pre_stage) and not self._working):
+          cond.wait()
+
+      if self._failed:
+        self._log.warn("Port '%s' has failed but trying to start stage '%s'"
+                     % (self._origin, Port.STAGE_NAME[stage]))
+        return False
+      pre_stage <<= 1
+
+    self._stage_status |= stage
+    self._working = True
+    return True
+
+  def _finalise(self, stage, status):
+    """
+       Finalise the port.  All appropriate flags are set given the status of
+       this stage.
+
+       @param stage: The stage for which to finalise
+       @type stage: C{int}
+       @param status: The status of this stage
+       @type status: C{bool}
+       @return: The status
+       @rtype: C{bool}
+    """
+    self._working = False
+    self._failed = not status
+    if self._failed:
+      self._log.error("Port '%s' has failed to complete stage '%s'"
+                      % (self._origin, Port.STAGE_NAME[stage]))
+    return status
 
 class PortCache(dict):
   """
@@ -304,7 +291,7 @@ class PortCache(dict):
      (note: this is an inflight cache)
   """
 
-  _log = getLogger('pypkg.ports.cache')  #: Logger for this cache
+  _log = getLogger('pypkg.port.cache')  #: Logger for this cache
 
   def __init__(self):
     """

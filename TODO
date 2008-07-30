@@ -10,13 +10,17 @@ Future release:
  - Check spelling for all documentation
  - Define working standards for logging
  - Increase level of logging
+ - Add all assertions
  - make:
    - Does make_target need env?
  - pypkg:
    - Add -n option (only display commands, don't execute anything)
    - Add -j option (fine tune concurrency)
+   - Add support for DESTDIR= and PREFIX=
  - Port:
    - Add distfiles checking (to optimise fetching)
+   - Add support for DESTDIR= and PREFIX= (esp. with depends)
+   - Allow switching for depends resolution (from complex to simple...)
    - Add caching for port information (with refreshing checks)
    - Handles ports that do not exist
    - Allow information collection from alternative sources
@@ -31,12 +35,15 @@ Future release:
      - FORBIDDEN, BROKEN and IGNORE
      - ONLY_FOR_ARCHS and NOT_FOR_ARCHS
      - DEPRECIATION...
+     - NO_BUILD option (and implement)
      - etc
    - Check all attributes are correctly formatted:
      - Port categories
      - Naming scheme
    - config:
      - Check for caching of options (and add option to force config)
+   - Handlers:
+     - Provide output stream (as work in progress)
  - WorkerQueue:
     - Handle worker thread crashing
 
@@ -47,9 +54,9 @@ Future release:
    + Create handlers for various make targets:
      * config
      + fetch
-     - build
-     - install
-   - Refracture cleanup code for stages
+     + build
+     + install
+   * Refracture cleanup code for stages
  - pypkg:
    - Add ability to update/install ports (basic)
    - Allow environment variables to be settable (like ports_dir)
