@@ -28,6 +28,11 @@ Future release:
    - Add logging of port targets
    - Check need for status
    - Move prepare to a private method?
+   - Offline cache of ports data
+     - Handle changes in port config
+     - Handle changes in port
+       - date stamps
+       - included Makefiles
    - Attributes:
      - Check for a need of PATCHFILES
      - ALWAYS_KEEP_DISTFILES
@@ -40,22 +45,31 @@ Future release:
    - Check all attributes are correctly formatted:
      - Port categories
      - Naming scheme
-   - config:
-     - Check for caching of options (and add option to force config)
    - Handlers:
      - Provide output stream (as work in progress)
+     - config:
+       - Check for caching of options
+       - Allow forcing of config options
+       - Only reget attr if options have changed
  - WorkerQueue:
     - Handle worker thread crashing
 
 0.0.2:
- - Port:
+ + Port:
    * Complete attribute tables and fixes
-   + Implement proper dependant handling (mimic what ports does)
-   + Create handlers for various make targets:
+   - Proper dependant handling (mimic what ports does)
+     - Create class for depends
+     - Late allocation (with a check that port is configged)
+   + Create handlers for various make targets (stages):
      * config
+       * Reget attr after configging
      + fetch
      + build
      + install
+       - Notify all dependants of our success
+   * Refracture startup code for stages
+     * All previous stages build (without failure)
+     - Handle stage depends
    * Refracture cleanup code for stages
  - pypkg:
    - Add ability to update/install ports (basic)
@@ -77,7 +91,7 @@ Future release:
  * Add queueing logic
    * Filter multiple items (prevent duplicates?)
    * Handle different queue items (build, info)
- * Add a Port's cache
+ * Add a Port's cache (memory)
  * Port:
    * Add generic method for getting arbitrary items of information
    * Add port status

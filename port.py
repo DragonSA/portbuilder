@@ -178,7 +178,12 @@ class Port(object):
       return False
 
     make = make_target(self._origin, 'config', pipe=False)
-    return self._finalise(Port.CONFIG, make.wait() == 0)
+    status = make.wait() == 0
+
+    if status:
+      self._attr_map = port_attr(self._origin)
+
+    return self._finalise(Port.CONFIG, status)
 
   def fetch(self):
     """
@@ -444,12 +449,14 @@ def port_status(origin):
   else: #info == '=' or info == '?' or info =='*'
     return Port.CURRENT
 
-def port_attr(origin):
+def port_attr(origin, change=False):
   """
      Retrieves the attributes for a given port
 
      @param origin: The port identifier
      @type origin: C{str}
+     @param change: Indicates if the attributes have changed
+     @type change: C{bool}
      @return: A dictionary of attributes
      @rtype: C{\{str:str|(str)|\}}
   """
