@@ -58,13 +58,234 @@ ports_attr["depends"].append(lambda x: ([x.remove(i) for i in x
 ports_attr["depends"].append(lambda x: [i for i in x if not ports.add(i)])
 ports_attr["distfiles"].append(lambda x: [i.split(':', 1)[0] for i in x])
 
-strip_depends = lambda x: [i.split(':', 1)[1][len(ports_dir):] for i in x]
+strip_depends = lambda x: [(i.split(':', 1)[0],
+                            i.split(':', 1)[1][len(ports_dir):]) for i in x]
 ports_attr["depend_build"].append(strip_depends)
 ports_attr["depend_extract"].append(strip_depends)
 ports_attr["depend_fetch"].append(strip_depends)
 ports_attr["depend_lib"].append(strip_depends)
 ports_attr["depend_run"].append(strip_depends)
 ports_attr["depend_patch"].append(strip_depends)
+
+class PortDepend(object):
+  """
+     The PortDepend class.  This class handles tracking the dependants
+     and dependancies of a Port
+  """
+
+  # The type of dependancies
+  BUILD   = 0  #: Build dependants
+  EXTRACT = 1  #: Extract dependants
+  FETCH   = 2  #: Fetch dependants
+  LIB     = 3  #: Library dependants
+  RUN     = 4  #: Run dependants
+  PATCH   = 5  #: Patch dependants
+
+  # The dependancy status
+  FAILURE    = -1  #  The port failed and cannot resolve the dependancy
+  UNRESOLV   = 0   #: Either port is not installed or completely out of date
+  PARTRESOLV = 1   #: Partly resolved, some dependancies not happy
+  RESOLV     = 2   #: Dependancy resolved
+
+  _log = getLogger("pypkg.port.PortDepend")
+
+  def __init__(self, port):
+    """
+       Initialise the databases of dependancies
+
+       @param port: The port this is a dependant handler for
+       @type port: Port
+    """
+    self._count = 0  # The count of outstanding dependancies
+    self._dependancies = [[], [], [], [], [], []]  # All dependancies
+    self._dependants   = [[], [], [], [], [], []]  # All dependants
+    self._port = port  # The port whom we handle
+    if port.installed_status > Port.ABSENT:
+      self._status = PortDepend.RESOLV
+    else:
+      self._status = PortDepend.UNRESOLV
+
+  def add_dependant(self, field, depend, typ):
+    """
+       Add a dependant to our list
+
+       @param field: The field data for the dependancy
+       @type field: C{str}
+       @param depend: The dependant
+       @type depend: C{PortDepend}
+       @param typ: The type of dependancy
+       @type typ: C{int}
+    """
+    if self._status == PortDepend.RESOLV:
+      if not self._update((field, depend), typ):
+        self._status = PortDepend.UNRESOLV
+        self._notify_all()
+
+    self._dependants[typ].append((field, depend))
+
+  def add_dependancy(self, field, port, typ):
+    """
+       Add a dependancy to our list
+
+       @param field: The field data for the dependancy
+       @type field: C{str}
+       @param port: The dependant
+       @type port: C{str}
+       @param typ: The type of dependancy
+       @type typ: C{int}
+    """
+    if port in self._dependancies[typ]:
+      self._log.warn("Multiple dependancies on port '%s' from port '%s'"
+                     % (port, self._port.attr('name')))
+    elif not ports.has_key(port):
+      self._log.error("Port '%s' has a stale dependancy on port '%s'"
+                      % (self._port.attr('name'), port))
+    else:
+      depends = ports[port].depends()
+      self._dependancies[typ].append(depends)
+      depends.add_dependant(field, self, typ)
+
+      if depends.status() != PortDepend.RESOLV:
+        self._count += 1
+      if depends.status() == PortDepend.FAILURE:
+        if self._status != PortDepend.FAILURE:
+          self._status = PortDepend.FAILURE
+          self._notify_all()
+
+  def _check(self, depends):
+    """
+       Check if a list of dependancies have been resolved
+
+       @param depends: List of dependancies
+       @type depends: C{int} or C{(int)}
+    """
+    if type(depends) == int:
+      depends = [depends]
+
+    for i in depends:
+      for j in self._dependancies[i]:
+        if j.status() != PortDepend.RESOLV:
+          return PortDepend.UNRESOLV
+    return PortDepend.PARTRESOLV
+
+  def check(self, stage):
+    """
+       Check the dependancy status for a given stage
+
+       @param stage: The stage to check for
+       @type stage: C{int}
+       @return: The dependancy status
+       @rtype: C{int}
+    """
+    if self._count == 0 or stage == Port.CONFIG:
+      return PortDepend.RESOLV
+    elif stage == Port.FETCH:
+      return self._check(PortDepend.FETCH)
+    elif stage == Port.BUILD:
+      return self._check((PortDepend.EXTRACT, PortDepend.PATCH,
+                          PortDepend.BUILD,   PortDepend.LIB))
+    elif stage == Port.INSTALL:
+      return self._check((PortDepend.LIB, PortDepend.RUN))
+    else:
+      self._log.error('Unknown stage specified')
+      return PortDepend.UNRESOLV
+
+  def port(self):
+    """
+       Return the port this is a dependant handle for
+
+       @return: The port
+       @rtype: C{Port}
+    """
+    return self._port
+
+  def update(self, depend):
+    """
+       Called when a dependancy has changes status
+
+       @param depend: The dependancies dependant handler
+       @type depend: C{PortDepend}
+    """
+    if depend.status() == PortDepend.FAILURE:
+      self._status = PortDepend.FAILURE
+    elif depend.status() == PortDepend.RESOLV:
+      self._count -= 1
+    else: # depend.status() == PortDepend.UNRESOLV
+      self._count += 1
+
+  def status(self):
+    """
+       Returns the status of this port
+
+       @return: The status
+       @rtype: C{int}
+    """
+    return self._status
+
+  def status_changed(self):
+    """
+       Indicates that our port's status has changed, this may mean either we
+       now satisfy our dependants or not
+    """
+    if self._port.failed():
+      status = PortDepend.FAILURE
+    elif self._port.installed_status() > Port.ABSENT:
+      status = PortDepend.RESOLV
+      if not self._verify():
+        status = PortDepend.UNRESOLV
+      else:
+        self._count = 0
+    else:
+      status = PortDepend.UNRESOLV
+
+    if status != self._status:
+      self._status = status
+      self._notify_all()
+
+  def _notify_all(self):
+    """
+       Notify all dependants that we have changed status
+    """
+    for i in self._dependants:
+      for j in i:
+        j[1].update(self)
+
+  def _update(self, data, typ):
+    """
+       Check if a dependancy has been resolved and adjust our status
+
+       @param data: The field data and the dependant handler
+       @type data: C{(str, PortDepend)}
+       @param typ: The type of dependancy
+       @type typ: C{int}
+    """
+    field, depend = data
+    if typ == PortDepend.BUILD:
+      pass
+    elif typ == PortDepend.EXTRACT:
+      pass
+    elif typ == PortDepend.FETCH:
+      pass
+    elif typ == PortDepend.LIB:
+      pass
+    elif typ == PortDepend.RUN:
+      pass
+    elif typ == PortDepend.PATCH:
+      pass
+
+    if self._port.installed_status == Port.ABSENT:
+      return False
+    else:
+      return True
+
+  def _verify(self):
+    """
+       Check that we actually satisfy all dependants
+    """
+    for i in range(PortDepend.PATCH):
+      for j in self._dependants[i]:
+        if not self._update(j, i):
+          return False
 
 class Port(object):
   """
@@ -106,27 +327,29 @@ class Port(object):
     self._attr_map = {}  #: The ports attributes
     self._working = False  #: Working flag
     self._failed = False  #: Failed flag
+    self._depends = None  #: The dependant handlers for various stages
 
     if not port_filter & self._install_status:
       self._attr_map = port_attr(origin)
 
-      def gen_method(name):
-        ''' Generator: Create a method to retrieve attributes '''
-        return lambda: self._attr_map[name]
-      for i in self._attr_map.iterkeys():
-        setattr(self, i, gen_method(i))
+      #def gen_method(name):
+      #  ''' Generator: Create a method to retrieve attributes '''
+      #  return lambda: self._attr_map[name]
+      #for i in self._attr_map.iterkeys():
+      #  setattr(self, i, gen_method(i))
 
       if not self._attr_map['options']:
         self._stage_status = Port.CONFIG
 
-  def attr(self):
+  def attr(self, attr):
     """
        Returns the ports attributes, such as version, categories, etc
 
+       # TODO
        @return: The attributes
        @rtype: C{\{str:str|(str)|\}}
     """
-    return self._attr_map
+    return self._attr_map[attr]
 
   def failed(self):
     """
@@ -161,11 +384,28 @@ class Port(object):
   def working(self):
     """
        The working status of the port.
- 
+
        @return: The build status
        @rtype: C{bool}
     """
     return self._working
+
+  def depends(self):
+    """
+       Returns the dependant handler for this port
+
+       @return: The dependant handler
+       @rtype: C{PortDepend}
+    """
+    if not self._depends:
+      self._depends = PortDepend()
+      depends = ['depends_build', 'depends_extract', 'depends_fetch',
+                 'depends_lib',   'depends_run',     'depends_patch']
+      for i in range(len(depends)):
+        for j in self._attr_map[depends[i]]:
+          self._depends.add_dependancy(j, i)
+
+    return self._depends
 
   def config(self):
     """
@@ -223,7 +463,11 @@ class Port(object):
       return False
 
     make = make_target(self._origin, 'install')
-    return self._finalise(Port.INSTALL, make.wait() == 0)
+    status = Port.INSTALL, make.wait() == 0
+    if status:
+      self._install_status = Port.CURRENT
+      self._depends.status_changed()
+    return self._finalise(Port.INSTALL, status)
 
   def _prepare(self, stage):
     """
@@ -238,11 +482,11 @@ class Port(object):
     """
     from queue import build_queue, fetch_queue
     if self._working:
-      self._log.warn("Port '%s' is already busy and trying to start stage '%s'"
+      self._log.warn("Port '%s' already busy while trying to start stage '%s'"
                      % (self._origin, Port.STAGE_NAME[stage]))
       return False
     if self._failed:
-      self._log.warn("Port '%s' has failed but trying to start stage '%s'"
+      self._log.warn("Port '%s' has failed but tryed to start stage '%s'"
                      % (self._origin, Port.STAGE_NAME[stage]))
       return False
 
@@ -268,7 +512,15 @@ class Port(object):
       pre_stage <<= 1
 
     self._stage_status |= stage
-    self._working = True
+
+    status = self._depends.check(stage)
+    if status == PortDepend.FAILURE:
+      self._failed = True
+      self._depends.status_changed()
+    elif status == PortDepend.UNRESOLV:
+      # TODO
+      self._working = True
+
     return True
 
   def _finalise(self, stage, status):
@@ -286,9 +538,11 @@ class Port(object):
     self._working = False
     self._failed = not status
     if self._failed:
+      self._depends.status_changed()
       self._log.error("Port '%s' has failed to complete stage '%s'"
                       % (self._origin, Port.STAGE_NAME[stage]))
     return status
+
 
 class PortCache(dict):
   """
@@ -455,7 +709,7 @@ def port_attr(origin, change=False):
 
      @param origin: The port identifier
      @type origin: C{str}
-     @param change: Indicates if the attributes have changed
+     @param change: Indicates if the attributes may have changed
      @type change: C{bool}
      @return: A dictionary of attributes
      @rtype: C{\{str:str|(str)|\}}

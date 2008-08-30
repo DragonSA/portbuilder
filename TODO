@@ -28,6 +28,7 @@ Future release:
    - Add logging of port targets
    - Check need for status
    - Move prepare to a private method?
+   - Move from flags to linear for stages
    - Offline cache of ports data
      - Handle changes in port config
      - Handle changes in port
@@ -51,8 +52,20 @@ Future release:
        - Check for caching of options
        - Allow forcing of config options
        - Only reget attr if options have changed
+     - install:
+       - Update port install status properly
+     - _prepare:
+       - Add all dependants onto the queue and wait for them to complete
+ - PortDepend:
+    - Implement type specific checking (bin vs lib)
+    - Add callback feature to Port (when resolved status has changed)
+    - Handle stale dependancies (with a dummy PortDepend)
+    - Handle a port having failed and still satisfy its dependants
+    - Add a handler to change our status (and notify all that is has)
+    - Add a concurrent implementation (and probably a cache of sorts)
  - WorkerQueue:
     - Handle worker thread crashing
+    - Allow a thread to indicate it has stalled (and create more to compensate)
 
 0.0.2:
  + Port:
@@ -71,6 +84,7 @@ Future release:
      * All previous stages build (without failure)
      - Handle stage depends
    * Refracture cleanup code for stages
+   - Make thread safe
  - pypkg:
    - Add ability to update/install ports (basic)
    - Allow environment variables to be settable (like ports_dir)

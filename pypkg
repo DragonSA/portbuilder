@@ -18,7 +18,8 @@ Name:     %s
 Version:  %s
 Revision: %s
 Comment:  ``%s''
-""" % (name, port.name(), port.version(), port.revision(), port.comment())
+""" % (name, port.attr('name'), port.attr('version'),
+       port.attr('revision'), port.attr('comment'))
 
 import make
 make.pre_target = ['echo']
