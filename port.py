@@ -100,7 +100,7 @@ class PortDepend(object):
     self._dependancies = [[], [], [], [], [], []]  # All dependancies
     self._dependants   = [[], [], [], [], [], []]  # All dependants
     self._port = port  # The port whom we handle
-    if port.installed_status > Port.ABSENT:
+    if port.install_status() > Port.ABSENT:
       self._status = PortDepend.RESOLV
     else:
       self._status = PortDepend.UNRESOLV
@@ -151,22 +151,6 @@ class PortDepend(object):
         if self._status != PortDepend.FAILURE:
           self._status = PortDepend.FAILURE
           self._notify_all()
-
-  def _check(self, depends):
-    """
-       Check if a list of dependancies have been resolved
-
-       @param depends: List of dependancies
-       @type depends: C{int} or C{(int)}
-    """
-    if type(depends) == int:
-      depends = [depends]
-
-    for i in depends:
-      for j in self._dependancies[i]:
-        if j.status() != PortDepend.RESOLV:
-          return PortDepend.UNRESOLV
-    return PortDepend.PARTRESOLV
 
   def check(self, stage):
     """
@@ -229,7 +213,7 @@ class PortDepend(object):
     """
     if self._port.failed():
       status = PortDepend.FAILURE
-    elif self._port.installed_status() > Port.ABSENT:
+    elif self._port.install_status() > Port.ABSENT:
       status = PortDepend.RESOLV
       if not self._verify():
         status = PortDepend.UNRESOLV
@@ -241,6 +225,24 @@ class PortDepend(object):
     if status != self._status:
       self._status = status
       self._notify_all()
+ 
+  def _check(self, depends):
+    """
+       Check if a list of dependancies have been resolved
+
+       @param depends: List of dependancies
+       @type depends: C{int} or C{(int)}
+    """
+    if type(depends) == int:
+      depends = [depends]
+
+    for i in depends:
+      for j in self._dependancies[i]:
+        if j.status() != PortDepend.RESOLV:
+          return PortDepend.UNRESOLV
+    return PortDepend.PARTRESOLV
+
+
 
   def _notify_all(self):
     """
@@ -273,7 +275,7 @@ class PortDepend(object):
     elif typ == PortDepend.PATCH:
       pass
 
-    if self._port.installed_status == Port.ABSENT:
+    if self._port.install_status() == Port.ABSENT:
       return False
     else:
       return True
@@ -398,12 +400,12 @@ class Port(object):
        @rtype: C{PortDepend}
     """
     if not self._depends:
-      self._depends = PortDepend()
-      depends = ['depends_build', 'depends_extract', 'depends_fetch',
-                 'depends_lib',   'depends_run',     'depends_patch']
+      self._depends = PortDepend(self)
+      depends = ['depend_build', 'depend_extract', 'depend_fetch',
+                 'depend_lib',   'depend_run',     'depend_patch']
       for i in range(len(depends)):
         for j in self._attr_map[depends[i]]:
-          self._depends.add_dependancy(j, i)
+          self._depends.add_dependancy(j[0], j[1], i)
 
     return self._depends
 
@@ -513,7 +515,7 @@ class Port(object):
 
     self._stage_status |= stage
 
-    status = self._depends.check(stage)
+    status = self.depends().check(stage)
     if status == PortDepend.FAILURE:
       self._failed = True
       self._depends.status_changed()

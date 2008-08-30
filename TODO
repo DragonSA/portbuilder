@@ -70,19 +70,19 @@ Future release:
 0.0.2:
  + Port:
    * Complete attribute tables and fixes
-   - Proper dependant handling (mimic what ports does)
-     - Create class for depends
-     - Late allocation (with a check that port is configged)
+   + Proper dependant handling (mimic what ports does)
+     * Create class for depends
+     * Late allocation (with a check that port is configged)
    + Create handlers for various make targets (stages):
      * config
        * Reget attr after configging
      + fetch
      + build
      + install
-       - Notify all dependants of our success
+       * Notify all dependants of our success
    * Refracture startup code for stages
      * All previous stages build (without failure)
-     - Handle stage depends
+     * Handle stage depends
    * Refracture cleanup code for stages
    - Make thread safe
  - pypkg:

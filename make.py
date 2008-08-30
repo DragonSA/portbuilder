@@ -3,6 +3,7 @@ The Make module.  This module provides an interface to `make'.
 """
 
 env = {}  #: The environment flags to pass to make, aka -D...
+pre_target = []  #: Prepend to command
 
 def make_target(origin, targets=None, args=[], pipe=True):
   """
@@ -31,7 +32,7 @@ def make_target(origin, targets=None, args=[], pipe=True):
     targets = [targets]
   elif targets == None:
     targets = []
-  make = Popen(['make', '-C', ports_dir + origin] + targets + args,
+  make = Popen(pre_target + ['make', '-C', ports_dir + origin] + targets + args,
                stdout=stdout, stderr=stderr)
 
   return make
