@@ -204,7 +204,7 @@ class WorkerQueue(Queue):
 
       # Signal that a job has finished
       with self._lock:
-        self._pool[jid] = -1
+        self._pool[thread] = -1
         self._lock.notifyAll()
 
 config_queue = WorkerQueue("config", 1)  #: Queue for configuring port options
