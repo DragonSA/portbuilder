@@ -13,7 +13,7 @@ log = getLogger('pypkg.ports')
 ports = {}  #: A cache of ports available with auto creation features
 ports_dir = getenv("PORTSDIR", "/usr/ports/")  #: The location of the ports tree
 ports_dir = env.get("PORTSDIR", ports_dir)
-port_filter = 0  #: The ports filter, if ports status matches then not 'loaded'
+port_filter = 3  #: The ports filter, if ports status matches then not 'loaded'
 
 ports_attr = {
 # Port naming
@@ -55,7 +55,6 @@ ports_attr = {
 ports_attr["depends"].append(lambda x: [i[len(ports_dir):] for i in x])
 ports_attr["depends"].append(lambda x: ([x.remove(i) for i in x
                                          if x.count(i) > 1], x)[1])
-ports_attr["depends"].append(lambda x: [i for i in x if not ports.add(i)])
 ports_attr["distfiles"].append(lambda x: [i.split(':', 1)[0] for i in x])
 
 strip_depends = lambda x: [(i.split(':', 1)[0],
@@ -292,17 +291,17 @@ class Port(object):
      The class that contains all information about a given port, such as status,
      dependancies and dependants
   """
+  from threading import Condition
 
-  ABSENT  = 0x01  #: Status flag for a port that is not installed
-  OLDER   = 0x02  #: Status flag for a port that is old
-  CURRENT = 0x04  #: Status flag for a port that is current
-  NEWER   = 0x08  #: Status flag for a port that is newer
+  ABSENT  = 0  #: Status flag for a port that is not installed
+  OLDER   = 1  #: Status flag for a port that is old
+  CURRENT = 2  #: Status flag for a port that is current
+  NEWER   = 3  #: Status flag for a port that is newer
 
-  CONFIG  = 0x01  #: Status flag for a port that is configuring
-  FETCH   = 0x02  #: Status flag for a port that is fetching sources
-  BUILD   = 0x04  #: Status flag for a port that is building
-  INSTALL = 0x08  #: Status flag for a port that is installing
-  DEPENDS = 0x10  #: Pseudo flag to indicate dependant failed
+  CONFIG  = 1  #: Status flag for a port that is configuring
+  FETCH   = 2  #: Status flag for a port that is fetching sources
+  BUILD   = 3  #: Status flag for a port that is building
+  INSTALL = 4  #: Status flag for a port that is installing
 
   INSTALL_NAME = {ABSENT : "Not Installed", OLDER : "Older",
                       CURRENT : "Current", NEWER : "Newer"}
@@ -313,6 +312,7 @@ class Port(object):
   #: Translation table for the build flags
 
   _log = getLogger("pypkg.port.Port")
+  _lock = Condition()  #: The notifier and locker for all ports
 
   def __init__(self, origin):
     """
@@ -323,13 +323,13 @@ class Port(object):
     """
     self._origin = origin  #: The origin of the port
     self._install_status = port_status(origin) #: The install status of the port
-    self._stage_status = 0  #: The (build) stage progress of the port
+    self._stage = 0  #: The (build) stage progress of the port
     self._attr_map = {}  #: The ports attributes
     self._working = False  #: Working flag
     self._failed = False  #: Failed flag
     self._depends = None  #: The dependant handlers for various stages
 
-    if not port_filter & self._install_status:
+    if port_filter >= self._install_status:
       self._attr_map = port_attr(origin)
 
       #def gen_method(name):
@@ -339,7 +339,9 @@ class Port(object):
       #  setattr(self, i, gen_method(i))
 
       if not self._attr_map['options']:
-        self._stage_status = Port.CONFIG
+        self._stage = Port.CONFIG
+        for i in self._attr_map['depends']:
+          ports.add(i)
 
   def attr(self, attr):
     """
@@ -369,17 +371,14 @@ class Port(object):
     """
     return self._install_status
 
-  def stage_status(self):
+  def stage(self):
     """
-       The (build) stage status of this port.
+       The currently (building or completed) stage
 
        @return: The build status
        @rtype: C{int}
     """
-    stage_flag = 1
-    while stage_flag <= self._stage_status:
-      stage_flag <<= 1
-    return stage_flag >> 1
+    return self._stage
 
   def working(self):
     """
@@ -398,15 +397,19 @@ class Port(object):
        @rtype: C{DependHandler}
     """
     if not self._depends:
-      if not self._stage_status & Port.CONFIG:
-        # TODO: May only proceed if we are configured
-        pass
-      self._depends = DependHandler(self)
-      depends = ['depend_build', 'depend_extract', 'depend_fetch',
+      with self._lock:
+        if not self._depends:
+          if self._stage < Port.CONFIG:
+            # TODO: May only proceed if we are configured
+            pass
+
+        self._depends = DependHandler(self)
+
+        depends = ['depend_build', 'depend_extract', 'depend_fetch',
                  'depend_lib',   'depend_run',     'depend_patch']
-      for i in range(len(depends)):
-        for j in self._attr_map[depends[i]]:
-          self._depends.add_dependancy(j[0], j[1], i)
+        for i in range(len(depends)):
+          for j in self._attr_map[depends[i]]:
+            self._depends.add_dependancy(j[0], j[1], i)
 
     return self._depends
 
@@ -417,14 +420,18 @@ class Port(object):
        @return: The success status
        @rtype: C{bool}
     """
-    if not self._prepare(Port.CONFIG):
-      return False
+    proceed, status = self._prepare(Port.CONFIG)
+    if not proceed:
+      return status
 
     make = make_target(self._origin, 'config', pipe=False)
     status = make.wait() == 0
 
     if status:
       self._attr_map = port_attr(self._origin)
+      for i in self._attr_map['depends']:
+        ports.add(i)
+      self.depends()
 
     return self._finalise(Port.CONFIG, status)
 
@@ -435,8 +442,9 @@ class Port(object):
        @return: The success status
        @rtype: C{bool}
     """
-    if not self._prepare(Port.FETCH):
-      return False
+    proceed, status = self._prepare(Port.FETCH)
+    if not proceed:
+      return status
 
     make = make_target(self._origin, 'checksum')
     return self._finalise(Port.FETCH, make.wait() == 0)
@@ -449,8 +457,9 @@ class Port(object):
         @return: The success status
         @rtype: C{bool}
     """
-    if not self._prepare(Port.BUILD):
-      return False
+    proceed, status = self._prepare(Port.BUILD)
+    if not proceed:
+      return status
 
     make = make_target(self._origin, ['extract', 'patch', 'configure', 'build'])
     return self._finalise(Port.BUILD, make.wait() == 0)
@@ -462,8 +471,9 @@ class Port(object):
         @return: The success status
         @rtype: C{bool}
     """
-    if not self._prepare(Port.INSTALL):
-      return False
+    proceed, status = self._prepare(Port.INSTALL)
+    if not proceed:
+      return status
 
     make = make_target(self._origin, 'install')
     status = Port.INSTALL, make.wait() == 0
@@ -480,51 +490,49 @@ class Port(object):
 
        @param stage: The stage for which to prepare
        @type stage: C{int}
-       @return: The proceed status
+       @return: The proceed status (and succes status)
        @rtype: C{bool}
     """
     from queue import build_queue, fetch_queue
-    if self._working:
-      self._log.warn("Port '%s' already busy while trying to start stage '%s'"
-                     % (self._origin, Port.STAGE_NAME[stage]))
-      return False
-    if self._failed:
-      self._log.warn("Port '%s' has failed but tryed to start stage '%s'"
-                     % (self._origin, Port.STAGE_NAME[stage]))
-      return False
+    with self._lock:
+      if self._stage > stage:
+        return False, True
 
-    queues = {Port.CONFIG : [build_queue, self.config],
-              Port.FETCH  : [fetch_queue, self.fetch]}
-    pre_stage = self.stage_status() << 1
-    if pre_stage == 0:
-      pre_stage = 1
-
-    while pre_stage < stage:
-      queue, func = queues[pre_stage]
-      cond = queue.condition()
-
-      queue.put([func])
-      with cond:
-        while not ((self._stage_status & pre_stage) and not self._working):
-          cond.wait()
+      while self._working:
+        self._lock.wait()
+        if not self._working and not self._failed and \
+           self._stage >= stage:
+          return False, True
 
       if self._failed:
-        self._log.warn("Port '%s' has failed but trying to start stage '%s'"
-                     % (self._origin, Port.STAGE_NAME[stage]))
-        return False
-      pre_stage <<= 1
+        self._log.warn("Port '%s' has failed but tryed to start stage '%s'"
+                       % (self._origin, Port.STAGE_NAME[stage]))
+        return False, False
 
-    self._stage_status |= stage
+      if self._stage == stage:
+        return False, True
 
-    status = self.depends().check(stage)
-    if status == DependHandler.FAILURE:
-      self._failed = True
-      self._depends.status_changed()
-    elif status == DependHandler.UNRESOLV:
-      # TODO
+      queues = {Port.CONFIG : [build_queue, self.config],
+                Port.FETCH  : [fetch_queue, self.fetch]}
+
+      if self._stage < stage - 1 and stage - 1 > 0:
+        # TODO: Use TargetBuilder
+        queue, func = queues[stage - 1]
+        self._lock.release()
+        queue.put_wait((func))
+        self._lock.acquire()
+        return self._prepare(stage)
+
+      self._stage = stage
+
+      status = self.depends().check(stage)
+      if status == DependHandler.FAILURE:
+        self._failed = True
+        self._depends.status_changed()
+
       self._working = True
 
-    return True
+      return True, True
 
   def _finalise(self, stage, status):
     """
@@ -538,8 +546,13 @@ class Port(object):
        @return: The status
        @rtype: C{bool}
     """
-    self._working = False
-    self._failed = not status
+    with self._lock:
+      self._working = False
+      if self._failed != (not status):
+        self._failed = not status
+        self._depends.status_changed()
+      self._lock.notifyAll()
+
     if self._failed:
       self._depends.status_changed()
       self._log.error("Port '%s' has failed to complete stage '%s'"
@@ -584,7 +597,6 @@ class PortCache(dict):
           return value
       except KeyError:
         self._add(key)
-        value = None
       else:
         if value == False:
           raise KeyError, key
@@ -615,11 +627,12 @@ class PortCache(dict):
        @rtype: C{bool}
     """
     with self._lock:
+      value = False
       try:
         if dict.__getitem__(self, key) != None:
-          return True
+          value = True
       finally:
-        return False
+        return value
 
   def _add(self, key):
     """
@@ -628,11 +641,12 @@ class PortCache(dict):
 
        @param key: The port for queueing
        @type key: C{str}
+       @return: The job ID of the queued port
+       @rtype: C{int}
     """
     from queue import ports_queue
     if not self.has_key(key):
-      dict.__setitem__(self, key, None)
-      ports_queue.put_nowait((self.get, [key]))
+      return ports_queue.put_nowait((self._get, [key]))
 
   def add(self, key):
     """
@@ -641,55 +655,62 @@ class PortCache(dict):
 
        @param key: The port for queueing
        @type key: C{str}
+       @return: The job ID of the queued port
+       @rtype: C{int}
     """
     with self._lock:
-      self._add(key)
+      return self._add(key)
 
   def get(self, k):
     """
-       Get a port.  If the port is not in the cache then created it (whereas
-       __getitem__ would queue the port to be constructed).  Use this if the
-       port requested is a once off request
+       Get a port from the database.
 
-       @param k: The port to get
+       @param k: The ports origin
        @type k: C{str}
+       @param d: The default argument
+       @return: The port or None
+       @rtype: C{Port}
+    """
+    try:
+      return self[k]
+    finally:
+      return None
+
+  def _get(self, key):
+    """
+       Create a port and add it to the database
+
+       @param key: The port to get
+       @type key: C{str}
        @return: The port
        @rtype: C{Port}
     """
+    from queue import ports_queue
     with self._lock:
       try:
-        value = dict.__getitem__(self, k)
+        value = dict.__getitem__(self, key)
         if value:
           return value
       except KeyError:
-        dict.__setitem__(self, k, None)
+        value = True
+        dict.__setitem__(self, key, None)
       else:
         if value == False:
-          raise KeyError, k
+          raise KeyError, key
+    if value == None:
+      ports_queue.wait(lambda: self._has_key(key))
+      return self[key]
 
     try:
       # Time consuming task, done outside lock
-      port = Port(k)
+      port = Port(key)
     except BaseException:
-      with self._lock:
-        value = dict.__getitem__(self, k)
-        if value == None:
-          dict.__setitem__(self, k, False)
-          self._log.exception("Error while creating port '%s'" % k)
-        if value:
-          return value
-        else:
-          raise KeyError, k
+      self[key] = False
+      self._log.exception("Error while creating port '%s'" % key)
+      raise KeyError, key
     else:
-      with self._lock:
-        value = dict.__getitem__(self, k)
-        if not value:
-          dict.__setitem__(self, k, port)
-          return port
-        if value:
-          return value
-        else:
-          raise KeyError, k
+      self[key] = port
+      return port
 
 ports = PortCache()
 

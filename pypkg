@@ -29,7 +29,7 @@ import make
 make.pre_target = ['echo']
 
 for i in ports.itervalues():
-  if not i.stage_status() & Port.CONFIG:
+  if i.stage() < Port.CONFIG:
     i.config()
 
 print ports_queue.stats(), len(ports)
