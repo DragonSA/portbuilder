@@ -400,6 +400,9 @@ class Port(object):
        @rtype: C{PortDepend}
     """
     if not self._depends:
+      if not self._stage_status & Port.CONFIG:
+        # TODO: May only proceed if we are configured
+        pass
       self._depends = PortDepend(self)
       depends = ['depend_build', 'depend_extract', 'depend_fetch',
                  'depend_lib',   'depend_run',     'depend_patch']

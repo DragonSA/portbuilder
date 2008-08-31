@@ -52,42 +52,54 @@ Future release:
        - Check for caching of options
        - Allow forcing of config options
        - Only reget attr if options have changed
+     - fetch:
+       - Add proxy support and changing the fetcher (e.g. wget)
+       - Add a cache for fetching
      - install:
        - Update port install status properly
      - _prepare:
        - Add all dependants onto the queue and wait for them to complete
  - PortDepend:
-    - Implement type specific checking (bin vs lib)
+    - Implement type specific checking (bin vs lib) [mimic ports]
     - Add callback feature to Port (when resolved status has changed)
     - Handle stale dependancies (with a dummy PortDepend)
     - Handle a port having failed and still satisfy its dependants
     - Add a handler to change our status (and notify all that is has)
     - Add a concurrent implementation (and probably a cache of sorts)
+    - Allow a port to satisfy its dependants without state > Port.ABSENT or
+      having failed
+    - When checking our status, try to resolve it
+    - Make thread safe
  - WorkerQueue:
     - Handle worker thread crashing
     - Allow a thread to indicate it has stalled (and create more to compensate)
 
+0.0.3:
+ - Port:
+   - Make thread safe
+ - pypkg:
+   - Add ability to update/install ports (basic)
+   - Allow environment variables to be settable (like ports_dir)
+ - Create ordering logic for building (and resolving dependants)
+ - Create target to build INDEX
+
 0.0.2:
- + Port:
+ * Port:
    * Complete attribute tables and fixes
-   + Proper dependant handling (mimic what ports does)
+   * Proper dependant handling (mimic what ports does)
      * Create class for depends
      * Late allocation (with a check that port is configged)
-   + Create handlers for various make targets (stages):
+   * Create handlers for various make targets (stages):
      * config
        * Reget attr after configging
-     + fetch
-     + build
-     + install
+     * fetch
+     * build
+     * install
        * Notify all dependants of our success
    * Refracture startup code for stages
      * All previous stages build (without failure)
      * Handle stage depends
    * Refracture cleanup code for stages
-   - Make thread safe
- - pypkg:
-   - Add ability to update/install ports (basic)
-   - Allow environment variables to be settable (like ports_dir)
  * ports:
    * Make ports_dir settable from the env
  * WorkerQueue:
@@ -95,8 +107,6 @@ Future release:
  * make:
    * Add handler for environment variables
    * Generic handler for executing make targets
- - Create ordering logic for building (and resolving dependants)
- - Create target to build INDEX
 
 0.0.1:
  * Expand documentation for ports library

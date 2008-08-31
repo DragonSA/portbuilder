@@ -12,14 +12,18 @@ ports_queue.join()
 for name, port in ports.iteritems():
   print """
 ==============================================================================
-Origin:   %s
+Origin:      %s
 ------------------------------------------------------------------------------
-Name:     %s
-Version:  %s
-Revision: %s
-Comment:  ``%s''
+Name:        %s
+Version:     %s
+Revision:    %s
+Comment:     ``%s''
+Dependants:  %s
+Depend stat: %i
 """ % (name, port.attr('name'), port.attr('version'),
-       port.attr('revision'), port.attr('comment'))
+       port.attr('revision'), port.attr('comment'),
+       str([[i[0] for i in j] for j in port.depends()._dependants]),
+       port.depends().status())
 
 import make
 make.pre_target = ['echo']
