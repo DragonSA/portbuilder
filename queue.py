@@ -45,7 +45,8 @@ class WorkerQueue(Queue):
        @return: The worker pool size
        @rtype: C{str}
     """
-    return len(self._pool)
+    with self._lock:
+      return len(self._pool)
 
   def condition(self):
     """
@@ -55,15 +56,6 @@ class WorkerQueue(Queue):
        @rtype: C{Condition}
     """
     return self._condition
-
-  def logger(self):
-    """
-       The logger used by this queue
-
-       @return: The logger
-       @rtype: C{Logger}
-    """
-    return self._log
 
   def pool(self):
     """
@@ -111,6 +103,20 @@ class WorkerQueue(Queue):
     """
     return (len(self), self._worker_cnt, self._job_cnt)
 
+  def wait(self, func):
+    """
+       Wait until a curtain criteria has been met.  The criteria is checked
+       every time a job has been finished.
+
+       @param func: The criteria
+       @type func: C{function}
+    """
+    with self._condition:
+      while True:
+        if func() or len(self) == 0:
+          return
+        self._condition.wait()
+
   def worker(self):
     """
        The worker.  It waits for a job from the queue and then executes the
@@ -132,6 +138,8 @@ class WorkerQueue(Queue):
           cmd = self.get(False)
         except Empty:
           self._pool.remove(currentThread())
+          with self._condition:
+            self._condition.notifyAll()
           return
 
         jid = self._job_cnt

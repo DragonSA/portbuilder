@@ -68,22 +68,31 @@ Future release:
     - Add a concurrent implementation (and probably a cache of sorts)
     - Allow a port to satisfy its dependants without state > Port.ABSENT or
       having failed
-    - When checking our status, try to resolve it
     - Make thread safe
  - WorkerQueue:
     - Handle worker thread crashing
     - Allow a thread to indicate it has stalled (and create more to compensate)
 
-0.0.3 - Milestone 3 (Target Builders):
- - Port:
-   - Make thread safe
- - DependHandler:
-   * Rename to be more descriptive
+0.0.4 - Milestone 4 (Command line controller)
  - pypkg:
    - Add ability to update/install ports (basic)
    - Allow environment variables to be settable (like ports_dir)
- - Create ordering logic for building (and resolving dependants)
  - Create target to build INDEX
+
+0.0.3 - Milestone 3 (Target Builders):
+ - Port:
+   - Make thread safe
+   - _prepare:
+     * Finish queue handling
+     - Move to TargetBuilder
+     - Fix resolving previous stages
+ + DependHandler:
+   * Rename to be more descriptive
+   - Check should resolve dependancies
+ - Create ordering logic for building (and resolving dependants)
+ + WorkerQueue:
+   * Add queue putter that returns once run
+   * Remove logger (was it ever needed?)
 
 0.0.2 - Milestone 2 (Dependant Handler):
  * Port:
