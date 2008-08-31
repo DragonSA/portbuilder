@@ -138,8 +138,7 @@ class WorkerQueue(Queue):
           cmd = self.get(False)
         except Empty:
           self._pool.remove(currentThread())
-          with self._condition:
-            self._condition.notifyAll()
+          self._condition.notifyAll()
           return
 
         jid = self._job_cnt
