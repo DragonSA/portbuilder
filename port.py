@@ -242,8 +242,6 @@ class DependHandler(object):
           return DependHandler.UNRESOLV
     return DependHandler.PARTRESOLV
 
-
-
   def _notify_all(self):
     """
        Notify all dependants that we have changed status
@@ -591,19 +589,9 @@ class PortCache(dict):
         if value == False:
           raise KeyError, key
 
-      self._lock.release()
-      cond = ports_queue.condition()
-      with cond:
-        while True:
-          value = dict.__getitem__(self, key)
-          if value == False:
-            self._lock.acquire()
-            raise KeyError, key
-          elif not value:
-            cond.wait()
-          else:
-            self._lock.acquire()
-            return value
+    ports_queue.wait(lambda: self._has_key(key))
+
+    return self[key]
 
   def __setitem__(self, key, value):
     """
@@ -616,6 +604,22 @@ class PortCache(dict):
     """
     with self._lock:
       dict.__setitem__(self, key, value)
+
+  def _has_key(self, key):
+    """
+       Check if a port has been created (or known not to exist)
+
+       @param key: The ports name
+       @type key: C{str}
+       @return: The creation status
+       @rtype: C{bool}
+    """
+    with self._lock:
+      try:
+        if dict.__getitem__(self, key) != None:
+          return True
+      finally:
+        return False
 
   def _add(self, key):
     """
@@ -645,7 +649,7 @@ class PortCache(dict):
     """
        Get a port.  If the port is not in the cache then created it (whereas
        __getitem__ would queue the port to be constructed).  Use this if the
-       port requested is a once of request
+       port requested is a once off request
 
        @param k: The port to get
        @type k: C{str}
@@ -668,17 +672,24 @@ class PortCache(dict):
       port = Port(k)
     except BaseException:
       with self._lock:
-        dict.__setitem__(self, k, False)
-        self._log.exception("Error while creating port '%s'" % k)
-        raise KeyError, k
+        value = dict.__getitem__(self, k)
+        if value == None:
+          dict.__setitem__(self, k, False)
+          self._log.exception("Error while creating port '%s'" % k)
+        if value:
+          return value
+        else:
+          raise KeyError, k
     else:
       with self._lock:
         value = dict.__getitem__(self, k)
         if not value:
           dict.__setitem__(self, k, port)
-          value = port
-          self._log.info("Duplicate port '%s' detected" % k)
-        return value
+          return port
+        if value:
+          return value
+        else:
+          raise KeyError, k
 
 ports = PortCache()
 
