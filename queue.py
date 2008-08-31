@@ -26,9 +26,8 @@ class WorkerQueue(Queue):
     """
     Queue.__init__(self)
     from logging import getLogger
-    from threading import Condition, Lock
-    self._lock = Lock()  #: Global lock for this class
-    self._condition = Condition(self._lock)
+    from threading import Condition
+    self._lock = Condition()  #: The notifier and locker of this queue
     self._log = getLogger("pypkg.queue." + name)  #: Logger of this queue
     #self._name = name  #: The name of this queue
     self._workers = workers  #: The (maximum) number of workers
@@ -36,7 +35,7 @@ class WorkerQueue(Queue):
     self._worker_cnt = 0  #: The number of workers created
     self._job_cnt = 0  #: The number of jobs executed
 
-    self._pool = []  #: The pool of workers
+    self._pool = {}  #: The pool of workers
 
   def __len__(self):
     """
@@ -45,8 +44,7 @@ class WorkerQueue(Queue):
        @return: The worker pool size
        @rtype: C{str}
     """
-    with self._lock:
-      return len(self._pool)
+    return len(self._pool)
 
   def condition(self):
     """
@@ -55,7 +53,24 @@ class WorkerQueue(Queue):
        @return: The condition object
        @rtype: C{Condition}
     """
-    return self._condition
+    return self._lock
+
+  def job(self, jid):
+    """
+       Returns if the specified job has finished or not
+
+       @param jid: The job ID (as returns by put)
+       @type jid: C{int}
+       @return: If the job has finished
+       @rtype: C{bool}
+    """
+    with self._lock:
+      if jid in self._pool.itervalues():
+        return False
+      if len([i for i in self.queue if i[0] == jid]) > 0:
+        return False
+
+      return True
 
   def pool(self):
     """
@@ -87,11 +102,25 @@ class WorkerQueue(Queue):
        @type item: C{(func, (args), \{kwargs\})}
     """
     with self._lock:
-      Queue.put(self, item, block, timeout)
+      jid = self._job_cnt
+      self._job_cnt += 1
+      Queue.put(self, (jid, item), block, timeout)
       if self.qsize() > 0 and len(self._pool) < self._workers:
         from threading import Thread
-        self._pool.append(Thread(target=self.worker))
-        self._pool[-1].start()
+        thread = Thread(target=self.worker)
+        self._pool[thread] = -1
+        thread.start()
+      return jid
+
+  def put_wait(self, item):
+    """
+       Place a job onto the queue and then wait for it to be executed
+
+       @param item: The job to execute
+       @type item: C{(func, (args), \{kwargs\})}
+    """
+    jid = self.put_nowait(item)
+    self.wait(lambda: self.job(jid))
 
   def stats(self):
     """
@@ -111,11 +140,11 @@ class WorkerQueue(Queue):
        @param func: The criteria
        @type func: C{function}
     """
-    with self._condition:
+    with self._lock:
       while True:
         if func() or len(self) == 0:
           return
-        self._condition.wait()
+        self._lock.wait()
 
   def worker(self):
     """
@@ -125,25 +154,27 @@ class WorkerQueue(Queue):
     from threading import currentThread
     from Queue import Empty
 
+    thread = currentThread()
+
     with self._lock:
       wid = self._worker_cnt
       self._worker_cnt += 1
-      self._log.debug("Worker %d: Created" % wid)
+    self._log.debug("Worker %d: Created" % wid)
+
     while True:
       with self._lock:
         if self._workers < len(self._pool):
-          self._pool.remove(currentThread())
+          self._pool.pop(thread)
           return
         try:
-          cmd = self.get(False)
+          jid, cmd = self.get(False)
+          self._pool[thread] = jid
         except Empty:
-          self._pool.remove(currentThread())
-          self._condition.notifyAll()
+          self._pool.pop(thread)
+          self._lock.notifyAll()
           return
 
-        jid = self._job_cnt
-        self._job_cnt += 1
-        self._log.debug("Worker %d: Starting job %d" % (wid, jid))
+      self._log.debug("Worker %d: Starting job %d" % (wid, jid))
 
       try:
         if len(cmd) == 1:
@@ -172,8 +203,9 @@ class WorkerQueue(Queue):
       self.task_done()
 
       # Signal that a job has finished
-      with self._condition:
-        self._condition.notifyAll()
+      with self._lock:
+        self._pool[jid] = -1
+        self._lock.notifyAll()
 
 config_queue = WorkerQueue("config", 1)  #: Queue for configuring port options
 build_queue  = WorkerQueue("build", ncpu)  #: Queue for building ports
