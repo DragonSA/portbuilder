@@ -1,3 +1,15 @@
+0.0.2 - 2008 August 30:
+ * Port:
+   - Update attribute tables and fixers
+   - Late allocation for dependant handler
+   - Create handlers for targets
+   - Refractured handler code
+ * PortDepend:
+   - Implement with API and psuedo working code
+ * make:
+   - Handles environment variables
+   - Executer for make targers
+
 0.0.1 - 2008 July 19:
  * Port:
    - Basic Port class created

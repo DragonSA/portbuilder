@@ -59,7 +59,7 @@ Future release:
        - Update port install status properly
      - _prepare:
        - Add all dependants onto the queue and wait for them to complete
- - PortDepend:
+ - DependHandler:
     - Implement type specific checking (bin vs lib) [mimic ports]
     - Add callback feature to Port (when resolved status has changed)
     - Handle stale dependancies (with a dummy PortDepend)
@@ -74,16 +74,18 @@ Future release:
     - Handle worker thread crashing
     - Allow a thread to indicate it has stalled (and create more to compensate)
 
-0.0.3:
+0.0.3 - Milestone 3 (Target Builders):
  - Port:
    - Make thread safe
+ - DependHandler:
+   * Rename to be more descriptive
  - pypkg:
    - Add ability to update/install ports (basic)
    - Allow environment variables to be settable (like ports_dir)
  - Create ordering logic for building (and resolving dependants)
  - Create target to build INDEX
 
-0.0.2:
+0.0.2 - Milestone 2 (Dependant Handler):
  * Port:
    * Complete attribute tables and fixes
    * Proper dependant handling (mimic what ports does)
@@ -108,7 +110,7 @@ Future release:
    * Add handler for environment variables
    * Generic handler for executing make targets
 
-0.0.1:
+0.0.1 - Milestone 1 (Basic Port infrastructure):
  * Expand documentation for ports library
  * Add exception handling
  * Add logging

@@ -67,9 +67,9 @@ ports_attr["depend_lib"].append(strip_depends)
 ports_attr["depend_run"].append(strip_depends)
 ports_attr["depend_patch"].append(strip_depends)
 
-class PortDepend(object):
+class DependHandler(object):
   """
-     The PortDepend class.  This class handles tracking the dependants
+     The DependHandler class.  This class handles tracking the dependants
      and dependancies of a Port
   """
 
@@ -87,7 +87,7 @@ class PortDepend(object):
   PARTRESOLV = 1   #: Partly resolved, some dependancies not happy
   RESOLV     = 2   #: Dependancy resolved
 
-  _log = getLogger("pypkg.port.PortDepend")
+  _log = getLogger("pypkg.port.DependHandler")
 
   def __init__(self, port):
     """
@@ -101,9 +101,9 @@ class PortDepend(object):
     self._dependants   = [[], [], [], [], [], []]  # All dependants
     self._port = port  # The port whom we handle
     if port.install_status() > Port.ABSENT:
-      self._status = PortDepend.RESOLV
+      self._status = DependHandler.RESOLV
     else:
-      self._status = PortDepend.UNRESOLV
+      self._status = DependHandler.UNRESOLV
 
   def add_dependant(self, field, depend, typ):
     """
@@ -112,13 +112,13 @@ class PortDepend(object):
        @param field: The field data for the dependancy
        @type field: C{str}
        @param depend: The dependant
-       @type depend: C{PortDepend}
+       @type depend: C{DependHandler}
        @param typ: The type of dependancy
        @type typ: C{int}
     """
-    if self._status == PortDepend.RESOLV:
+    if self._status == DependHandler.RESOLV:
       if not self._update((field, depend), typ):
-        self._status = PortDepend.UNRESOLV
+        self._status = DependHandler.UNRESOLV
         self._notify_all()
 
     self._dependants[typ].append((field, depend))
@@ -145,11 +145,11 @@ class PortDepend(object):
       self._dependancies[typ].append(depends)
       depends.add_dependant(field, self, typ)
 
-      if depends.status() != PortDepend.RESOLV:
+      if depends.status() != DependHandler.RESOLV:
         self._count += 1
-      if depends.status() == PortDepend.FAILURE:
-        if self._status != PortDepend.FAILURE:
-          self._status = PortDepend.FAILURE
+      if depends.status() == DependHandler.FAILURE:
+        if self._status != DependHandler.FAILURE:
+          self._status = DependHandler.FAILURE
           self._notify_all()
 
   def check(self, stage):
@@ -162,17 +162,17 @@ class PortDepend(object):
        @rtype: C{int}
     """
     if self._count == 0 or stage == Port.CONFIG:
-      return PortDepend.RESOLV
+      return DependHandler.RESOLV
     elif stage == Port.FETCH:
-      return self._check(PortDepend.FETCH)
+      return self._check(DependHandler.FETCH)
     elif stage == Port.BUILD:
-      return self._check((PortDepend.EXTRACT, PortDepend.PATCH,
-                          PortDepend.BUILD,   PortDepend.LIB))
+      return self._check((DependHandler.EXTRACT, DependHandler.PATCH,
+                          DependHandler.BUILD,   DependHandler.LIB))
     elif stage == Port.INSTALL:
-      return self._check((PortDepend.LIB, PortDepend.RUN))
+      return self._check((DependHandler.LIB, DependHandler.RUN))
     else:
       self._log.error('Unknown stage specified')
-      return PortDepend.UNRESOLV
+      return DependHandler.UNRESOLV
 
   def port(self):
     """
@@ -188,13 +188,13 @@ class PortDepend(object):
        Called when a dependancy has changes status
 
        @param depend: The dependancies dependant handler
-       @type depend: C{PortDepend}
+       @type depend: C{DependHandler}
     """
-    if depend.status() == PortDepend.FAILURE:
-      self._status = PortDepend.FAILURE
-    elif depend.status() == PortDepend.RESOLV:
+    if depend.status() == DependHandler.FAILURE:
+      self._status = DependHandler.FAILURE
+    elif depend.status() == DependHandler.RESOLV:
       self._count -= 1
-    else: # depend.status() == PortDepend.UNRESOLV
+    else: # depend.status() == DependHandler.UNRESOLV
       self._count += 1
 
   def status(self):
@@ -212,15 +212,15 @@ class PortDepend(object):
        now satisfy our dependants or not
     """
     if self._port.failed():
-      status = PortDepend.FAILURE
+      status = DependHandler.FAILURE
     elif self._port.install_status() > Port.ABSENT:
-      status = PortDepend.RESOLV
+      status = DependHandler.RESOLV
       if not self._verify():
-        status = PortDepend.UNRESOLV
+        status = DependHandler.UNRESOLV
       else:
         self._count = 0
     else:
-      status = PortDepend.UNRESOLV
+      status = DependHandler.UNRESOLV
 
     if status != self._status:
       self._status = status
@@ -238,9 +238,9 @@ class PortDepend(object):
 
     for i in depends:
       for j in self._dependancies[i]:
-        if j.status() != PortDepend.RESOLV:
-          return PortDepend.UNRESOLV
-    return PortDepend.PARTRESOLV
+        if j.status() != DependHandler.RESOLV:
+          return DependHandler.UNRESOLV
+    return DependHandler.PARTRESOLV
 
 
 
@@ -257,22 +257,22 @@ class PortDepend(object):
        Check if a dependancy has been resolved and adjust our status
 
        @param data: The field data and the dependant handler
-       @type data: C{(str, PortDepend)}
+       @type data: C{(str, DependHandler)}
        @param typ: The type of dependancy
        @type typ: C{int}
     """
     field, depend = data
-    if typ == PortDepend.BUILD:
+    if typ == DependHandler.BUILD:
       pass
-    elif typ == PortDepend.EXTRACT:
+    elif typ == DependHandler.EXTRACT:
       pass
-    elif typ == PortDepend.FETCH:
+    elif typ == DependHandler.FETCH:
       pass
-    elif typ == PortDepend.LIB:
+    elif typ == DependHandler.LIB:
       pass
-    elif typ == PortDepend.RUN:
+    elif typ == DependHandler.RUN:
       pass
-    elif typ == PortDepend.PATCH:
+    elif typ == DependHandler.PATCH:
       pass
 
     if self._port.install_status() == Port.ABSENT:
@@ -284,7 +284,7 @@ class PortDepend(object):
     """
        Check that we actually satisfy all dependants
     """
-    for i in range(PortDepend.PATCH):
+    for i in range(DependHandler.PATCH):
       for j in self._dependants[i]:
         if not self._update(j, i):
           return False
@@ -397,13 +397,13 @@ class Port(object):
        Returns the dependant handler for this port
 
        @return: The dependant handler
-       @rtype: C{PortDepend}
+       @rtype: C{DependHandler}
     """
     if not self._depends:
       if not self._stage_status & Port.CONFIG:
         # TODO: May only proceed if we are configured
         pass
-      self._depends = PortDepend(self)
+      self._depends = DependHandler(self)
       depends = ['depend_build', 'depend_extract', 'depend_fetch',
                  'depend_lib',   'depend_run',     'depend_patch']
       for i in range(len(depends)):
@@ -519,10 +519,10 @@ class Port(object):
     self._stage_status |= stage
 
     status = self.depends().check(stage)
-    if status == PortDepend.FAILURE:
+    if status == DependHandler.FAILURE:
       self._failed = True
       self._depends.status_changed()
-    elif status == PortDepend.UNRESOLV:
+    elif status == DependHandler.UNRESOLV:
       # TODO
       self._working = True
 
