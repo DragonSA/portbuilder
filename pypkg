@@ -26,9 +26,10 @@ Depend stat: %i
        port.depends().status())
 
 import make
-make.pre_target = ['echo']
+make.pre_cmd = ['echo']
 
 for i in ports.itervalues():
+  print i._origin, i.attr('options')
   if i.stage() < Port.CONFIG:
     i.config()
 

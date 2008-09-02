@@ -10,6 +10,7 @@ Future release:
  - Check spelling for all documentation
  - Define working standards for logging
  - Increase level of logging
+ - Have a base class (and simple API) to manage logged messages
  - Add all assertions
  - make:
    - Does make_target need env?
@@ -85,6 +86,7 @@ Future release:
 0.0.3 - Milestone 3 (Target Builders):
  - Port:
    - Make thread safe
+   - Getter for origin
    * Convert install status flags to linear
    * Convert stage status flags to linear
    * Move targets to queue (not build directly)
@@ -94,12 +96,20 @@ Future release:
      - Fix resolving previous stages
  + DependHandler:
    * Rename to be more descriptive
-   - Check should resolve dependancies
-   - Add getters for dependancies and dependants
+   ? Check should resolve dependancies
+   - Add getters for dependancies and dependants (ports and/or field)
  - Create ordering logic for building (and resolving dependants)
+ - Remove make_target from global import
+ + Fix PORTSDIR not having a trailing /
  + WorkerQueue:
    * Add queue putter that returns once run
    * Remove logger (needed?)
+ * queue:
+   * Add installer queue
+ * make:
+   * Rename pre_target to pre_cmd
+   * Allow disabling of pre_cmd
+   * Condense functionality
 
 0.0.2 - Milestone 2 (Dependant Handler):
  * Port:
@@ -122,6 +132,7 @@ Future release:
    * Make ports_dir settable from the env
  * WorkerQueue:
    * Add Condition (and a global Condition)
+   * Simplify function calling
  * make:
    * Add handler for environment variables
    * Generic handler for executing make targets

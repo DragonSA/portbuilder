@@ -5,14 +5,12 @@ managing port information.
 
 from __future__ import with_statement # Used for locking
 from logging import getLogger
-from make import env, make_target
-from os import getenv
+from make import env
+
 
 log = getLogger('pypkg.ports')
 
 ports = {}  #: A cache of ports available with auto creation features
-ports_dir = getenv("PORTSDIR", "/usr/ports/")  #: The location of the ports tree
-ports_dir = env.get("PORTSDIR", ports_dir)
 port_filter = 3  #: The ports filter, if ports status matches then not 'loaded'
 
 ports_attr = {
@@ -52,19 +50,21 @@ ports_attr = {
 } #: The attributes of the given port
 
 # The following are 'fixes' for various attributes
-ports_attr["depends"].append(lambda x: [i[len(ports_dir):] for i in x])
+ports_attr["depends"].append(lambda x: [i[len(env['PORTSDIR']):] for i in x])
 ports_attr["depends"].append(lambda x: ([x.remove(i) for i in x
                                          if x.count(i) > 1], x)[1])
 ports_attr["distfiles"].append(lambda x: [i.split(':', 1)[0] for i in x])
 
 strip_depends = lambda x: [(i.split(':', 1)[0],
-                            i.split(':', 1)[1][len(ports_dir):]) for i in x]
+                          i.split(':', 1)[1][len(env['PORTSDIR']):]) for i in x]
 ports_attr["depend_build"].append(strip_depends)
 ports_attr["depend_extract"].append(strip_depends)
 ports_attr["depend_fetch"].append(strip_depends)
 ports_attr["depend_lib"].append(strip_depends)
 ports_attr["depend_run"].append(strip_depends)
 ports_attr["depend_patch"].append(strip_depends)
+
+del strip_depends
 
 class DependHandler(object):
   """
@@ -338,7 +338,7 @@ class Port(object):
       #for i in self._attr_map.iterkeys():
       #  setattr(self, i, gen_method(i))
 
-      if not self._attr_map['options']:
+      if len(self._attr_map['options']) == 0:
         self._stage = Port.CONFIG
         for i in self._attr_map['depends']:
           ports.add(i)
@@ -420,6 +420,8 @@ class Port(object):
        @return: The success status
        @rtype: C{bool}
     """
+    from make import make_target
+
     proceed, status = self._prepare(Port.CONFIG)
     if not proceed:
       return status
@@ -442,6 +444,8 @@ class Port(object):
        @return: The success status
        @rtype: C{bool}
     """
+    from make import make_target
+
     proceed, status = self._prepare(Port.FETCH)
     if not proceed:
       return status
@@ -457,6 +461,8 @@ class Port(object):
         @return: The success status
         @rtype: C{bool}
     """
+    from make import make_target
+
     proceed, status = self._prepare(Port.BUILD)
     if not proceed:
       return status
@@ -471,6 +477,8 @@ class Port(object):
         @return: The success status
         @rtype: C{bool}
     """
+    from make import make_target
+
     proceed, status = self._prepare(Port.INSTALL)
     if not proceed:
       return status
@@ -519,7 +527,7 @@ class Port(object):
         # TODO: Use TargetBuilder
         queue, func = queues[stage - 1]
         self._lock.release()
-        queue.put_wait((func))
+        queue.put_wait(func)
         self._lock.acquire()
         return self._prepare(stage)
 
@@ -646,7 +654,7 @@ class PortCache(dict):
     """
     from queue import ports_queue
     if not self.has_key(key):
-      return ports_queue.put_nowait((self._get, [key]))
+      return ports_queue.put_nowait(lambda: self._get(key))
 
   def add(self, key):
     """
@@ -751,14 +759,19 @@ def port_attr(origin, change=False):
      @return: A dictionary of attributes
      @rtype: C{\{str:str|(str)|\}}
   """
+  from make import make_target
+
+  if env['PORTSDIR'][-1] != '/':
+    env['PORTSDIR'].join('/')
+
   args = []
   for i in ports_attr.itervalues():
     args.append('-V')
     args.append(i[0])
 
-  make = make_target(origin, None, args)
+  make = make_target(origin, args, pre=False)
   if make.wait() > 0:
-    log.info("Error in obtaining information for port '%s'" % origin)
+    log.error("Error in obtaining information for port '%s'" % origin)
     return {}
 
   attr_map = {}

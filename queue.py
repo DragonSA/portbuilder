@@ -167,7 +167,7 @@ class WorkerQueue(Queue):
           self._pool.pop(thread)
           return
         try:
-          jid, cmd = self.get(False)
+          jid, func = self.get(False)
           self._pool[thread] = jid
         except Empty:
           self._pool.pop(thread)
@@ -177,24 +177,10 @@ class WorkerQueue(Queue):
       self._log.debug("Worker %d: Starting job %d" % (wid, jid))
 
       try:
-        if len(cmd) == 1:
-          func = cmd[0]
-          args = []
-          kwargs = {}
-        elif len(cmd) == 2:
-          func, args = cmd
-          kwargs = {}
-        elif len(cmd) == 3:
-          func, args, kwargs = cmd
-        else:
-          raise Exception
-      except BaseException:
-        self._log.error("Worker %d: Job %d is malformed" % (wid, jid))
-        self.task_done()
-        continue
-
-      try:
-        func(*args, **kwargs)
+        func()
+      except TypeError:
+        self._log.exception("Worker %d: Job %d didn't specify a callable target"
+                            % (wid, jid))
       except BaseException:
         self._log.exception("Worker %d: Job %d threw an exception" % (wid, jid))
       else:
@@ -207,7 +193,8 @@ class WorkerQueue(Queue):
         self._pool[thread] = -1
         self._lock.notifyAll()
 
-config_queue = WorkerQueue("config", 1)  #: Queue for configuring port options
-build_queue  = WorkerQueue("build", ncpu)  #: Queue for building ports
-fetch_queue  = WorkerQueue("fetch", 1)  #: Queue for fetching distribution files
-ports_queue  = WorkerQueue("ports", ncpu * 2)  #: Queue for fetching port info
+config_queue  = WorkerQueue("config", 1)  #: Queue for configuring port options
+build_queue   = WorkerQueue("build", ncpu)  #: Queue for building ports
+fetch_queue   = WorkerQueue("fetch", 1)  #: Queue for fetching dist files
+install_queue = WorkerQueue("install", 1)  #: Queue for installing ports
+ports_queue   = WorkerQueue("ports", ncpu * 2)  #: Queue for fetching port info
