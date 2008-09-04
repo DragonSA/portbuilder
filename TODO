@@ -84,24 +84,28 @@ Future release:
  - Create target to build INDEX
 
 0.0.3 - Milestone 3 (Target Builders):
- - Port:
-   - Make thread safe
-   - Getter for origin
+ + Port:
+   * Make thread safe
+   * Getter for origin
    * Convert install status flags to linear
    * Convert stage status flags to linear
    * Move targets to queue (not build directly)
-   - _prepare:
+   * Fix filtering (for dependancies)
+   + _prepare:
      * Finish queue handling
      - Move to TargetBuilder
      - Fix resolving previous stages
+ - PortCache:
+   - Minimise duplicate job requests
  + DependHandler:
+   - Make thread safe
    * Rename to be more descriptive
    ? Check should resolve dependancies
-   - Add getters for dependancies and dependants (ports and/or field)
+   * Add getters for dependancies and dependants (ports and/or field)
  - Create ordering logic for building (and resolving dependants)
- - Remove make_target from global import
- + Fix PORTSDIR not having a trailing /
- + WorkerQueue:
+ * Remove make_target from global import
+ * Fix PORTSDIR not having a trailing /
+ * WorkerQueue:
    * Add queue putter that returns once run
    * Remove logger (needed?)
  * queue:

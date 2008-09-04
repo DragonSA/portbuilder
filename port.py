@@ -104,24 +104,6 @@ class DependHandler(object):
     else:
       self._status = DependHandler.UNRESOLV
 
-  def add_dependant(self, field, depend, typ):
-    """
-       Add a dependant to our list
-
-       @param field: The field data for the dependancy
-       @type field: C{str}
-       @param depend: The dependant
-       @type depend: C{DependHandler}
-       @param typ: The type of dependancy
-       @type typ: C{int}
-    """
-    if self._status == DependHandler.RESOLV:
-      if not self._update((field, depend), typ):
-        self._status = DependHandler.UNRESOLV
-        self._notify_all()
-
-    self._dependants[typ].append((field, depend))
-
   def add_dependancy(self, field, port, typ):
     """
        Add a dependancy to our list
@@ -150,6 +132,83 @@ class DependHandler(object):
         if self._status != DependHandler.FAILURE:
           self._status = DependHandler.FAILURE
           self._notify_all()
+
+  def dependancies(self, typ=None):
+    """
+       Retrieve a list of dependancies, with all of them or just a subset
+
+       @param typ: The subset of dependancies to get
+       @type typ: C{int} or C{(int)}
+       @return: A list of dependancies
+       @rtype: C{[DependHandler]}
+    """
+    if typ == None:
+      depends = self._dependancies
+    elif type(typ) == int:
+      depends = [self._dependancies[typ]]
+    else:
+      depends = []
+      for i in typ:
+        depends.append(self._dependancies[typ])
+
+    dlist = []
+    for i in depends:
+      for j in i:
+        if j not in dlist:
+          dlist.append(j)
+
+    return dlist
+
+  def add_dependant(self, field, depend, typ):
+    """
+       Add a dependant to our list
+
+       @param field: The field data for the dependancy
+       @type field: C{str}
+       @param depend: The dependant
+       @type depend: C{DependHandler}
+       @param typ: The type of dependancy
+       @type typ: C{int}
+    """
+    if self._status == DependHandler.RESOLV:
+      if not self._update((field, depend), typ):
+        self._status = DependHandler.UNRESOLV
+        self._notify_all()
+
+    self._dependants[typ].append((field, depend))
+
+  def dependants(self, typ=None, fields=False):
+    """
+       Retrieve a list of dependant, with all of them or just a subset in either
+       a list of fields or DependHandlers
+
+       @param typ: The subset of dependancies to get
+       @type typ: C{int} or C{(int)}
+       @param fields: If the list should be a list of fields
+       @type fields: C{bool}
+       @return: The list of dependants fields or handlers
+       @rtype: C{[DependHandler]} or C{[str]}
+    """
+    if typ == None:
+      depends = self._dependants
+    elif type(typ) == int:
+      depends = [self._dependants[typ]]
+    else:
+      depends = []
+      for i in typ:
+        depends.append(self._dependants[typ])
+
+    dlist = []
+    for i in depends:
+      for j in i:
+        if fields:
+          if j[0] not in dlist:
+            dlist.append(j[0])
+        else:
+          if j[1] not in dlist:
+            dlist.append(j[1])
+
+    return dlist
 
   def check(self, stage):
     """
@@ -347,11 +406,18 @@ class Port(object):
     """
        Returns the ports attributes, such as version, categories, etc
 
-       # TODO
+       @param attr: The port attribute to retrieve
+       @type attr: C{str}
        @return: The attributes
        @rtype: C{\{str:str|(str)|\}}
     """
-    return self._attr_map[attr]
+    if self._attr_map:
+      return self._attr_map[attr]
+    elif port_filter >= self._install_status:
+      self.config()
+      return self.attr(attr)
+    else:
+      return ''
 
   def failed(self):
     """
@@ -380,6 +446,15 @@ class Port(object):
     """
     return self._stage
 
+  def origin(self):
+    """
+       The origin of this port
+
+       @return: The ports origin
+       @rtype: C{int}
+    """
+    return self._origin
+
   def working(self):
     """
        The working status of the port.
@@ -399,17 +474,27 @@ class Port(object):
     if not self._depends:
       with self._lock:
         if not self._depends:
-          if self._stage < Port.CONFIG:
-            # TODO: May only proceed if we are configured
-            pass
+          if port_filter >= self._install_status:
+            if self._stage < Port.CONFIG:
+              if self._depends == None:
+                self._depends = False
+                self._lock.release()
+                self.config()
+                self._lock.acquire()
+              else:
+                while self._depends == False:
+                  self._lock.wait()
 
-        self._depends = DependHandler(self)
+            self._depends = DependHandler(self)
 
-        depends = ['depend_build', 'depend_extract', 'depend_fetch',
-                 'depend_lib',   'depend_run',     'depend_patch']
-        for i in range(len(depends)):
-          for j in self._attr_map[depends[i]]:
-            self._depends.add_dependancy(j[0], j[1], i)
+            depends = ['depend_build', 'depend_extract', 'depend_fetch',
+                    'depend_lib',   'depend_run',     'depend_patch']
+            for i in range(len(depends)):
+              for j in self._attr_map[depends[i]]:
+                self._depends.add_dependancy(j[0], j[1], i)
+            self._lock.notifyAll()
+          else:
+            self._depends = DependHandler(self)
 
     return self._depends
 
@@ -426,14 +511,17 @@ class Port(object):
     if not proceed:
       return status
 
-    make = make_target(self._origin, 'config', pipe=False)
-    status = make.wait() == 0
+    if port_filter >= self._install_status:
+      make = make_target(self._origin, 'config', pipe=False)
+      status = make.wait() == 0
 
-    if status:
-      self._attr_map = port_attr(self._origin)
-      for i in self._attr_map['depends']:
-        ports.add(i)
-      self.depends()
+      if status:
+        self._attr_map = port_attr(self._origin)
+        for i in self._attr_map['depends']:
+          ports.add(i)
+        self.depends()
+    else:
+      status = True
 
     return self._finalise(Port.CONFIG, status)
 
@@ -502,6 +590,7 @@ class Port(object):
        @rtype: C{bool}
     """
     from queue import build_queue, fetch_queue
+
     with self._lock:
       if self._stage > stage:
         return False, True
