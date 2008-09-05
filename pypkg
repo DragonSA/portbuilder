@@ -2,20 +2,21 @@
 """
 Controller for various ports operations
 """
-from make import pre_cmd
-from port import ports, Port, port_filter
+from port import ports, Port
 from queue import ports_queue
 
 import make, port
 make.pre_cmd = ['echo']
 port.port_filter = Port.OLDER
 
-ports.get('x11/xorg')
-ports_queue.join()
 print "Getting 'x11/xorg' dependant handler..."
 ports['x11/xorg'].depends()
 
+#ports_queue.join()
+
 for name, port in ports.iteritems():
+  if port._depends == None:
+    print port.origin()
   print """
 ==============================================================================
 Origin:      %s
@@ -31,12 +32,10 @@ Depend stat: %i
        port.depends().status())
 
 print len(ports)
-configs = filter(lambda x: x.stage() < Port.CONFIG, ports.itervalues())
+configs = [i for i in ports if i.stage() < Port.CONFIG]
 while len(configs):
   for i in configs:
     i.config()
   ports_queue.join()
-  print len(ports)
-  configs = filter(lambda x: x.stage() < Port.CONFIG, ports.itervalues())
-
-print ports_queue.stats(), len(ports)
+  print ports_queue.stats(), len(ports)
+  configs = [i for i in ports if i.stage() < Port.CONFIG]

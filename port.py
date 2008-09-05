@@ -117,12 +117,16 @@ class DependHandler(object):
     """
     if port in self._dependancies[typ]:
       self._log.warn("Multiple dependancies on port '%s' from port '%s'"
-                     % (port, self._port.attr('name')))
-    elif not ports.has_key(port):
-      self._log.error("Port '%s' has a stale dependancy on port '%s'"
-                      % (self._port.attr('name'), port))
+                     % (port, self._port.origin()))
     else:
-      depends = ports[port].depends()
+      try:
+        depends = ports[port].depends()
+      except KeyError:
+        print 'Missing port', port, 'from', self._port.origin()
+        self._log.error("Port '%s' has a stale dependancy on port '%s'"
+                        % (self._port.origin(), port))
+        raise
+
       self._dependancies[typ].append(depends)
       depends.add_dependant(field, self, typ)
 
@@ -417,7 +421,10 @@ class Port(object):
       self.config()
       return self.attr(attr)
     else:
-      return ''
+      if ports_attr[attr][1] == str:
+        return ''
+      else:
+        return []
 
   def failed(self):
     """
@@ -473,28 +480,28 @@ class Port(object):
     """
     if not self._depends:
       with self._lock:
-        if not self._depends:
-          if port_filter >= self._install_status:
-            if self._stage < Port.CONFIG:
-              if self._depends == None:
-                self._depends = False
-                self._lock.release()
-                self.config()
-                self._lock.acquire()
-              else:
-                while self._depends == False:
-                  self._lock.wait()
+        while self._depends == False:
+          self._lock.wait()
+        if self._depends:
+          return self._depends
 
-            self._depends = DependHandler(self)
+        if port_filter >= self._install_status:
+          if self._stage < Port.CONFIG:
+            self._depends = False
+            self._lock.release()
+            self.config()
+            self._lock.acquire()
 
-            depends = ['depend_build', 'depend_extract', 'depend_fetch',
-                    'depend_lib',   'depend_run',     'depend_patch']
-            for i in range(len(depends)):
-              for j in self._attr_map[depends[i]]:
-                self._depends.add_dependancy(j[0], j[1], i)
-            self._lock.notifyAll()
-          else:
-            self._depends = DependHandler(self)
+          self._depends = DependHandler(self)
+          self._lock.notifyAll()
+        else:
+          self._depends = DependHandler(self)
+
+      depends = ['depend_build', 'depend_extract', 'depend_fetch',
+                 'depend_lib',   'depend_run',     'depend_patch']
+      for i in range(len(depends)):
+        for j in self.attr(depends[i]):
+          self._depends.add_dependancy(j[0], j[1], i)
 
     return self._depends
 
@@ -696,6 +703,7 @@ class PortCache(dict):
         self._add(key)
       else:
         if value == False:
+          print 'Port failed', key
           raise KeyError, key
 
     ports_queue.wait(lambda: self._has_key(key))
@@ -714,6 +722,21 @@ class PortCache(dict):
     with self._lock:
       dict.__setitem__(self, key, value)
 
+  def has_key(self, k):
+    """
+       Check if a port exists
+
+       @param k: The ports origin
+       @type k: C{str}
+       @return: If the port exists
+       @rtype: C{bool}
+    """
+    try:
+      PortCache.__getitem__(self, k)
+      return True
+    except KeyError:
+      return False
+
   def _has_key(self, key):
     """
        Check if a port has been created (or known not to exist)
@@ -724,12 +747,10 @@ class PortCache(dict):
        @rtype: C{bool}
     """
     with self._lock:
-      value = False
       try:
-        if dict.__getitem__(self, key) != None:
-          value = True
-      finally:
-        return value
+        return dict.__getitem__(self, key) != None
+      except KeyError:
+        return False
 
   def _add(self, key):
     """
@@ -742,7 +763,7 @@ class PortCache(dict):
        @rtype: C{int}
     """
     from queue import ports_queue
-    if not self.has_key(key):
+    if not dict.has_key(self, key):
       return ports_queue.put_nowait(lambda: self._get(key))
 
   def add(self, key):
@@ -779,35 +800,21 @@ class PortCache(dict):
 
        @param key: The port to get
        @type key: C{str}
-       @return: The port
-       @rtype: C{Port}
     """
-    from queue import ports_queue
     with self._lock:
       try:
-        value = dict.__getitem__(self, key)
-        if value:
-          return value
+        dict.__getitem__(self, key)
+        return
       except KeyError:
-        value = True
         dict.__setitem__(self, key, None)
-      else:
-        if value == False:
-          raise KeyError, key
-    if value == None:
-      ports_queue.wait(lambda: self._has_key(key))
-      return self[key]
 
     try:
       # Time consuming task, done outside lock
-      port = Port(key)
+      self[key] = Port(key)
+      print key
     except BaseException:
       self[key] = False
       self._log.exception("Error while creating port '%s'" % key)
-      raise KeyError, key
-    else:
-      self[key] = port
-      return port
 
 ports = PortCache()
 
