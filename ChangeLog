@@ -5,10 +5,10 @@
    - Create handlers for targets
    - Refractured handler code
  * PortDepend:
-   - Implement with API and psuedo working code
+   - Implement with API and pseudo working code
  * make:
    - Handles environment variables
-   - Executer for make targers
+   - Executor for make targets
 
 0.0.1 - 2008 July 19:
  * Port:

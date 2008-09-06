@@ -32,10 +32,10 @@ Depend stat: %i
        port.depends().status())
 
 print len(ports)
-configs = [i for i in ports if i.stage() < Port.CONFIG]
+configs = [i for i in ports.itervalues() if i.stage() < Port.CONFIG]
 while len(configs):
   for i in configs:
     i.config()
   ports_queue.join()
   print ports_queue.stats(), len(ports)
-  configs = [i for i in ports if i.stage() < Port.CONFIG]
+  configs = [i for i in ports.itervalues() if i.stage() < Port.CONFIG]

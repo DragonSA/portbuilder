@@ -12,8 +12,9 @@ Future release:
  - Increase level of logging
  - Have a base class (and simple API) to manage logged messages
  - Add all assertions
- - make:
-   - Does make_target need env?
+ - Refactor:
+   - Break ports into its own libraries
+   - Try isolate system and ports dependant code
  - pypkg:
    - Add -n option (only display commands, don't execute anything)
    - Add -j option (fine tune concurrency)
@@ -75,10 +76,12 @@ Future release:
     - When doing individual checks, cache as they can be duplicated
  - WorkerQueue:
     - Handle worker thread crashing
-    - Allow a thread to indicate it has stalled (and create more to compensate)
+    - Allow a thread to indicate it has stalled (and create more to compensate)?
+    - Add terminate and kill functions (to clean off threads)
 
 0.0.8 - Milestone 8 (Finish command line controller)
  - Refine and condense code
+ - Default to batch mode
 
 0.0.7 - Milestone 7 (Finish Target Builders)
  - Refine and condense code
@@ -90,6 +93,8 @@ Future release:
  - Refine and condense code
  - PortCache:
    - Minimise duplicate job requests
+ - Port:
+   - Add clean target (and have a failed port clean itself...)
 
 0.0.4 - Milestone 4 (Command line controller)
  - pypkg:
@@ -105,12 +110,14 @@ Future release:
    * Convert stage status flags to linear
    * Move targets to queue (not build directly)
    * Fix filtering (for dependancies)
+   - Make depends return once competely initiated
    + _prepare:
      * Finish queue handling
      - Move to TargetBuilder
      - Fix resolving previous stages
  + DependHandler:
    - Make thread safe
+   - Allow constructor to initialise dependancies
    * Rename to be more descriptive
    * Add getters for dependancies and dependants (ports and/or field)
  - Create ordering logic for building (and resolving dependants)
