@@ -7,7 +7,6 @@ from __future__ import with_statement # Used for locking
 from logging import getLogger
 from make import env
 
-
 log = getLogger('pypkg.ports')
 
 ports = {}  #: A cache of ports available with auto creation features
@@ -146,9 +145,9 @@ class DependHandler(object):
        @return: A list of dependancies
        @rtype: C{[DependHandler]}
     """
-    if typ == None:
+    if typ is None:
       depends = self._dependancies
-    elif type(typ) == int:
+    elif type(typ) is int:
       depends = [self._dependancies[typ]]
     else:
       depends = []
@@ -193,9 +192,9 @@ class DependHandler(object):
        @return: The list of dependants fields or handlers
        @rtype: C{[DependHandler]} or C{[str]}
     """
-    if typ == None:
+    if typ is None:
       depends = self._dependants
-    elif type(typ) == int:
+    elif type(typ) is int:
       depends = [self._dependants[typ]]
     else:
       depends = []
@@ -295,7 +294,7 @@ class DependHandler(object):
        @param depends: List of dependancies
        @type depends: C{int} or C{(int)}
     """
-    if type(depends) == int:
+    if type(depends) is int:
       depends = [depends]
 
     for i in depends:
@@ -354,7 +353,7 @@ class Port(object):
      The class that contains all information about a given port, such as status,
      dependancies and dependants
   """
-  from threading import Condition
+  from threading import Condition, Lock
 
   ABSENT  = 0  #: Status flag for a port that is not installed
   OLDER   = 1  #: Status flag for a port that is old
@@ -375,7 +374,7 @@ class Port(object):
   #: Translation table for the build flags
 
   _log = getLogger("pypkg.port.Port")
-  _lock = Condition()  #: The notifier and locker for all ports
+  _lock = Condition(Lock())  #: The notifier and locker for all ports
 
   def __init__(self, origin):
     """
@@ -421,7 +420,7 @@ class Port(object):
       self.config()
       return self.attr(attr)
     else:
-      if ports_attr[attr][1] == str:
+      if ports_attr[attr][1] is str:
         return ''
       else:
         return []
@@ -475,33 +474,40 @@ class Port(object):
     """
        Returns the dependant handler for this port
 
+       WARNING: Dead lock will occure if there is a cyclic port dependancy
+
        @return: The dependant handler
        @rtype: C{DependHandler}
     """
-    if not self._depends:
-      with self._lock:
-        while self._depends == False:
-          self._lock.wait()
-        if self._depends:
-          return self._depends
+    if self._depends:
+      return self._depends
 
-        if port_filter >= self._install_status:
-          if self._stage < Port.CONFIG:
-            self._depends = False
-            self._lock.release()
-            self.config()
-            self._lock.acquire()
+    with self._lock:
+      while self._depends is False:
+        self._lock.wait()
 
+      if not self._depends:
+        if port_filter < self._install_status:
           self._depends = DependHandler(self)
-          self._lock.notifyAll()
-        else:
-          self._depends = DependHandler(self)
+        elif self._stage < Port.CONFIG and not self._failed:
+          self._depends = False
 
-      depends = ['depend_build', 'depend_extract', 'depend_fetch',
-                 'depend_lib',   'depend_run',     'depend_patch']
-      for i in range(len(depends)):
-        for j in self.attr(depends[i]):
-          self._depends.add_dependancy(j[0], j[1], i)
+    if self._depends:
+      return self._depends
+
+    if self._stage < Port.CONFIG:
+      self.config()
+
+    depends_obj = DependHandler(self)
+    depends = ['depend_build', 'depend_extract', 'depend_fetch',
+                'depend_lib',   'depend_run',     'depend_patch']
+    for i in range(len(depends)):
+      for j in self.attr(depends[i]):
+        depends_obj.add_dependancy(j[0], j[1], i)
+
+    with self._lock:
+      self._depends = depends_obj
+      self._lock.notifyAll()
 
     return self._depends
 
@@ -518,19 +524,23 @@ class Port(object):
     if not proceed:
       return status
 
-    if port_filter >= self._install_status:
-      make = make_target(self._origin, 'config', pipe=False)
-      status = make.wait() == 0
+    if port_filter < self._install_status:
+      return self._finalise(Port.CONFIG, True)
 
-      if status:
-        self._attr_map = port_attr(self._origin)
-        for i in self._attr_map['depends']:
-          ports.add(i)
-        self.depends()
-    else:
-      status = True
+    make = make_target(self._origin, 'config', pipe=False)
+    status = make.wait() == 0
 
-    return self._finalise(Port.CONFIG, status)
+    if status:
+      self._attr_map = port_attr(self._origin)
+      for i in self._attr_map['depends']:
+        ports.add(i)
+
+    self._finalise(Port.CONFIG, status)
+
+    if self._depends is None:
+      self.depends()
+
+    return status
 
   def fetch(self):
     """
@@ -578,7 +588,7 @@ class Port(object):
     if not proceed:
       return status
 
-    make = make_target(self._origin, 'install')
+    make = make_target(self._origin, ['install', 'clean'])
     status = Port.INSTALL, make.wait() == 0
     if status:
       self._install_status = Port.CURRENT
@@ -629,7 +639,7 @@ class Port(object):
 
       self._stage = stage
 
-      status = self.depends().check(stage)
+      status = stage > Port.CONFIG and self.depends().check(stage)
       if status == DependHandler.FAILURE:
         self._failed = True
         self._depends.status_changed()
@@ -702,8 +712,7 @@ class PortCache(dict):
       except KeyError:
         self._add(key)
       else:
-        if value == False:
-          print 'Port failed', key
+        if value is False:
           raise KeyError, key
 
     ports_queue.wait(lambda: self._has_key(key))
@@ -872,7 +881,7 @@ def port_attr(origin, change=False):
 
   attr_map = {}
   for name, value in ports_attr.iteritems():
-    if value[1] == str:
+    if value[1] is str:
       attr_map[name] = make.stdout.readline().strip()
     else:
       attr_map[name] = value[1](make.stdout.readline().split())

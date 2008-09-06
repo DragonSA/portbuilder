@@ -12,6 +12,7 @@ Future release:
  - Increase level of logging
  - Have a base class (and simple API) to manage logged messages
  - Add all assertions
+ - Add process effiecient version of subprocess
  - Refactor:
    - Break ports into its own libraries
    - Try isolate system and ports dependant code
@@ -95,6 +96,8 @@ Future release:
    - Minimise duplicate job requests
  - Port:
    - Add clean target (and have a failed port clean itself...)
+ - WorkerQueue:
+   - Remove condition (not needed and overexposing internals)
 
 0.0.4 - Milestone 4 (Command line controller)
  - pypkg:
@@ -110,7 +113,7 @@ Future release:
    * Convert stage status flags to linear
    * Move targets to queue (not build directly)
    * Fix filtering (for dependancies)
-   - Make depends return once competely initiated
+   * Make depends return once competely initiated
    + _prepare:
      * Finish queue handling
      - Move to TargetBuilder
@@ -126,6 +129,7 @@ Future release:
  * WorkerQueue:
    * Add queue putter that returns once run
    * Remove logger (needed?)
+   * put: If calling thread is one of our workers then execute it directly
  * queue:
    * Add installer queue
  * make:

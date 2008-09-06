@@ -15,8 +15,6 @@ ports['x11/xorg'].depends()
 #ports_queue.join()
 
 for name, port in ports.iteritems():
-  if port._depends == None:
-    print port.origin()
   print """
 ==============================================================================
 Origin:      %s

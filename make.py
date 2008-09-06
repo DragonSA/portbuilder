@@ -26,7 +26,7 @@ def make_target(origin, args, pipe=True, pre=True):
   from os.path import join
   from subprocess import Popen, PIPE, STDOUT
 
-  if type(args) == str:
+  if type(args) is str:
     args = [args]
   args = args + ["%s=%s" % (k, v) for k, v in env.iteritems()
                   if (k != "PORTSDIR" or v != "/usr/ports/")]

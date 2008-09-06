@@ -26,8 +26,10 @@ class WorkerQueue(Queue):
     """
     Queue.__init__(self)
     from logging import getLogger
-    from threading import Condition
-    self._lock = Condition()  #: The notifier and locker of this queue
+    from threading import Condition, Lock, local
+    # We have to use our own locks since we cannot access Queue's functions
+    # without not holding the locks and doing this will cause a dead lock...
+    self._lock = Condition(Lock())  #: The notifier and locker of this queue
     self._log = getLogger("pypkg.queue." + name)  #: Logger of this queue
     #self._name = name  #: The name of this queue
     self._workers = workers  #: The (maximum) number of workers
@@ -36,6 +38,7 @@ class WorkerQueue(Queue):
     self._job_cnt = 0  #: The number of jobs executed
 
     self._pool = {}  #: The pool of workers
+    self._local = local()  #: Thread specific information
 
   def __len__(self):
     """
@@ -67,8 +70,9 @@ class WorkerQueue(Queue):
     with self._lock:
       if jid in self._pool.itervalues():
         return False
-      if len([i for i in self.queue if i[0] == jid]) > 0:
-        return False
+      for i in self.queue:
+        if i[0] == jid:
+          return False
 
       return True
 
@@ -93,18 +97,17 @@ class WorkerQueue(Queue):
     """
     self._workers = workers
 
-  def put(self, item, block=True, timeout=0):
+  def put(self, func, block=True, timeout=0):
     """
        Places a job onto the queue, if insufficient workers are available one
        will be started.
 
-       @param item: The job to execute
-       @type item: C{(func, (args), \{kwargs\})}
+       @param func: The job to execute
     """
     with self._lock:
       jid = self._job_cnt
       self._job_cnt += 1
-      Queue.put(self, (jid, item), block, timeout)
+      Queue.put(self, (jid, func), block, timeout)
       if self.qsize() > 0 and len(self._pool) < self._workers:
         from threading import Thread
         thread = Thread(target=self.worker)
@@ -112,15 +115,25 @@ class WorkerQueue(Queue):
         thread.start()
       return jid
 
-  def put_wait(self, item):
+  def put_wait(self, func):
     """
        Place a job onto the queue and then wait for it to be executed
 
-       @param item: The job to execute
-       @type item: C{(func, (args), \{kwargs\})}
+       @param func: The job to execute
     """
-    jid = self.put_nowait(item)
-    self.wait(lambda: self.job(jid))
+    from threading import currentThread
+    with self._lock:
+      if currentThread in self._pool.iterkeys():
+        jid = self._job_cnt
+        inline = True
+      else:
+        inline = False
+
+    if inline:
+      self._work(func, jid)
+    else:
+      jid = self.put_nowait(func)
+      self.wait(lambda: self.job(jid))
 
   def stats(self):
     """
@@ -140,7 +153,12 @@ class WorkerQueue(Queue):
        @param func: The criteria
        @type func: C{function}
     """
+    from threading import currentThread
     with self._lock:
+      if currentThread() in self._pool.iterkeys():
+        self._log.error("Worker %i: Job %i is waiting on its own queue" %
+                        (self._local.jid, self._local.wid))
+        raise RuntimeError, "Averted dead lock on queue"
       while True:
         if func() or len(self) == 0:
           return
@@ -157,34 +175,24 @@ class WorkerQueue(Queue):
     thread = currentThread()
 
     with self._lock:
-      wid = self._worker_cnt
+      self._local.wid = self._worker_cnt
       self._worker_cnt += 1
-    self._log.debug("Worker %d: Created" % wid)
+    self._log.debug("Worker %d: Created" % self._local.wid)
 
     while True:
       with self._lock:
-        if self._workers < len(self._pool):
-          self._pool.pop(thread)
-          return
         try:
-          jid, func = self.get(False)
-          self._pool[thread] = jid
+          if self._workers < len(self._pool):
+            raise Empty
+          self._local.jid, func = self.get(False)
+          self._pool[thread] = self._local.jid
         except Empty:
           self._pool.pop(thread)
           self._lock.notifyAll()
+          self._log.debug("Worker %d: Terminating" % self._local.wid)
           return
 
-      self._log.debug("Worker %d: Starting job %d" % (wid, jid))
-
-      try:
-        func()
-      except TypeError:
-        self._log.exception("Worker %d: Job %d didn't specify a callable target"
-                            % (wid, jid))
-      except BaseException:
-        self._log.exception("Worker %d: Job %d threw an exception" % (wid, jid))
-      else:
-        self._log.debug("Worker %d: Finished job %d" % (wid, jid))
+      self._work(func, self._local.jid)
 
       self.task_done()
 
@@ -193,8 +201,29 @@ class WorkerQueue(Queue):
         self._pool[thread] = -1
         self._lock.notifyAll()
 
+  def _work(self, func, jid):
+    """
+       Execute a job
+
+       @param func: The job to run
+       @param jid: The job's ID
+       @type jid: C{int}
+    """
+    self._log.debug("Worker %d: Starting job %d" % (self._local.wid, jid))
+
+    try:
+      func()
+    except TypeError:
+      self._log.exception("Worker %d: Job %d didn't specify a callable target"
+                          % (self._local.wid, jid))
+    except BaseException:
+      self._log.exception("Worker %d: Job %d threw an exception"
+                          % (self._local.wid, jid))
+    finally:
+      self._log.debug("Worker %d: Finished job %d" % (self._local.wid, jid))
+
 config_queue  = WorkerQueue("config", 1)  #: Queue for configuring port options
-build_queue   = WorkerQueue("build", ncpu)  #: Queue for building ports
+build_queue   = WorkerQueue("build", 1)  #: Queue for building ports
 fetch_queue   = WorkerQueue("fetch", 1)  #: Queue for fetching dist files
 install_queue = WorkerQueue("install", 1)  #: Queue for installing ports
-ports_queue   = WorkerQueue("ports", ncpu * 2)  #: Queue for fetching port info
+ports_queue   = WorkerQueue("ports", 1)  #: Queue for fetching port info
