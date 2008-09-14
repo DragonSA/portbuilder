@@ -6,7 +6,10 @@ Coding standard:
 Future release:
  - Speed up port_version()
  - Add options for either individually executing make targets or in baulk
- - Allow KeyboardInterrupt to terminate program
+ - Allow KeyboardInterrupt to terminate program:
+   - Get threads to terminate kindly
+   - Allow double KeyboardInterrupt to kill all threads
+   - Check if threads should be daemonised
  - Check spelling for all documentation
  - Define working standards for logging
  - Increase level of logging
@@ -20,6 +23,12 @@ Future release:
    - Add -n option (only display commands, don't execute anything)
    - Add -j option (fine tune concurrency)
    - Add support for DESTDIR= and PREFIX=
+ - Split port into its subcomponents:
+   - Port
+   - PortCache
+   - DependHandler
+   - System interface (and apply appropriate abstraction)
+   - Develop proper API for the library
  - Port:
    - Add distfiles checking (to optimise fetching)
    - Add support for DESTDIR= and PREFIX= (esp. with depends)
@@ -83,15 +92,23 @@ Future release:
 0.0.8 - Milestone 8 (Finish command line controller)
  - Refine and condense code
  - Default to batch mode
+ - Implement proper and complete logging (and comments)
+ - Ensure thread safety
 
 0.0.7 - Milestone 7 (Finish Target Builders)
  - Refine and condense code
+ - Implement proper and complete logging (and comments)
+ - Ensure thread safety
 
 0.0.6 - Milestone 6 (Finish Dependant Handling)
  - Refine and condense code
+ - Implement proper and complete logging (and comments)
+ - Ensure thread safety
 
 0.0.5 - Milestone 5 (Finish basic ports infrastructure)
  - Refine and condense code
+ - Implement proper and complete logging (and comments)
+ - Ensure thread safety
  - PortCache:
    - Minimise duplicate job requests
  - Port:
@@ -118,16 +135,16 @@ Future release:
      * Finish queue handling
      - Move to TargetBuilder
      - Fix resolving previous stages
- + DependHandler:
-   - Make thread safe
-   - Allow constructor to initialise dependancies
+ * DependHandler:
+   * Make thread safe
+   * Allow constructor to initialise dependancies
    * Rename to be more descriptive
    * Add getters for dependancies and dependants (ports and/or field)
  * WorkerQueue:
    * Add queue putter that returns once run
    * Remove logger (needed?)
    * put: If calling thread is one of our workers then execute it directly
-   - Have all threads terminate on exit()
+   * Have all threads terminate on exit()
  * queue:
    * Add installer queue
  * make:

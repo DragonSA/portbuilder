@@ -71,6 +71,8 @@ class DependHandler(object):
      and dependancies of a Port
   """
 
+  from threading import Lock
+
   # The type of dependancies
   BUILD   = 0  #: Build dependants
   EXTRACT = 1  #: Extract dependants
@@ -85,6 +87,7 @@ class DependHandler(object):
   PARTRESOLV = 1   #: Partly resolved, some dependancies not happy
   RESOLV     = 2   #: Dependancy resolved
 
+  _lock = Lock()
   _log = getLogger("pypkg.port.DependHandler")
 
   def __init__(self, port, depends=None):
@@ -136,15 +139,18 @@ class DependHandler(object):
                         % (self._port.origin(), port))
         raise
 
-      self._dependancies[typ].append(depends)
+      with self._lock:
+        self._dependancies[typ].append(depends)
       depends.add_dependant(field, self, typ)
 
       if depends.status() != DependHandler.RESOLV:
-        self._count += 1
+        with self._lock:
+          self._count += 1
       if depends.status() == DependHandler.FAILURE:
-        if self._status != DependHandler.FAILURE:
-          self._status = DependHandler.FAILURE
-          self._notify_all()
+        with self._lock:
+          if self._status != DependHandler.FAILURE:
+            self._status = DependHandler.FAILURE
+            self._notify_all()
 
   def dependancies(self, typ=None):
     """
@@ -155,22 +161,23 @@ class DependHandler(object):
        @return: A list of dependancies
        @rtype: C{[DependHandler]}
     """
-    if typ is None:
-      depends = self._dependancies
-    elif type(typ) is int:
-      depends = [self._dependancies[typ]]
-    else:
-      depends = []
-      for i in typ:
-        depends.append(self._dependancies[typ])
+    with self._lock:
+      if typ is None:
+        depends = self._dependancies
+      elif type(typ) is int:
+        depends = [self._dependancies[typ]]
+      else:
+        depends = []
+        for i in typ:
+          depends.append(self._dependancies[typ])
 
-    dlist = []
-    for i in depends:
-      for j in i:
-        if j not in dlist:
-          dlist.append(j)
+      dlist = []
+      for i in depends:
+        for j in i:
+          if j not in dlist:
+            dlist.append(j)
 
-    return dlist
+      return dlist
 
   def add_dependant(self, field, depend, typ):
     """
@@ -183,12 +190,13 @@ class DependHandler(object):
        @param typ: The type of dependancy
        @type typ: C{int}
     """
-    if self._status == DependHandler.RESOLV:
-      if not self._update((field, depend), typ):
-        self._status = DependHandler.UNRESOLV
-        self._notify_all()
+    with self._lock:
+      if self._status == DependHandler.RESOLV:
+        if not self._update((field, depend), typ):
+          self._status = DependHandler.UNRESOLV
+          self._notify_all()
 
-    self._dependants[typ].append((field, depend))
+      self._dependants[typ].append((field, depend))
 
   def dependants(self, typ=None, fields=False):
     """
@@ -202,26 +210,27 @@ class DependHandler(object):
        @return: The list of dependants fields or handlers
        @rtype: C{[DependHandler]} or C{[str]}
     """
-    if typ is None:
-      depends = self._dependants
-    elif type(typ) is int:
-      depends = [self._dependants[typ]]
-    else:
-      depends = []
-      for i in typ:
-        depends.append(self._dependants[typ])
+    with self._lock:
+      if typ is None:
+        depends = self._dependants
+      elif type(typ) is int:
+        depends = [self._dependants[typ]]
+      else:
+        depends = []
+        for i in typ:
+          depends.append(self._dependants[typ])
 
-    dlist = []
-    for i in depends:
-      for j in i:
-        if fields:
-          if j[0] not in dlist:
-            dlist.append(j[0])
-        else:
-          if j[1] not in dlist:
-            dlist.append(j[1])
+      dlist = []
+      for i in depends:
+        for j in i:
+          if fields:
+            if j[0] not in dlist:
+              dlist.append(j[0])
+          else:
+            if j[1] not in dlist:
+              dlist.append(j[1])
 
-    return dlist
+      return dlist
 
   def check(self, stage):
     """
@@ -232,18 +241,19 @@ class DependHandler(object):
        @return: The dependancy status
        @rtype: C{int}
     """
-    if self._count == 0 or stage == Port.CONFIG:
-      return DependHandler.RESOLV
-    elif stage == Port.FETCH:
-      return self._check(DependHandler.FETCH)
-    elif stage == Port.BUILD:
-      return self._check((DependHandler.EXTRACT, DependHandler.PATCH,
-                          DependHandler.BUILD,   DependHandler.LIB))
-    elif stage == Port.INSTALL:
-      return self._check((DependHandler.LIB, DependHandler.RUN))
-    else:
-      self._log.error('Unknown stage specified')
-      return DependHandler.UNRESOLV
+    with self._lock:
+      if self._count == 0 or stage == Port.CONFIG:
+        return DependHandler.RESOLV
+      elif stage == Port.FETCH:
+        return self._check(DependHandler.FETCH)
+      elif stage == Port.BUILD:
+        return self._check((DependHandler.EXTRACT, DependHandler.PATCH,
+                            DependHandler.BUILD,   DependHandler.LIB))
+      elif stage == Port.INSTALL:
+        return self._check((DependHandler.LIB, DependHandler.RUN))
+      else:
+        self._log.error('Unknown stage specified')
+        return DependHandler.UNRESOLV
 
   def port(self):
     """
@@ -262,11 +272,14 @@ class DependHandler(object):
        @type depend: C{DependHandler}
     """
     if depend.status() == DependHandler.FAILURE:
-      self._status = DependHandler.FAILURE
+      with self._lock:
+        self._status = DependHandler.FAILURE
     elif depend.status() == DependHandler.RESOLV:
-      self._count -= 1
+      with self._lock:
+        self._count -= 1
     else: # depend.status() == DependHandler.UNRESOLV
-      self._count += 1
+      with self._lock:
+        self._count += 1
 
   def status(self):
     """
@@ -275,7 +288,8 @@ class DependHandler(object):
        @return: The status
        @rtype: C{int}
     """
-    return self._status
+    with self._lock:
+      return self._status
 
   def status_changed(self):
     """
@@ -286,16 +300,18 @@ class DependHandler(object):
       status = DependHandler.FAILURE
     elif self._port.install_status() > Port.ABSENT:
       status = DependHandler.RESOLV
-      if not self._verify():
-        status = DependHandler.UNRESOLV
-      else:
-        self._count = 0
+      with self._lock:
+        if not self._verify():
+          status = DependHandler.UNRESOLV
+        else:
+          self._count = 0
     else:
       status = DependHandler.UNRESOLV
 
     if status != self._status:
-      self._status = status
-      self._notify_all()
+      with self._lock:
+        self._status = status
+        self._notify_all()
  
   def _check(self, depends):
     """
@@ -309,8 +325,10 @@ class DependHandler(object):
 
     for i in depends:
       for j in self._dependancies[i]:
+        self._lock.release()
         if j.status() != DependHandler.RESOLV:
           return DependHandler.UNRESOLV
+        self._lock.acquire()
     return DependHandler.PARTRESOLV
 
   def _notify_all(self):
@@ -319,7 +337,9 @@ class DependHandler(object):
     """
     for i in self._dependants:
       for j in i:
+        self._lock.release()
         j[1].update(self)
+        self._lock.acquire()
 
   def _update(self, data, typ):
     """
