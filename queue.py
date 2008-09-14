@@ -26,6 +26,7 @@ class WorkerQueue(Queue):
        @type number: C{int}
     """
     Queue.__init__(self)
+    from atexit import register
     from logging import getLogger
     from threading import Condition, Lock, local
     # We have to use our own locks since we cannot access Queue's functions
@@ -40,6 +41,8 @@ class WorkerQueue(Queue):
 
     self._pool = {}  #: The pool of workers
     self._local = local()  #: Thread specific information
+
+    register(lambda: self.setpool(0))
 
   def __len__(self):
     """
@@ -111,7 +114,7 @@ class WorkerQueue(Queue):
       Queue.put(self, (jid, func), block, timeout)
       if self.qsize() > 0 and len(self._pool) < self._workers:
         from threading import Thread
-        thread = Thread(target=self.worker)
+        thread = Thread(target=self._worker)
         self._pool[thread] = -1
         thread.setDaemon(True)
         thread.start()
@@ -166,7 +169,7 @@ class WorkerQueue(Queue):
           return
         self._lock.wait()
 
-  def worker(self):
+  def _worker(self):
     """
        The worker.  It waits for a job from the queue and then executes the
        given command (with given parameters).
