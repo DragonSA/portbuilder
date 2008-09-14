@@ -37,3 +37,5 @@ while len(configs):
   ports_queue.join()
   print ports_queue.stats(), len(ports)
   configs = [i for i in ports.itervalues() if i.stage() < Port.CONFIG]
+
+exit(0)

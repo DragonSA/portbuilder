@@ -123,19 +123,20 @@ Future release:
    - Allow constructor to initialise dependancies
    * Rename to be more descriptive
    * Add getters for dependancies and dependants (ports and/or field)
- - Create ordering logic for building (and resolving dependants)
- * Remove make_target from global import
- * Fix PORTSDIR not having a trailing /
  * WorkerQueue:
    * Add queue putter that returns once run
    * Remove logger (needed?)
    * put: If calling thread is one of our workers then execute it directly
+   - Have all threads terminate on exit()
  * queue:
    * Add installer queue
  * make:
    * Rename pre_target to pre_cmd
    * Allow disabling of pre_cmd
    * Condense functionality
+ - Create ordering logic for building (and resolving dependants)
+ * Remove make_target from global import
+ * Fix PORTSDIR not having a trailing /
 
 0.0.2 - Milestone 2 (Dependant Handler):
  * Port:

@@ -54,8 +54,8 @@ ports_attr["depends"].append(lambda x: ([x.remove(i) for i in x
                                          if x.count(i) > 1], x)[1])
 ports_attr["distfiles"].append(lambda x: [i.split(':', 1)[0] for i in x])
 
-strip_depends = lambda x: [(i.split(':', 1)[0],
-                          i.split(':', 1)[1][len(env['PORTSDIR']):]) for i in x]
+strip_depends = lambda x: [(i.split(':', 1)[0].strip(),
+                  i.split(':', 1)[1][len(env['PORTSDIR']):].strip()) for i in x]
 ports_attr["depend_build"].append(strip_depends)
 ports_attr["depend_extract"].append(strip_depends)
 ports_attr["depend_fetch"].append(strip_depends)
@@ -87,12 +87,14 @@ class DependHandler(object):
 
   _log = getLogger("pypkg.port.DependHandler")
 
-  def __init__(self, port):
+  def __init__(self, port, depends=None):
     """
        Initialise the databases of dependancies
 
        @param port: The port this is a dependant handler for
        @type port: Port
+       @param depends: A list of the dependancies
+       @type depends: C{[[(str, str)]]}
     """
     self._count = 0  # The count of outstanding dependancies
     self._dependancies = [[], [], [], [], [], []]  # All dependancies
@@ -102,6 +104,15 @@ class DependHandler(object):
       self._status = DependHandler.RESOLV
     else:
       self._status = DependHandler.UNRESOLV
+
+    if not depends:
+      depends = [[]]
+    elif len(depends) != len(self._dependancies):
+      self._log.warn("Incomplete list of dependancies passed")
+
+    for i in range(len(depends)):
+      for j in depends[i]:
+        self.add_dependancy(j[0], j[1], i)
 
   def add_dependancy(self, field, port, typ):
     """
@@ -121,7 +132,6 @@ class DependHandler(object):
       try:
         depends = ports[port].depends()
       except KeyError:
-        print 'Missing port', port, 'from', self._port.origin()
         self._log.error("Port '%s' has a stale dependancy on port '%s'"
                         % (self._port.origin(), port))
         raise
@@ -495,15 +505,15 @@ class Port(object):
     if self._depends:
       return self._depends
 
+    #from queue import ports_queue
+    #ports_queue.join()
+
     if self._stage < Port.CONFIG:
       self.config()
 
-    depends_obj = DependHandler(self)
-    depends = ['depend_build', 'depend_extract', 'depend_fetch',
-                'depend_lib',   'depend_run',     'depend_patch']
-    for i in range(len(depends)):
-      for j in self.attr(depends[i]):
-        depends_obj.add_dependancy(j[0], j[1], i)
+    depends_obj = DependHandler(self, [self.attr(i) for i in
+                  ('depend_build', 'depend_extract', 'depend_fetch',
+                  'depend_lib',   'depend_run',     'depend_patch')])
 
     with self._lock:
       self._depends = depends_obj
@@ -838,7 +848,8 @@ def port_status(origin):
      @rtype: C{int}
   """
   from subprocess import Popen, PIPE, STDOUT
-  pkg_version = Popen(['pkg_version', '-O', origin], stdout=PIPE, stderr=STDOUT)
+  pkg_version = Popen(['pkg_version', '-O', origin], close_fds=True,
+                      stdout=PIPE, stderr=STDOUT)
   if pkg_version.wait() != 0:
     return Port.ABSENT
 

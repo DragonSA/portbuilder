@@ -7,7 +7,8 @@ from subprocess import Popen, PIPE
 from Queue import Queue
 
 #: The number of CPU's available on this system
-ncpu = int(Popen(['sysctl', '-n', 'hw.ncpu'], stdout=PIPE).communicate()[0])
+ncpu = int(Popen(['sysctl', '-n', 'hw.ncpu'], close_fds=True,
+                 stdout=PIPE).communicate()[0])
 
 class WorkerQueue(Queue):
   """
@@ -112,6 +113,7 @@ class WorkerQueue(Queue):
         from threading import Thread
         thread = Thread(target=self.worker)
         self._pool[thread] = -1
+        thread.setDaemon(True)
         thread.start()
       return jid
 
@@ -223,7 +225,7 @@ class WorkerQueue(Queue):
       self._log.debug("Worker %d: Finished job %d" % (self._local.wid, jid))
 
 config_queue  = WorkerQueue("config", 1)  #: Queue for configuring port options
-build_queue   = WorkerQueue("build", 1)  #: Queue for building ports
+build_queue   = WorkerQueue("build", ncpu)  #: Queue for building ports
 fetch_queue   = WorkerQueue("fetch", 1)  #: Queue for fetching dist files
 install_queue = WorkerQueue("install", 1)  #: Queue for installing ports
-ports_queue   = WorkerQueue("ports", 1)  #: Queue for fetching port info
+ports_queue   = WorkerQueue("ports", ncpu * 2)  #: Queue for fetching port info

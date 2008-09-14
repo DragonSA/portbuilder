@@ -1,7 +1,7 @@
 """
 The subprocess2 module.  This module is a derivative of subprocess.  It manages
 a thread that handles all the creating requests of Popen.  This prevents some
-locking contentions and makes sure only one Popen instance is executed at a time
+locking contentions.
 """
 
 from __future__ import with_statement
