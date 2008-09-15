@@ -1,7 +1,6 @@
 """
 The Make module.  This module provides an interface to `make'.
 """
-
 from os import getenv
 
 env = {}  #: The environment flags to pass to make, aka -D...

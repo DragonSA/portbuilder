@@ -104,6 +104,10 @@ Future release:
  - Refine and condense code
  - Implement proper and complete logging (and comments)
  - Ensure thread safety
+ - DependHandler:
+   - Ensure _count is done properly
+   - _verify:
+     - Add caching of dependancies (no need to check them multiple times)
 
 0.0.5 - Milestone 5 (Finish basic ports infrastructure)
  - Refine and condense code
