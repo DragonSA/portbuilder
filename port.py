@@ -9,7 +9,6 @@ from make import env
 log = getLogger('pypkg.ports')
 
 ports = {}  #: A cache of ports available with auto creation features
-port_filter = 3  #: The ports filter, if ports status matches then not 'loaded'
 
 ports_attr = {
 # Port naming
@@ -419,19 +418,12 @@ class Port(object):
     self._failed = False  #: Failed flag
     self._depends = None  #: The dependant handlers for various stages
 
-    if port_filter >= self._install_status:
-      self._attr_map = port_attr(origin)
+    self._attr_map = port_attr(origin)
 
-      #def gen_method(name):
-      #  ''' Generator: Create a method to retrieve attributes '''
-      #  return lambda: self._attr_map[name]
-      #for i in self._attr_map.iterkeys():
-      #  setattr(self, i, gen_method(i))
-
-      if len(self._attr_map['options']) == 0:
-        self._stage = Port.CONFIG
-        for i in self._attr_map['depends']:
-          ports.add(i)
+    if len(self._attr_map['options']) == 0:
+      self._stage = Port.CONFIG
+      for i in self._attr_map['depends']:
+        ports.add(i)
 
   def attr(self, attr):
     """
@@ -442,16 +434,9 @@ class Port(object):
        @return: The attributes
        @rtype: C{\{str:str|(str)|\}}
     """
-    if self._attr_map:
-      return self._attr_map[attr]
-    elif port_filter >= self._install_status:
+    if not self._attr_map:
       self.config()
-      return self.attr(attr)
-    else:
-      if ports_attr[attr][1] is str:
-        return ''
-      else:
-        return []
+    return self._attr_map[attr]
 
   def failed(self):
     """
@@ -515,16 +500,11 @@ class Port(object):
         self._lock.wait()
 
       if not self._depends:
-        if port_filter < self._install_status:
-          self._depends = DependHandler(self)
-        elif self._stage < Port.CONFIG and not self._failed:
+        if not self._failed:
           self._depends = False
 
     if self._depends:
       return self._depends
-
-    #from queue import ports_queue
-    #ports_queue.join()
 
     if self._stage < Port.CONFIG:
       self.config()
@@ -551,9 +531,6 @@ class Port(object):
     proceed, status = self._prepare(Port.CONFIG)
     if not proceed:
       return status
-
-    if port_filter < self._install_status:
-      return self._finalise(Port.CONFIG, True)
 
     make = make_target(self._origin, 'config', pipe=False)
     status = make.wait() == 0

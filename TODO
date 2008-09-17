@@ -119,6 +119,7 @@ Future release:
    - Add clean target (and have a failed port clean itself...)
  - WorkerQueue:
    - Remove condition (not needed and overexposing internals)
+ - subprocess2: Simplify where possible (reduce as much as possible)
 
 0.0.4 - Milestone 4 (Command line controller)
  - pypkg:
@@ -133,7 +134,7 @@ Future release:
    * Convert install status flags to linear
    * Convert stage status flags to linear
    * Move targets to queue (not build directly)
-   * Fix filtering (for dependancies)
+   * Fix filtering (for dependancies) [actually remove, missplaced]
    * Make depends return once competely initiated
    + _prepare:
      * Finish queue handling

@@ -79,6 +79,10 @@ class _PopenQueue(object):
 
         jid, args, kwargs = self._queue.popleft()
 
+      #args = list(args)
+      #args[0] = [' '.join([''.join(["'", i.replace("'", "\'"), "'"])
+      #                     for i in args[0]])]
+
       self._popen[jid] = subprocess.Popen(close_fds=True, *args, **kwargs)
 
       with self._lock:
