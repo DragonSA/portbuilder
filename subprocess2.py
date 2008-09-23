@@ -13,15 +13,15 @@ __all__ = subprocess.__all__ + ['PopenQueue']
 class _PopenQueue(object):
   def __init__(self):
     from atexit import register
-    from collections import deque
     from threading import Condition, Lock, Thread
+
     self._lock = Lock()
     self._signal_client = Condition(self._lock)
     self._signal_worker = Condition(self._lock)
 
     self._terminate = False
     self._job_cnt = 0
-    self._queue = deque()
+    self._queue = []
     self._popen = {}
 
     thread = Thread(target=self.worker)
@@ -77,74 +77,19 @@ class _PopenQueue(object):
         if self._terminate:
           return
 
-        jid, args, kwargs = self._queue.popleft()
-
-      #args = list(args)
-      #args[0] = [' '.join([''.join(["'", i.replace("'", "\'"), "'"])
-      #                     for i in args[0]])]
+        jid, args, kwargs = self._queue.pop(0)
 
       self._popen[jid] = subprocess.Popen(close_fds=True, *args, **kwargs)
 
       with self._lock:
         self._signal_client.notifyAll()
 
-  #def worker(self):
-    #from os import fork, pipe
-    #from pickle import dump, load
-
-    #term_signal = (-1, None, None)
-
-    #def fdpipe(pipe, mode):
-      #from os import close, fdopen
-      #if mode == 'r':
-        #close(pipe[1])
-        #return fdopen(pipe[0], mode)
-      #elif mode == 'w':
-        #close(pipe[0])
-        #return fdopen(pipe[1], mode, 0)
-
-    #Popen_stream = pipe()
-    #Arg_stream = pipe()
-
-    #pid = fork()
-    #if pid:
-      #Popen_stream = fdpipe(Popen_stream, 'r')
-      #Arg_stream = fdpipe(Arg_stream, 'w')
-
-      #while True:
-        #with self._lock:
-          #while len(self._queue) == 0 and not self._terminate:
-            #self._signal_worker.wait()
-
-          #if self._terminate:
-            #dump(term_signal, file=Arg_stream, protocol=-1)
-            #if term_signal != load(Popen_stream):
-              ## TODO: something went wrong
-              #pass
-            #return
-
-          #args = self._queue.popleft()
-
-        #dump(args, file=Arg_stream, protocol=-1)
-        #self._popen[args[0]] = load(Popen_stream)
-
-        #with self._lock:
-          #self._signal_client.notifyAll()
-
-    #else:
-      #Popen_stream = fdpipe(Popen_stream, 'w')
-      #Arg_stream = fdpipe(Arg_stream, 'r')
-
-      #while True:
-        #jid, args, kwargs = load(Arg_stream)
-        #if term_signal == (jid, args, kwargs):
-          #dump(term_signal, file=Popen_stream, protocol=-1)
-          #exit(255)
-        #dump(subprocess.Popen(close_fds=True, *args, **kwargs),
-             #file=Popen_stream, protocol=-1)
-
 PopenQueue = _PopenQueue()
 Popen = PopenQueue.put_wait
+
+# Make pylint happier:
+PIPE = subprocess.PIPE
+STDOUT = subprocess.STDOUT
 
 for i in __all__:
   if i not in locals():

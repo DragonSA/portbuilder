@@ -842,9 +842,8 @@ def port_status(origin):
      @return: The port's status
      @rtype: C{int}
   """
-  from subprocess import Popen, PIPE, STDOUT
-  pkg_version = Popen(['pkg_version', '-O', origin], close_fds=True,
-                      stdout=PIPE, stderr=STDOUT)
+  from subprocess2 import Popen, PIPE, STDOUT
+  pkg_version = Popen(['pkg_version', '-O', origin], stdout=PIPE, stderr=STDOUT)
   if pkg_version.wait() != 0:
     return Port.ABSENT
 
@@ -880,7 +879,7 @@ def port_attr(origin, change=False):
     args.append('-V')
     args.append(i[0])
 
-  make = make_target(origin, args, pre=False)
+  make = make_target(origin, args, pipe=True, pre=False)
   if make.wait() > 0:
     log.error("Error in obtaining information for port '%s'" % origin)
     return {}

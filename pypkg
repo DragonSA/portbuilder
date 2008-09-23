@@ -2,6 +2,7 @@
 """
 Controller for various ports operations
 """
+
 from port import ports, Port
 from queue import ports_queue
 
@@ -26,8 +27,8 @@ Comment:     ``%s''
 Dependants:  %s
 Depend stat: %i
 """ % (name, port.attr('name'), port.attr('version'), port.attr('revision'),
-       port.attr('comment'), port.depends().dependants(fields=True),
-       port.depends().status())
+      port.attr('comment'), port.depends().dependants(fields=True),
+      port.depends().status())
 
 print len(ports)
 configs = [i for i in ports.itervalues() if i.stage() < Port.CONFIG]

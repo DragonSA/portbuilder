@@ -16,6 +16,7 @@ Future release:
  - Have a base class (and simple API) to manage logged messages
  - Add all assertions
  - Add process effiecient version of subprocess
+ - Prevent multiple fetches of the same file!!!
  - Refactor:
    - Break ports into its own libraries
    - Try isolate system and ports dependant code
@@ -29,6 +30,9 @@ Future release:
    - DependHandler
    - System interface (and apply appropriate abstraction)
    - Develop proper API for the library
+ - make:
+   - Add a command prefix (such as for socksify?)
+   - Add sudo support
  - Port:
    - Add distfiles checking (to optimise fetching)
    - Add support for DESTDIR= and PREFIX= (esp. with depends)
@@ -128,6 +132,7 @@ Future release:
  - Create target to build INDEX
 
 0.0.3 - Milestone 3 (Target Builders):
+ - Move from threading to multiprocessing (to fix locking problems)
  + Port:
    * Make thread safe
    * Getter for origin
@@ -152,8 +157,10 @@ Future release:
    * Have all threads terminate on exit()
  * queue:
    * Add installer queue
- * make:
+ + make:
    * Rename pre_target to pre_cmd
+   - Handle pipes properly
+   - Add logging support (pipe redirection)
    * Allow disabling of pre_cmd
    * Condense functionality
  - Create ordering logic for building (and resolving dependants)

@@ -8,7 +8,7 @@ pre_cmd = []  #: Prepend to command
 
 env["PORTSDIR"] = getenv("PORTSDIR", "/usr/ports/")  #: Location of ports
 
-def make_target(origin, args, pipe=True, pre=True):
+def make_target(origin, args, pipe=None, pre=True):
   """
      Run make to build a target with the given arguments and the appropriate
      addition settings
@@ -23,7 +23,7 @@ def make_target(origin, args, pipe=True, pre=True):
      @rtype: C{Popen}
   """
   from os.path import join
-  from subprocess import Popen, PIPE, STDOUT
+  from subprocess2 import Popen, PIPE, STDOUT
 
   if type(args) is str:
     args = [args]
@@ -32,15 +32,20 @@ def make_target(origin, args, pipe=True, pre=True):
 
   if pipe:
     stdout, stderr = PIPE, STDOUT
+  elif pipe is False:
+    stdout, stderr = None, None
   else:
+    # TODO, record log of commands
     stdout, stderr = None, None
 
   if pre:
     pre = pre_cmd
+    if pre:
+      stdout, stderr = None, None
   else:
     pre = []
 
   make = Popen(pre + ['make', '-C', join(env["PORTSDIR"], origin)] + args,
-               close_fds=True, stdout=stdout, stderr=stderr)
+               stdout=stdout, stderr=stderr)
 
   return make
