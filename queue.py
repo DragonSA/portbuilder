@@ -3,7 +3,7 @@ The Queue module.  This module handles the execution of time consuming tasks.
 """
 from __future__ import with_statement
 
-from subprocess2 import Popen, PIPE
+from subprocess import Popen, PIPE
 from Queue import Queue
 
 #: The number of CPU's available on this system

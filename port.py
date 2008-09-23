@@ -842,7 +842,7 @@ def port_status(origin):
      @return: The port's status
      @rtype: C{int}
   """
-  from subprocess2 import Popen, PIPE, STDOUT
+  from subprocess import Popen, PIPE, STDOUT
   pkg_version = Popen(['pkg_version', '-O', origin], stdout=PIPE, stderr=STDOUT)
   if pkg_version.wait() != 0:
     return Port.ABSENT

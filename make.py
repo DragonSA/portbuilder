@@ -23,7 +23,7 @@ def make_target(origin, args, pipe=None, pre=True):
      @rtype: C{Popen}
   """
   from os.path import join
-  from subprocess2 import Popen, PIPE, STDOUT
+  from subprocess import Popen, PIPE, STDOUT
 
   if type(args) is str:
     args = [args]
