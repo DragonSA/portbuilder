@@ -127,7 +127,7 @@ class WorkerQueue(Queue):
     """
     from threading import currentThread
     with self._lock:
-      if currentThread in self._pool.iterkeys():
+      if currentThread() in self._pool.iterkeys():
         jid = self._job_cnt
         inline = True
       else:
