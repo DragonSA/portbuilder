@@ -307,6 +307,7 @@ class DependHandler(object):
     """
     if self._port.failed():
       status = DependHandler.FAILURE
+      # TODO: We might have failed and yet still satisfy our dependants
     elif self._port.install_status() > Port.ABSENT:
       status = DependHandler.RESOLV
       if not self._verify():
@@ -321,7 +322,7 @@ class DependHandler(object):
 
   def _check(self, depends):
     """
-       Check if a list of dependancies have been resolved
+       Check if a list of dependancies has been resolved
 
        @param depends: List of dependancies
        @type depends: C{int} or C{(int)}
@@ -463,6 +464,15 @@ class Port(object):
        @rtype: C{int}
     """
     return self._install_status
+
+  def lock(self):
+    """
+       The lock this port uses
+
+       @return: The ports lock
+       @rtype: C{Lock}
+    """
+    return self._lock
 
   def stage(self):
     """

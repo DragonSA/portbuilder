@@ -100,20 +100,25 @@ Future release:
  - Implement proper and complete logging (and comments)
  - Ensure thread safety
  - Vet the thread locking for deadlocks
+ - Move variables from protected to private (were appropriate)
 
 0.0.7 - Milestone 7 (Finish Target Builders)
  - Refine and condense code
  - Implement proper and complete logging (and comments)
  - Ensure thread safety
  - Vet the thread locking for deadlocks
+ - Move variables from protected to private (were appropriate)
 
 0.0.6 - Milestone 6 (Finish Dependant Handling)
  - Refine and condense code
  - Implement proper and complete logging (and comments)
  - Ensure thread safety
  - Vet the thread locking for deadlocks
+ - Move variables from protected to private (were appropriate)
  - DependHandler:
    - Ensure _count is done properly
+   - Have a dummy port for all stale ports
+   - Check for cyclic dependancies
    - _verify:
      - Add caching of dependancies (no need to check them multiple times)
 
@@ -122,25 +127,25 @@ Future release:
  - Implement proper and complete logging (and comments)
  - Ensure thread safety
  - Vet the thread locking for deadlocks
+ - Move variables from protected to private (were appropriate)
  - PortCache:
    - Minimise duplicate job requests
  - Port:
    - Add clean target (and have a failed port clean itself...)
  - WorkerQueue:
    - Remove condition (not needed and overexposing internals)
- - subprocess2: Simplify where possible (reduce as much as possible)
+ - make:
+   - Have automatic logging of build commands (with archival)
 
 0.0.4 - Milestone 4 (Command line controller)
  - pypkg:
    - Add ability to update/install ports (basic)
    - Allow environment variables to be settable (like ports_dir)
  - Create target to build INDEX
- - Vet the thread locking for deadlocks
 
 0.0.3 - Milestone 3 (Target Builders):
  - Move type() checks to isinstance
- - Make sure all variable comments have a #:
- - Vet the thread locking for deadlocks
+ * Make sure all variable comments have a #:
  + Port:
    * Make thread safe
    * Getter for origin
@@ -165,10 +170,10 @@ Future release:
    * Have all threads terminate on exit()
  * queue:
    * Add installer queue
- + make:
+ * make:
    * Rename pre_target to pre_cmd
-   - Handle pipes properly
-   - Add logging support (pipe redirection)
+   * Handle pipes properly
+   * Add logging support (pipe redirection)
    * Allow disabling of pre_cmd
    * Condense functionality
  - Create ordering logic for building (and resolving dependants)

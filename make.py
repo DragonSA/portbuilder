@@ -30,10 +30,12 @@ def make_target(origin, args, pipe=None, pre=True):
   args = args + ["%s=%s" % (k, v) for k, v in env.iteritems()
                   if (k != "PORTSDIR" or v != "/usr/ports/")]
 
-  if pipe:
+  if pipe is True:
     stdout, stderr = PIPE, STDOUT
   elif pipe is False:
     stdout, stderr = None, None
+  elif pipe:
+    stdout, stderr = pipe, STDOUT
   else:
     # TODO, record log of commands
     stdout, stderr = None, None
