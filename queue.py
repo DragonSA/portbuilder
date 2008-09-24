@@ -151,7 +151,7 @@ class WorkerQueue(Queue):
 
   def wait(self, func):
     """
-       Wait until a curtain criteria has been met.  The criteria is checked
+       Wait until a certain criteria has been met.  The criteria is checked
        every time a job has been finished.
 
        @param func: The criteria
@@ -162,7 +162,7 @@ class WorkerQueue(Queue):
       if currentThread() in self._pool.iterkeys():
         self._log.error("Worker %i: Job %i is waiting on its own queue" %
                         (self._local.jid, self._local.wid))
-        raise RuntimeError, "Averted dead lock on queue"
+        raise RuntimeError, "Potential dead lock on queue"
       while True:
         if func() or len(self) == 0:
           return

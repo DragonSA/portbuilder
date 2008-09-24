@@ -2,7 +2,8 @@
 The Port module.  This module contains all classes and utilities needed for
 managing port information.  
 """
-from __future__ import with_statement # Used for locking
+from __future__ import with_statement
+
 from logging import getLogger
 from make import env
 
@@ -97,10 +98,11 @@ class DependHandler(object):
        @param depends: A list of the dependancies
        @type depends: C{[[(str, str)]]}
     """
-    self._count = 0  # The count of outstanding dependancies
-    self._dependancies = [[], [], [], [], [], []]  # All dependancies
-    self._dependants   = [[], [], [], [], [], []]  # All dependants
-    self._port = port  # The port whom we handle
+    self._count = 0  #: The count of outstanding dependancies
+    self._dependancies = [[], [], [], [], [], []]  #: All dependancies
+    self._dependants   = [[], [], [], [], [], []]  #: All dependants
+    self._port = port  #: The port whom we handle
+    self._report_log = []  #: Log of all problems reported (to prevent dups)
     if port.install_status() > Port.ABSENT:
       self._status = DependHandler.RESOLV
     else:
@@ -126,18 +128,24 @@ class DependHandler(object):
        @param typ: The type of dependancy
        @type typ: C{int}
     """
-
     try:
       depends = ports[port].depends()
     except KeyError:
-      self._log.error("Port '%s' has a stale dependancy on port '%s'"
-                      % (self._port.origin(), port))
-      raise
+      ports_msg = (self._port.origin(), port)
+      if ports_msg not in self._report_log:
+        self._log.error("Port '%s' has a stale dependancy on port '%s'"
+                        % ports_msg)
+        self._report_log.append(ports_msg)
+      # TODO: Set a dummy port as the dependancy...
+      return
 
     with self._lock:
       if depends in self._dependancies[typ]:
-        self._log.warn("Multiple dependancies on port '%s' from port '%s'"
-                       % (port, self._port.origin()))
+        ports_msg = (port, self._port.origin())
+        if ports_msg not in self._report_log:
+          self._log.warn("Multiple dependancies on port '%s' from port '%s'"
+                         % ports_msg)
+          self._report_log.append(ports_msg)
         return
 
       self._dependancies[typ].append(depends)
@@ -721,6 +729,8 @@ class PortCache(dict):
           raise KeyError, key
 
     ports_queue.wait(lambda: self._has_key(key))
+
+    assert dict.has_key(self, key) and dict.__getitem__(self, key) != None
 
     return self[key]
 

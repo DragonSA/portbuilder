@@ -1,14 +1,17 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2.6
 """
 Controller for various ports operations
 """
-import hacks
+#import hacks
 from port import ports, Port
 from queue import ports_queue
 
 import make, port
 make.pre_cmd = ['echo']
-port.port_filter = Port.OLDER
+
+from logging import getLogger, StreamHandler
+
+getLogger('pypkg').addHandler(StreamHandler())
 
 print "Getting 'x11/xorg' dependant handler..."
 ports['x11/xorg'].depends()

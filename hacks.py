@@ -1,8 +1,8 @@
 """
 The Hacks module.  This module overrides system operations to patch errors or
 to enhance functionality.  This should be imported once and only once (and
-before any threading operations take place, preferably before threading is
-imported)
+before any threading operations take place, preferably before 'threading' or
+'thread' is imported)
 """
 from __future__ import with_statement
 
@@ -39,8 +39,6 @@ if not locals().has_key('hacks_finished'):
       import thread
       lock = thread.allocate_lock()
       override.lock = lock
-      if lock not in lock_store:
-        lock_store.append(lock)
     setattr(mod, attribute, override)
     register_db.append((mod, attr, override))
 
@@ -56,13 +54,14 @@ if not locals().has_key('hacks_finished'):
     from sys import getrefcount
 
     with allocate_lock.lock:
-      # Return an old lock that is not being used.  This results in a cache of
-      # locks with a maximum count of the most concurrently referenced locks.
-      for i in lock_store:
-        if getrefcount(i) <= 3:
-          if i.locked():
-            i.release()
-          return i
+      # Since we keep a record of all the locks we need to tidy up when the
+      # locks become free
+      for i in xrange(len(lock_store) - 1, -1, -1):
+        if getrefcount(lock_store[i]) <= 2:
+          # Make sure the lock has been released before we delete it
+          if lock_store[i].locked():
+            lock_store[i].release()
+          lock_store.pop(i)
 
       lock = allocate_lock.this()
       lock_store.append(lock)
@@ -75,14 +74,16 @@ if not locals().has_key('hacks_finished'):
        @return: The pid of the child, or 0 if we are the child
        @rtype: C{int}
     """
-    with allocate_lock.lock:
-      pid = fork.this()
-      if not pid:
-        # Free all the locks.  There should not be any locked!!!
-        for i in lock_store:
-          if i.locked() and i is not allocate_lock.lock:
-            i.release()
-      return pid
+    pid = fork.this()
+    if not pid:
+      global lock_store
+      # Free all the locks.
+      for i in lock_store:
+        if i.locked() and i is not allocate_lock.lock:
+          i.release()
+      del lock_store
+      lock_store = []
+    return pid
 
   def popen(*args, **kwargs):
     """
@@ -97,8 +98,8 @@ if not locals().has_key('hacks_finished'):
        @rtype: C{subprocess.Popen}
     """
     # Make close_fds=True the default.  Fixes some deadlocking bugs
-    if len(args) < 7 and not kwargs.has_key("close_fds"):
-      kwargs["close_fds"] = True
+    #if len(args) < 7 and not kwargs.has_key("close_fds"):
+      #kwargs["close_fds"] = True
 
     with popen.lock:
       return popen.this(*args, **kwargs)

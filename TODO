@@ -133,7 +133,8 @@ Future release:
  - Create target to build INDEX
 
 0.0.3 - Milestone 3 (Target Builders):
- - Move from threading to multiprocessing (to fix locking problems)
+ - Move type() checks to isinstance
+ - Make sure all variable comments have a #:
  + Port:
    * Make thread safe
    * Getter for origin
