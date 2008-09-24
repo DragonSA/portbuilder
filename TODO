@@ -99,16 +99,19 @@ Future release:
  - Default to batch mode
  - Implement proper and complete logging (and comments)
  - Ensure thread safety
+ - Vet the thread locking for deadlocks
 
 0.0.7 - Milestone 7 (Finish Target Builders)
  - Refine and condense code
  - Implement proper and complete logging (and comments)
  - Ensure thread safety
+ - Vet the thread locking for deadlocks
 
 0.0.6 - Milestone 6 (Finish Dependant Handling)
  - Refine and condense code
  - Implement proper and complete logging (and comments)
  - Ensure thread safety
+ - Vet the thread locking for deadlocks
  - DependHandler:
    - Ensure _count is done properly
    - _verify:
@@ -118,6 +121,7 @@ Future release:
  - Refine and condense code
  - Implement proper and complete logging (and comments)
  - Ensure thread safety
+ - Vet the thread locking for deadlocks
  - PortCache:
    - Minimise duplicate job requests
  - Port:
@@ -131,10 +135,12 @@ Future release:
    - Add ability to update/install ports (basic)
    - Allow environment variables to be settable (like ports_dir)
  - Create target to build INDEX
+ - Vet the thread locking for deadlocks
 
 0.0.3 - Milestone 3 (Target Builders):
  - Move type() checks to isinstance
  - Make sure all variable comments have a #:
+ - Vet the thread locking for deadlocks
  + Port:
    * Make thread safe
    * Getter for origin

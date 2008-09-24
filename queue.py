@@ -4,6 +4,7 @@ The Queue module.  This module handles the execution of time consuming tasks.
 from __future__ import with_statement
 
 from subprocess import Popen, PIPE
+from tools import invert
 from Queue import Queue
 
 #: The number of CPU's available on this system
@@ -159,12 +160,15 @@ class WorkerQueue(Queue):
     """
     from threading import currentThread
     with self._lock:
-      if currentThread() in self._pool.iterkeys():
+      if currentThread() in self._pool:
         self._log.error("Worker %i: Job %i is waiting on its own queue" %
                         (self._local.jid, self._local.wid))
         raise RuntimeError, "Potential dead lock on queue"
       while True:
-        if func() or len(self) == 0:
+        with invert(self._lock):
+          if func():
+            return
+        if len(self) == 0:
           return
         self._lock.wait()
 
@@ -177,6 +181,7 @@ class WorkerQueue(Queue):
     from Queue import Empty
 
     thread = currentThread()
+
 
     with self._lock:
       self._local.wid = self._worker_cnt
@@ -221,6 +226,9 @@ class WorkerQueue(Queue):
       self._log.exception("Worker %d: Job %d didn't specify a callable target"
                           % (self._local.wid, jid))
     except BaseException:
+      from traceback import print_exception
+      from sys import exc_info
+      print_exception(*exc_info())
       self._log.exception("Worker %d: Job %d threw an exception"
                           % (self._local.wid, jid))
     finally:

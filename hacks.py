@@ -97,9 +97,9 @@ if not locals().has_key('hacks_finished'):
        @return: The Popen object
        @rtype: C{subprocess.Popen}
     """
-    # Make close_fds=True the default.  Fixes some deadlocking bugs
-    #if len(args) < 7 and not kwargs.has_key("close_fds"):
-      #kwargs["close_fds"] = True
+    #Make close_fds=True the default.  Fixes some deadlocking bugs
+    if len(args) < 7 and not kwargs.has_key("close_fds"):
+      kwargs["close_fds"] = True
 
     with popen.lock:
       return popen.this(*args, **kwargs)

@@ -717,16 +717,16 @@ class PortCache(dict):
     """
     from queue import ports_queue
 
-    with self._lock:
-      try:
+    try:
+      with self._lock:
         value = dict.__getitem__(self, key)
         if value:
           return value
-      except KeyError:
-        self._add(key)
-      else:
-        if value is False:
-          raise KeyError, key
+    except KeyError:
+      self.add(key)
+    else:
+      if value is False:
+        raise KeyError, key
 
     ports_queue.wait(lambda: self._has_key(key))
 
@@ -776,7 +776,7 @@ class PortCache(dict):
       except KeyError:
         return False
 
-  def _add(self, key):
+  def add(self, key):
     """
        Adds a port to be contructed if not already in the cache or queued for
        construction
@@ -789,19 +789,6 @@ class PortCache(dict):
     from queue import ports_queue
     if not dict.has_key(self, key):
       return ports_queue.put_nowait(lambda: self._get(key))
-
-  def add(self, key):
-    """
-       Adds a port to be contructed if not already in the cache or queued for
-       construction
-
-       @param key: The port for queueing
-       @type key: C{str}
-       @return: The job ID of the queued port
-       @rtype: C{int}
-    """
-    with self._lock:
-      return self._add(key)
 
   def get(self, k):
     """
@@ -837,6 +824,9 @@ class PortCache(dict):
       self[key] = Port(key)
       print key
     except BaseException:
+      from traceback import print_exception
+      from sys import exc_info
+      print_exception(*exc_info())
       self[key] = False
       self._log.exception("Error while creating port '%s'" % key)
 
