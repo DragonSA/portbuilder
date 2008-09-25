@@ -4,15 +4,16 @@ ports
 """
 from __future__ import with_statement
 
-from contextlib import nested
+from port import DependHandler, Port
 from tools import invert
+from queue import config_queue, fetch_queue, build_queue, install_queue
 
 class Builder(object):
   """
      The Builder class.  This class handles building a particular stage
   """
 
-  def __init__(self, stage, queue, pre_builder=None):
+  def __init__(self, stage, queue, prev_builder=None):
     from logging import getLogger
     from threading import Lock
     #: Logger for this Builder
@@ -21,58 +22,72 @@ class Builder(object):
     self.__log = getLogger("pypkg.builder." + self.__name)
     self.__stage = stage  #: The stage we are taking care of
     self.__queue = queue  #: The queue for this stage
-    self.__pre_builder = pre_builder  #: The builder for the previous stage
+    self.__prev_builder = prev_builder  #: The builder for the previous stage
 
-    self.__working = []  #: List of ports we are working on
+    self.__building = {}  #: List of ports we are working on
 
-  def append(self, port, callback=None):
-    if callback is None or not callable(callback):
-      def caller():
-        pass
-      callback = caller
-    # TODO: Check if not configured, if not then make sure it is
+  def __call__(self, port, callback=None):
     port_lock = port.lock()
+    if port.stage() < Port.CONFIG:
+      config_builder(port, lambda: self(port, callback))
+      return
+    # Make sure the ports dependant handler has been created:
+    depends = port.depends()
     port_lock.acquire()
     with self.__lock:
       if port.failed() or port.stage() > self.__stage:
         with invert(self.__lock):
           port_lock.release()
-          callback()
+          if callable(callback):
+            callback()
           return
-      if port.working():
-        if port.stage() == self.__stage:
-          if not self.__working.has_key(port):
-            self.__log.error("Port '%s' not being built via this Builder"
-                            % port.origin())
-          else:
-            self.__working[port].append(callback)
-          port_lock.release()
-          return
-      if port.stage() < self.__stage:
+      elif port.stage() < self.__stage:
         port_lock.release()
-        if self.__pre_builder:
-          self.__pre_builder.append(port, lambda: self.__build(port))
+        if self.__prev_builder:
+          with invert(self.__lock):
+            self.__prev_builder(port, lambda: self(port, callback))
         else:
           self.__log.error("Unable to resolve stage '%s' of port '%s'"
                            % (self.__name, port.origin()))
           return
+      elif port.working():
+        port_lock.release()
+        # Implied: port.stage() == self.__stage:
+        if not self.__building.has_key(port):
+          self.__log.error("Port '%s' not being built via this Builder"
+                           % port.origin())
+        elif callable(callback):
+          self.__building[port].append(callback)
+        return
+      elif depends.check(self.__stage) > DependHandler.UNRESOLV:
+        port_lock.release()
+        self.__building[port] = callable(callback) and [callback] or []
+        with invert(self.__lock):
+          self.__queue.put(lambda: self.__build(port))
+        return
 
-      # TODO: Fix
-      for i in port.depends().dependancies(DependHandler.???self.__stage):
-        if i.status() == DependHandler.UNRESOLV:
-          install_builder.append(i.port(), lambda: self.__cond_append(port,
-                                                                      callback))
+    depends = depends.dependancies(DependHandler.STAGE2DEPENDS[self.__stage])
+    port_lock.release()
 
-  def __cond_append(self, port, callback):
-    for i in port.depends().dependancies(DependHandler.???self.__stage):
+    for i in depends:
+      if i.status() == DependHandler.UNRESOLV:
+        install_builder(i.port(), lambda: self.__cond_call(port, callback))
+
+  def __cond_call(self, port, callback):
+    for i in port.depends().dependancies(
+               DependHandler.STAGE2DEPENDS[self.__stage]):
       if i.status() == DependHandler.UNRESOLV:
         return
-    self.append(port, callback)
+    self(port, callback)
 
   def __build(self, port):
     assert self.__building.has_key(port)
     port.build(self.__stage)
-    for i in self.__building(port):
-      i()
     with self.__lock:
-      self.__building.pop(port)
+      callbacks = self.__building.pop(port)
+    for i in callbacks:
+      i()
+
+fetch_builder   = Builder(Port.FETCH, fetch_queue)
+build_builder   = Builder(Port.BUILD, build_queue, fetch_builder)
+install_builder = Builder(Port.INSTALL, install_queue, build_builder)

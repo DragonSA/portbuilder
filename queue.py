@@ -4,7 +4,6 @@ The Queue module.  This module handles the execution of time consuming tasks.
 from __future__ import with_statement
 
 from subprocess import Popen, PIPE
-from tools import invert
 from Queue import Queue
 
 #: The number of CPU's available on this system
@@ -72,7 +71,7 @@ class WorkerQueue(Queue):
        @rtype: C{bool}
     """
     with self._lock:
-      if jid in self._pool.itervalues():
+      if jid in self._pool:
         return False
       for i in self.queue:
         if i[0] == jid:
@@ -120,26 +119,6 @@ class WorkerQueue(Queue):
         thread.start()
       return jid
 
-  def put_wait(self, func):
-    """
-       Place a job onto the queue and then wait for it to be executed
-
-       @param func: The job to execute
-    """
-    from threading import currentThread
-    with self._lock:
-      if currentThread() in self._pool.iterkeys():
-        jid = self._job_cnt
-        inline = True
-      else:
-        inline = False
-
-    if inline:
-      self._work(func, jid)
-    else:
-      jid = self.put_nowait(func)
-      self.wait(lambda: self.job(jid))
-
   def stats(self):
     """
        Returns a tuple about activity on the queue.
@@ -149,28 +128,6 @@ class WorkerQueue(Queue):
        @rtype: C{(int, int, int)}
     """
     return (len(self), self._worker_cnt, self._job_cnt)
-
-  def wait(self, func):
-    """
-       Wait until a certain criteria has been met.  The criteria is checked
-       every time a job has been finished.
-
-       @param func: The criteria
-       @type func: C{function}
-    """
-    from threading import currentThread
-    with self._lock:
-      if currentThread() in self._pool:
-        self._log.error("Worker %i: Job %i is waiting on its own queue" %
-                        (self._local.jid, self._local.wid))
-        raise RuntimeError, "Potential dead lock on queue"
-      while True:
-        with invert(self._lock):
-          if func():
-            return
-        if len(self) == 0:
-          return
-        self._lock.wait()
 
   def _worker(self):
     """
@@ -226,9 +183,6 @@ class WorkerQueue(Queue):
       self._log.exception("Worker %d: Job %d didn't specify a callable target"
                           % (self._local.wid, jid))
     except BaseException:
-      from traceback import print_exception
-      from sys import exc_info
-      print_exception(*exc_info())
       self._log.exception("Worker %d: Job %d threw an exception"
                           % (self._local.wid, jid))
     finally:
