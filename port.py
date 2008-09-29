@@ -109,9 +109,6 @@ class Port(object):
 
     self._attr_map = port_attr(origin)
 
-    if len(self._attr_map['options']) == 0:
-      self._stage = Port.CONFIG
-
     for i in self._attr_map['depends']:
       ports.add(i)
 
@@ -218,6 +215,21 @@ class Port(object):
 
     return self._depends
 
+  def build_stage(self, stage):
+    """
+       Generic handler for building a stage, this calls the correct method.
+       This does not add the port to the construction queue and should only
+       be called by the correstonding _builder (Note: private but friendly C++)
+
+       @param stage: The stage to build
+       @type stage: C{int}
+       @return: The stage result
+       @rtype: C{bool}
+    """
+    stage_handler = {Port.CONFIG: self.config, Port.FETCH: self.fetch,
+                     Port.BUILD: self.build, Port.INSTALL: self.install}
+    return stage_handler[stage]()
+
   def config(self):
     """
        Configure the ports options.
@@ -231,18 +243,18 @@ class Port(object):
     if not proceed:
       return status
 
-    make = make_target(self._origin, 'config', pipe=False)
-    status = make.wait() == 0
+    if len(self._attr_map['options']) == 0:
+      status = True
+    else:
+      make = make_target(self._origin, 'config', pipe=False)
+      status = make.wait() == 0
 
-    if status:
-      self._attr_map = port_attr(self._origin)
-      for i in self._attr_map['depends']:
-        ports.add(i)
+      if status:
+        self._attr_map = port_attr(self._origin)
+        for i in self._attr_map['depends']:
+          ports.add(i)
 
     self._finalise(Port.CONFIG, status)
-
-    if self._depends is None:
-      self.depends()
 
     return status
 

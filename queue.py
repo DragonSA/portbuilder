@@ -107,6 +107,7 @@ class WorkerQueue(Queue):
 
        @param func: The job to execute
     """
+    assert callable(func)
     with self._lock:
       jid = self._job_cnt
       self._job_cnt += 1
@@ -179,10 +180,10 @@ class WorkerQueue(Queue):
 
     try:
       func()
-    except TypeError:
-      self._log.exception("Worker %d: Job %d didn't specify a callable target"
-                          % (self._local.wid, jid))
     except BaseException:
+      from traceback import print_exception
+      from sys import exc_info
+      print_exception(*exc_info())
       self._log.exception("Worker %d: Job %d threw an exception"
                           % (self._local.wid, jid))
     finally:

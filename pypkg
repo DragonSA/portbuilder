@@ -3,9 +3,19 @@
 Controller for various ports operations
 """
 from port import ports
-from queue import ports_queue
-from target import config_builder
+from queue import ports_queue, config_queue, install_queue #, fetch_queue
+from target import config_builder, install_builder # , fetch_builder
 import make
+
+from logging import getLogger, StreamHandler, DEBUG
+
+handler = StreamHandler()
+handler.setLevel(DEBUG)
+getLogger('pypkg').addHandler(StreamHandler())
+#getLogger('pypkg').setLevel(DEBUG)
+#getLogger('pypkg.port').setLevel(DEBUG)
+getLogger('pypkg.port.DependHandler').setLevel(DEBUG)
+
 
 make.pre_cmd = ['echo']
 
@@ -15,46 +25,14 @@ print "\nWaiting for all port details to load..."
 ports_queue.join()
 print "\nConfiguring 'x11/xorg'..."
 config_builder(xorg)
+config_queue.join()
 
-exit(0)
+#print "\nFetching all for 'x11/xorg'..."
+#fetch_builder(xorg, recurse=True)
+#fetch_queue.join()
 
-from port import ports, Port
-from queue import ports_queue
-
-import make, port
-make.pre_cmd = ['echo']
-
-from logging import getLogger, StreamHandler
-
-getLogger('pypkg').addHandler(StreamHandler())
-
-print "Getting 'x11/xorg' dependant handler..."
-ports['x11/xorg'].depends()
-
-#ports_queue.join()
-
-for name, port in ports.iteritems():
-  print """
-==============================================================================
-Origin:      %s
-------------------------------------------------------------------------------
-Name:        %s
-Version:     %s
-Revision:    %s
-Comment:     ``%s''
-Dependants:  %s
-Depend stat: %i
-""" % (name, port.attr('name'), port.attr('version'), port.attr('revision'),
-      port.attr('comment'), port.depends().dependants(fields=True),
-      port.depends().status())
-
-print len(ports)
-configs = [i for i in ports.itervalues() if i.stage() < Port.CONFIG]
-while len(configs):
-  for i in configs:
-    i.config()
-  ports_queue.join()
-  print ports_queue.stats(), len(ports)
-  configs = [i for i in ports.itervalues() if i.stage() < Port.CONFIG]
+print "\nInstalling all for 'x11/xorg'..."
+install_builder(xorg)
+install_queue.join()
 
 exit(0)
