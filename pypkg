@@ -2,6 +2,22 @@
 """
 Controller for various ports operations
 """
+from port import ports
+from queue import ports_queue
+from target import config_builder
+import make
+
+make.pre_cmd = ['echo']
+
+print "Getting 'x11/xorg' port details..."
+xorg = ports['x11/xorg']
+print "\nWaiting for all port details to load..."
+ports_queue.join()
+print "\nConfiguring 'x11/xorg'..."
+config_builder(xorg)
+
+exit(0)
+
 from port import ports, Port
 from queue import ports_queue
 

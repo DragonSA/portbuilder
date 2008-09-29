@@ -111,8 +111,9 @@ class Port(object):
 
     if len(self._attr_map['options']) == 0:
       self._stage = Port.CONFIG
-      for i in self._attr_map['depends']:
-        ports.add(i)
+
+    for i in self._attr_map['depends']:
+      ports.add(i)
 
   def attr(self, attr):
     """

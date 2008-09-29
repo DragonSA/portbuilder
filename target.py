@@ -88,6 +88,48 @@ class Builder(object):
     for i in callbacks:
       i()
 
+class Configer(object):
+  from threading import Lock
+
+  lock   = Lock()
+  cache = {}
+
+  def __init__(self, port, callback=None):
+    self.__port = port
+    self.__callback = callback
+    self.__count = 1
+    self.__callback = callable(callback) and [callback] or []
+
+  def add_callback(self, callback):
+    self.__callback.append(callback)
+
+  def config(self):
+    from port import ports
+    if self.__port.build(Port.CONFIG):
+      self.__count = len(self.__port.attr('depends'))
+      for i in self.__port.attr('depends'):
+        config_builder(ports[i], self.finish)
+    self.finish()
+
+  def finish(self):
+    with self.lock:
+      if self.__count > 1:
+        self.__count -= 1
+        return
+      else:
+        self.cache.pop(self.__port.origin())
+    for i in self.__callback:
+      i()
+
+def config_builder(port, callback=None):
+  with Configer.lock:
+    if Configer.cache.has_key(port):
+      Configer.cache[port].add_callback(callback)
+    else:
+      conf = Configer(port, callback)
+      Configer.cache[port] = conf
+      config_queue.put(conf.config)
+
 fetch_builder   = Builder(Port.FETCH, fetch_queue)
 build_builder   = Builder(Port.BUILD, build_queue, fetch_builder)
 install_builder = Builder(Port.INSTALL, install_queue, build_builder)
