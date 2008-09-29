@@ -16,7 +16,6 @@ getLogger('pypkg').addHandler(StreamHandler())
 #getLogger('pypkg.port').setLevel(DEBUG)
 getLogger('pypkg.port.DependHandler').setLevel(DEBUG)
 
-
 make.pre_cmd = ['echo']
 
 print "Getting 'x11/xorg' port details..."
@@ -31,8 +30,8 @@ config_queue.join()
 #fetch_builder(xorg, recurse=True)
 #fetch_queue.join()
 
-print "\nInstalling all for 'x11/xorg'..."
-install_builder(xorg)
+print "\nInstalling for 'x11/xorg'..."
+xorg.install()
 install_queue.join()
 
 exit(0)

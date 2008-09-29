@@ -96,7 +96,7 @@ class Builder(object):
 
   def build(self, port):
     assert self.__building.has_key(port)
-    port.build_stage(self.__stage)
+    port.build_stage(self.__stage, False)
     with self.__lock:
       callbacks = self.__building.pop(port)
     for i in callbacks:
@@ -111,7 +111,7 @@ class Configer(object):
   def __init__(self, port, callback=None):
     self.__port = port
     self.__callback = callback
-    self.__count = 0
+    self.__count = 1
     self.__callback = callable(callback) and [callback] or []
 
   def add_callback(self, callback):
@@ -121,7 +121,7 @@ class Configer(object):
     from port import ports
     assert self.__port.stage() < Port.CONFIG
 
-    if self.__port.build_stage(Port.CONFIG):
+    if self.__port.build_stage(Port.CONFIG, False):
       self.__count = len(self.__port.attr('depends')) + 1
       for i in self.__port.attr('depends'):
         port = ports[i]
