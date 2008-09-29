@@ -226,11 +226,19 @@ class Port(object):
        @return: The stage result
        @rtype: C{bool}
     """
-    stage_handler = {Port.CONFIG: self.config, Port.FETCH: self.fetch,
-                     Port.BUILD: self.build, Port.INSTALL: self.install}
-    return stage_handler[stage]()
+    stage_handler = {Port.CONFIG: self._config, Port.FETCH: self._fetch,
+                     Port.BUILD: self._build, Port.INSTALL: self._install}
+    assert stage_handler.has_key(stage)
 
-  def config(self):
+    proceed, status = self._prepare(stage)
+    if not proceed:
+      return status
+
+    status = stage_handler[stage]()
+
+    return self._finalise(stage, status)
+
+  def _config(self):
     """
        Configure the ports options.
 
@@ -238,10 +246,6 @@ class Port(object):
        @rtype: C{bool}
     """
     from make import make_target
-
-    proceed, status = self._prepare(Port.CONFIG)
-    if not proceed:
-      return status
 
     if len(self._attr_map['options']) == 0:
       status = True
@@ -254,11 +258,9 @@ class Port(object):
         for i in self._attr_map['depends']:
           ports.add(i)
 
-    self._finalise(Port.CONFIG, status)
-
     return status
 
-  def fetch(self):
+  def _fetch(self):
     """
        Fetches the distribution files for this port
 
@@ -267,14 +269,9 @@ class Port(object):
     """
     from make import make_target
 
-    proceed, status = self._prepare(Port.FETCH)
-    if not proceed:
-      return status
+    return make_target(self._origin, 'checksum').wait() == 0
 
-    make = make_target(self._origin, 'checksum')
-    return self._finalise(Port.FETCH, make.wait() == 0)
-
-  def build(self):
+  def _build(self):
     """
         Build the port.  This includes extracting, patching, configuring and
         lastly building the port.
@@ -284,14 +281,10 @@ class Port(object):
     """
     from make import make_target
 
-    proceed, status = self._prepare(Port.BUILD)
-    if not proceed:
-      return status
-
     make = make_target(self._origin, ['extract', 'patch', 'configure', 'build'])
-    return self._finalise(Port.BUILD, make.wait() == 0)
+    return make.wait() == 0
 
-  def install(self):
+  def _install(self):
     """
         Install the port.
 
@@ -300,16 +293,14 @@ class Port(object):
     """
     from make import make_target
 
-    proceed, status = self._prepare(Port.INSTALL)
-    if not proceed:
-      return status
-
     make = make_target(self._origin, ['install', 'clean'])
+
     status = Port.INSTALL, make.wait() == 0
     if status:
       self._install_status = Port.CURRENT
       self._depends.status_changed()
-    return self._finalise(Port.INSTALL, status)
+
+    return status
 
   def _prepare(self, stage):
     """
@@ -330,8 +321,7 @@ class Port(object):
 
       while self._working:
         self._lock.wait()
-        if not self._working and not self._failed and \
-           self._stage >= stage:
+        if not self._working and not self._failed and self._stage >= stage:
           return False, True
 
       if self._failed:
@@ -342,16 +332,12 @@ class Port(object):
       if self._stage == stage:
         return False, True
 
-      queues = {Port.CONFIG : [build_queue, self.config],
-                Port.FETCH  : [fetch_queue, self.fetch]}
-
-      if self._stage < stage - 1 and stage - 1 > 0:
-        # TODO: Use TargetBuilder
-        queue, func = queues[stage - 1]
-        self._lock.release()
-        queue.put_wait(func)
-        self._lock.acquire()
-        return self._prepare(stage)
+      if self._stage < stage - 1:
+        builders = {Port.CONFIG: self.config, Port.FETCH: self.fetch,
+                    Port.BUILD: self.build}
+        with invert(self._lock):
+          if not builders[stage - 1]():
+            return False, False
 
       self._stage = stage
 
@@ -376,6 +362,8 @@ class Port(object):
        @return: The status
        @rtype: C{bool}
     """
+    assert self._working and not self._failed
+
     with self._lock:
       self._working = False
       if self._failed != (not status):

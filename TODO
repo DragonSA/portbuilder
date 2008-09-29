@@ -158,7 +158,7 @@ Future release:
    + _prepare:
      * Finish queue handling
      - Move to TargetBuilder
-     - Fix resolving previous stages
+     * Fix resolving previous stages
  * DependHandler:
    * Make thread safe
    * Allow constructor to initialise dependancies

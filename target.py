@@ -59,8 +59,8 @@ class Builder(object):
       port_lock.acquire()
       stage = port.stage()
       if port.failed() or stage > self.__stage:
+        port_lock.release()
         with invert(self.__lock):
-          port_lock.release()
           if callable(callback):
             callback()
           return
@@ -70,11 +70,11 @@ class Builder(object):
         assert self.__prev_builder is not None
         with invert(self.__lock):
           self.__prev_builder(port, lambda: self(port, callback))
+        return
       elif depends.check(self.__stage) > DependHandler.UNRESOLV:
         port_lock.release()
         self.__building[port] = callable(callback) and [callback] or []
-        with invert(self.__lock):
-          self.__queue.put(lambda: self.build(port))
+        self.__queue.put(lambda: self.build(port))
         return
 
     depends = depends.dependancies(DependHandler.STAGE2DEPENDS[self.__stage])
