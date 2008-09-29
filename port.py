@@ -513,7 +513,7 @@ class DependHandler(object):
     with self._lock:
       if typ is None:
         depends = self._dependancies
-      elif type(typ) is int:
+      elif isinstance(typ, int):
         depends = [self._dependancies[typ]]
       else:
         depends = []
@@ -556,7 +556,7 @@ class DependHandler(object):
     with self._lock:
       if typ is None:
         depends = self._dependants
-      elif type(typ) is int:
+      elif isinstance(typ, int):
         depends = [self._dependants[typ]]
       else:
         depends = []
@@ -660,7 +660,7 @@ class DependHandler(object):
        @param depends: List of dependancies
        @type depends: C{int} or C{(int)}
     """
-    if type(depends) is int:
+    if isinstance(depends, int):
       depends = [depends]
 
     for i in depends:
