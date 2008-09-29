@@ -215,7 +215,7 @@ class Port(object):
 
     return self._depends
 
-  def build_stage(self, stage):
+  def build_stage(self, stage, queue=True):
     """
        Generic handler for building a stage, this calls the correct method.
        This does not add the port to the construction queue and should only
@@ -226,18 +226,39 @@ class Port(object):
        @return: The stage result
        @rtype: C{bool}
     """
+    from target import config_builder, fetch_builder, build_builder, \
+                       install_builder
     stage_handler = {Port.CONFIG: self._config, Port.FETCH: self._fetch,
                      Port.BUILD: self._build, Port.INSTALL: self._install}
-    assert stage_handler.has_key(stage)
+    stage_builder = {Port.CONFIG: config_builder, Port.FETCH: fetch_builder,
+                     Port.BUILD: build_builder, Port.INSTALL: install_builder}
+    assert (queue and stage_builder.has_key(stage)) or \
+           (not queue and stage_handler.has_key(stage))
 
-    proceed, status = self._prepare(stage)
-    if not proceed:
-      return status
+    if queue:
+      with self._lock:
+        if self._failed:
+          return False
+        elif self._stage > stage:
+          return True
 
-    status = stage_handler[stage]()
+      stage_builder[stage](self)
 
-    return self._finalise(stage, status)
+      with self._lock:
+        while self._stage < stage or (self._working and self._stage == stage):
+          self._lock.wait()
 
+        return self._failed
+    else:
+      proceed, status = self._prepare(stage)
+      if not proceed:
+        return status
+
+      status = stage_handler[stage]()
+
+      return self._finalise(stage, status)
+
+  config = lambda self: self.build_stage(Port.CONFIG)
   def _config(self):
     """
        Configure the ports options.
@@ -260,6 +281,7 @@ class Port(object):
 
     return status
 
+  fetch = lambda self: self.build_stage(Port.FETCH)
   def _fetch(self):
     """
        Fetches the distribution files for this port
@@ -271,6 +293,7 @@ class Port(object):
 
     return make_target(self._origin, 'checksum').wait() == 0
 
+  build = lambda self: self.build_stage(Port.BUILD)
   def _build(self):
     """
         Build the port.  This includes extracting, patching, configuring and
@@ -284,6 +307,7 @@ class Port(object):
     make = make_target(self._origin, ['extract', 'patch', 'configure', 'build'])
     return make.wait() == 0
 
+  install = lambda self: self.build_stage(Port.INSTALL)
   def _install(self):
     """
         Install the port.
@@ -313,7 +337,7 @@ class Port(object):
        @return: The proceed status (and succes status)
        @rtype: C{bool}
     """
-    from queue import build_queue, fetch_queue
+    from tools import invert
 
     with self._lock:
       if self._stage > stage:
@@ -333,10 +357,8 @@ class Port(object):
         return False, True
 
       if self._stage < stage - 1:
-        builders = {Port.CONFIG: self.config, Port.FETCH: self.fetch,
-                    Port.BUILD: self.build}
         with invert(self._lock):
-          if not builders[stage - 1]():
+          if not self.build(stage - 1)():
             return False, False
 
       self._stage = stage

@@ -155,9 +155,9 @@ Future release:
    * Move targets to queue (not build directly)
    * Fix filtering (for dependancies) [actually remove, missplaced]
    * Make depends return once competely initiated
-   + _prepare:
+   * _prepare:
      * Finish queue handling
-     - Move to TargetBuilder
+     * Move to TargetBuilder
      * Fix resolving previous stages
  * DependHandler:
    * Make thread safe
