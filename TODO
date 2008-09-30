@@ -19,6 +19,7 @@ Future release:
  - Add process effiecient version of subprocess
  - Prevent multiple fetches of the same file!!!
  - Remove invert as far as possible
+ - Implement proper recording of ports installation (i.e. when they fail)
  - Refactor:
    - Break ports into its own libraries
    - Try isolate system and ports dependant code
@@ -109,7 +110,7 @@ Future release:
  - Ensure thread safety
  - Vet the thread locking for deadlocks
  - Move variables from protected to private (were appropriate)
- - Ensure gracefull handling of failed ports
+ - Ensure gracefull handling of failed ports (does not appear to work)
 
 0.0.6 - Milestone 6 (Finish Dependant Handling)
  - Refine and condense code

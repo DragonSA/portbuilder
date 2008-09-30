@@ -247,7 +247,8 @@ class Port(object):
       stage_builder[stage](self)
 
       with self._lock:
-        while self._stage < stage or (self._working and self._stage == stage):
+        while (self._stage < stage or (self._working and self._stage == stage))\
+              and not self._failed:
           self._lock.wait()
 
         return self._failed
