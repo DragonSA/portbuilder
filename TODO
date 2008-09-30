@@ -109,6 +109,7 @@ Future release:
  - Ensure thread safety
  - Vet the thread locking for deadlocks
  - Move variables from protected to private (were appropriate)
+ - Ensure gracefull handling of failed ports
 
 0.0.6 - Milestone 6 (Finish Dependant Handling)
  - Refine and condense code
