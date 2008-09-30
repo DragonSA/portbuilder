@@ -26,7 +26,7 @@ class Caller(object):
     if callable(self.__callback):
       self.__callback()
 
-class Builder(object):
+class TargetBuilder(object):
   """
      The Builder class.  This class handles building a particular stage
   """
@@ -47,7 +47,7 @@ class Builder(object):
   def put(self, port, callback=None):
     port_lock = port.lock()
     if port.stage() < Port.CONFIG:
-      config_builder(port, lambda: self(port, callback))
+      config_builder(port, lambda: self.put(port, callback))
       return
     # Make sure the ports dependant handler has been created:
     depends = port.depends()
@@ -58,41 +58,44 @@ class Builder(object):
         return
       port_lock.acquire()
       stage = port.stage()
-      if port.failed() or stage > self.__stage:
+      if port.failed() or stage >= self.__stage:
+        working = port.working()
         port_lock.release()
-        with invert(self.__lock):
-          if callable(callback):
+        if callable(callback):
+          with invert(self.__lock):
             callback()
-          return
-      elif stage < self.__stage - 1 or \
-           (port.working() and stage == self.__stage - 1):
-        port_lock.release()
-        assert self.__prev_builder is not None
-        with invert(self.__lock):
-          self.__prev_builder(port, lambda: self(port, callback))
         return
+
+      self.__building[port] = callable(callback) and [callback] or []
+      if stage < self.__stage - 1 or \
+           (port.working() and stage == self.__stage - 1):
+        # stage == self.__stage -> self.working()
+        assert stage != self.__stage or working
+        assert self.__prev_builder is not None
+        resolv_depends = False
       elif depends.check(self.__stage) > DependHandler.UNRESOLV:
         port_lock.release()
         self.__building[port] = callable(callback) and [callback] or []
         self.__queue.put(lambda: self.build(port))
         return
+      else:
+        resolv_depends = True
 
-    depends = depends.dependancies(DependHandler.STAGE2DEPENDS[self.__stage])
-    port_lock.release()
+      depends = depends.dependancies(DependHandler.STAGE2DEPENDS[self.__stage])
+      port_lock.release()
 
-    callback = Caller(len(depends), lambda: self.put(port, callback))
+    callback = Caller(len(depends) + (resolv_depends and 0 or 1),
+                      lambda: self.queue(port))
+
+    if not resolv_depends:
+      self.__prev_builder(port, callback)
+
 
     for i in depends:
       if i.status() == DependHandler.UNRESOLV:
         install_builder(i.port(), callback)
       else:
         callback()
-
-  def __call__(self, port, callback=None):
-    self.put(port, callback)
-
-  def __len__(self):
-    return len(self.__building)
 
   def build(self, port):
     assert self.__building.has_key(port)
@@ -101,6 +104,18 @@ class Builder(object):
       callbacks = self.__building.pop(port)
     for i in callbacks:
       i()
+
+  def queue(self, port):
+    assert self.__building.has_key(port)
+    assert port.depends().check(self.__stage) > DependHandler.UNRESOLV
+    assert port.stage() == self.__stage - 1 and not port.working()
+    self.__queue.put(lambda: self.build(port))
+
+  def __call__(self, port, callback=None):
+    self.put(port, callback)
+
+  def __len__(self):
+    return len(self.__building)
 
 class Configer(object):
   from threading import Lock
@@ -156,7 +171,7 @@ def config_builder(port, callback=None):
   if callable(callback):
     callback()
 
-fetcher = Builder(Port.FETCH, fetch_queue)
+fetcher = TargetBuilder(Port.FETCH, fetch_queue)
 def fetch_builder(port, callback=None, recurse=False):
   if recurse:
     if port.stage() < Port.CONFIG:
@@ -180,5 +195,5 @@ def fetch_builder(port, callback=None, recurse=False):
       fetcher.put(i.port(), callback)
   fetcher.put(port, callback)
 
-build_builder   = Builder(Port.BUILD, build_queue, fetch_builder)
-install_builder = Builder(Port.INSTALL, install_queue, build_builder)
+build_builder   = TargetBuilder(Port.BUILD, build_queue, fetch_builder)
+install_builder = TargetBuilder(Port.INSTALL, install_queue, build_builder)

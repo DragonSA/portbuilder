@@ -1,10 +1,9 @@
-#!/usr/bin/env python2.6
+#!/usr/bin/env python
 """
 Controller for various ports operations
 """
 from port import ports
-from queue import ports_queue, config_queue, install_queue #, fetch_queue
-from target import config_builder, install_builder # , fetch_builder
+from queue import ports_queue, install_queue
 import make
 
 from logging import getLogger, StreamHandler, DEBUG
@@ -12,26 +11,19 @@ from logging import getLogger, StreamHandler, DEBUG
 handler = StreamHandler()
 handler.setLevel(DEBUG)
 getLogger('pypkg').addHandler(StreamHandler())
-#getLogger('pypkg').setLevel(DEBUG)
-#getLogger('pypkg.port').setLevel(DEBUG)
 getLogger('pypkg.port.DependHandler').setLevel(DEBUG)
 
 make.pre_cmd = ['echo']
 
-print "Getting 'x11/xorg' port details..."
-xorg = ports['x11/xorg']
+port = 'x11/xorg'
+
+print "Getting '%s' port details..." % port
+p_obj = ports[port]
 print "\nWaiting for all port details to load..."
 ports_queue.join()
-print "\nConfiguring 'x11/xorg'..."
-config_builder(xorg)
-config_queue.join()
 
-#print "\nFetching all for 'x11/xorg'..."
-#fetch_builder(xorg, recurse=True)
-#fetch_queue.join()
-
-print "\nInstalling for 'x11/xorg'..."
-xorg.install()
+print "\nInstalling for '%s'..." % port
+p_obj.install()
 install_queue.join()
 
 exit(0)

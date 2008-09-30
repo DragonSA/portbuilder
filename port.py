@@ -198,6 +198,8 @@ class Port(object):
       if not self._depends:
         if not self._failed:
           self._depends = False
+        else:
+          self._depends = DependHandler(self)
 
     if self._depends:
       return self._depends
@@ -291,7 +293,7 @@ class Port(object):
     """
     from make import make_target
 
-    return make_target(self._origin, 'checksum').wait() == 0
+    return make_target(self._origin, ['checksum', '-DBATCH']).wait() == 0
 
   build = lambda self: self.build_stage(Port.BUILD)
   def _build(self):
@@ -304,7 +306,8 @@ class Port(object):
     """
     from make import make_target
 
-    make = make_target(self._origin, ['extract', 'patch', 'configure', 'build'])
+    #make = make_target(self._origin, ['extract','patch','configure','build'])
+    make = make_target(self._origin, ['all', '-DBATCH'])
     return make.wait() == 0
 
   install = lambda self: self.build_stage(Port.INSTALL)
@@ -317,7 +320,7 @@ class Port(object):
     """
     from make import make_target
 
-    make = make_target(self._origin, ['install', 'clean'])
+    make = make_target(self._origin, ['install', 'clean', '-DBATCH'])
 
     status = Port.INSTALL, make.wait() == 0
     if status:
@@ -356,17 +359,19 @@ class Port(object):
       if self._stage == stage:
         return False, True
 
-      if self._stage < stage - 1:
-        with invert(self._lock):
-          if not self.build(stage - 1)():
-            return False, False
+      assert self._stage == stage - 1
 
       self._stage = stage
 
-      status = stage > Port.CONFIG and self.depends().check(stage)
+      status = stage > Port.CONFIG and self.depends().check(stage) or \
+               DependHandler.RESOLV
       if status == DependHandler.FAILURE:
         self._failed = True
-        self._depends.status_changed()
+        with invert(self._lock):
+          self._depends.status_changed()
+        return False, False
+
+      assert status > DependHandler.UNRESOLV
 
       self._working = True
 
@@ -445,6 +450,7 @@ class DependHandler(object):
     self._dependants   = [[], [], [], [], [], []]  #: All dependants
     self._port = port  #: The port whom we handle
     self._report_log = []  #: Log of all problems reported (to prevent dups)
+    # TODO: Change to actually check if we are resolved
     if port.install_status() > Port.ABSENT:
       self._status = DependHandler.RESOLV
     else:
@@ -828,6 +834,7 @@ class PortCache(dict):
        @param key: The port to get
        @type key: C{str}
     """
+    from os.path import isdir, join
     with self._lock:
       try:
         dict.__getitem__(self, key)
@@ -837,7 +844,11 @@ class PortCache(dict):
 
     try:
       # Time consuming task, done outside lock
-      port = Port(key)
+      if isdir(join(env['PORTSDIR'], key)) and len(key.split('/')) == 2:
+        port = Port(key)
+      else:
+        port = False
+        self._log.error("Invalid port name '%s' passed" % key)
       self._lock.acquire()
       dict.__setitem__(self, key, port)
       print key

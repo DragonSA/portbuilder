@@ -119,6 +119,7 @@ Future release:
  - DependHandler:
    - Ensure _count is done properly
    - Have a dummy port for all stale ports
+   - Do not do cyclic dependancy allocation (or move to late)
    - Check for cyclic dependancies
    - _verify:
      - Add caching of dependancies (no need to check them multiple times)
@@ -133,6 +134,8 @@ Future release:
    - Minimise duplicate job requests
  - Port:
    - Add clean target (and have a failed port clean itself...)
+   - Use batch mode for all stages except config
+   - Precleaning
  - WorkerQueue:
    - Remove condition (not needed and overexposing internals)
  - make:
@@ -145,9 +148,10 @@ Future release:
  - Create target to build INDEX
 
 0.0.3 - Milestone 3 (Target Builders):
+ - Finish call documentation
  * Move type() checks to isinstance
  * Make sure all variable comments have a #:
- + Port:
+ * Port:
    * Make thread safe
    * Getter for origin
    * Convert install status flags to linear
@@ -177,7 +181,7 @@ Future release:
    * Add logging support (pipe redirection)
    * Allow disabling of pre_cmd
    * Condense functionality
- + Create ordering logic for building (and resolving dependants)
+ * Create ordering logic for building (and resolving dependants)
  * Remove make_target from global import
  * Fix PORTSDIR not having a trailing /
 

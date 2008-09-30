@@ -1,3 +1,25 @@
+0.0.3 - 2008 September 30:
+ * Port:
+   * Make thread safe
+   * Use TargetBuilder to handle stages
+   * Make depends allocate late
+   * Stage resolution fixes
+ * DependHandler:
+   * Make thread safe
+   * Allow constructor to initialise dependancies
+   * Add getters for dependancies and dependants (ports and/or field)
+ * WorkerQueue:
+   * Have all threads terminate on exit()
+ * queue:
+   * Add installer queue
+ * make:
+   * Rename pre_target to pre_cmd
+   * Handle pipes properly
+   * Allow disabling of pre_cmd
+   * Condense functionality
+ * Create ordering logic for building (and resolving dependants)
+ * Remove make_target from global import
+
 0.0.2 - 2008 August 30:
  * Port:
    - Update attribute tables and fixers
