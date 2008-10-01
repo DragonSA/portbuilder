@@ -124,15 +124,14 @@ class TargetBuilder(object):
     callback = Caller(len(depends) + (resolv_depends and 0 or 1),
                       lambda: self.queue(port))
 
-    if not resolv_depends:
-      self.__prev_builder(port, callback)
-
-
     for i in depends:
       if i.status() == DependHandler.UNRESOLV:
         install_builder(i.port(), callback)
       else:
         callback()
+
+    if not resolv_depends:
+      self.__prev_builder(port, callback)
 
   def build(self, port):
     """

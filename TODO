@@ -13,6 +13,7 @@ Future release:
    - Check if threads should be daemonised
  - Check spelling for all documentation
  - Define working standards for logging
+ - Create proper statistical handling of data (with easy collection methods)
  - Increase level of logging
  - Have a base class (and simple API) to manage logged messages
  - Add all assertions

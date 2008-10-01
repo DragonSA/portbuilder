@@ -272,7 +272,7 @@ class Port(object):
     from make import make_target
 
     if len(self._attr_map['options']) == 0:
-      status = True
+      return True
     else:
       make = make_target(self._origin, 'config', pipe=False)
       status = make.wait() == 0
@@ -282,7 +282,7 @@ class Port(object):
         for i in self._attr_map['depends']:
           ports.add(i)
 
-    return status
+      return status
 
   fetch = lambda self: self.build_stage(Port.FETCH)
   def _fetch(self):
