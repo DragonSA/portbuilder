@@ -25,12 +25,11 @@ class WorkerQueue(Queue):
        @type number: C{int}
     """
     Queue.__init__(self)
-    from atexit import register
     from logging import getLogger
-    from threading import Condition, Lock, local
+    from threading import Lock
     # We have to use our own locks since we cannot access Queue's functions
     # without not holding the locks and doing this will cause a dead lock...
-    self._lock = Condition(Lock())  #: The notifier and locker of this queue
+    self._lock = Lock()  #: The notifier and locker of this queue
     self._log = getLogger("pypkg.queue." + name)  #: Logger of this queue
     #self._name = name  #: The name of this queue
     self._workers = workers  #: The (maximum) number of workers
@@ -39,9 +38,6 @@ class WorkerQueue(Queue):
     self._job_cnt = 0  #: The number of jobs executed
 
     self._pool = {}  #: The pool of workers
-    self._local = local()  #: Thread specific information
-
-    register(lambda: self.setpool(0))
 
   def __len__(self):
     """
@@ -51,15 +47,6 @@ class WorkerQueue(Queue):
        @rtype: C{str}
     """
     return len(self._pool)
-
-  def condition(self):
-    """
-       The condition that is issued everytime a job finishes
-
-       @return: The condition object
-       @rtype: C{Condition}
-    """
-    return self._lock
 
   def job(self, jid):
     """
@@ -98,7 +85,8 @@ class WorkerQueue(Queue):
        @param workers: Number of workers
        @type workers: C{int}
     """
-    self._workers = workers
+    with self._lock:
+      self._workers = workers
 
   def put(self, func, block=True, timeout=0):
     """
@@ -106,9 +94,13 @@ class WorkerQueue(Queue):
        will be started.
 
        @param func: The job to execute
+       @type func: C{callable}
     """
     assert callable(func)
     with self._lock:
+      # If there are no workers expected then we are not open for jobs
+      if not self._workers:
+        return -1
       jid = self._job_cnt
       self._job_cnt += 1
       Queue.put(self, (jid, func), block, timeout)
@@ -130,6 +122,21 @@ class WorkerQueue(Queue):
     """
     return (len(self), self._worker_cnt, self._job_cnt)
 
+  def terminate(self):
+    """
+       Shutdown this WorkerQueue.  Unlike setpool(0) all remaining queued
+       items are also removed.
+    """
+    from Queue import Empty
+
+    self.setpool(0)
+    try:
+      while True:
+        self.get(False)
+        self.task_done()
+    except Empty:
+      return
+
   def _worker(self):
     """
        The worker.  It waits for a job from the queue and then executes the
@@ -142,52 +149,58 @@ class WorkerQueue(Queue):
 
 
     with self._lock:
-      self._local.wid = self._worker_cnt
+      wid = self._worker_cnt
       self._worker_cnt += 1
-    self._log.debug("Worker %d: Created" % self._local.wid)
+    self._log.debug("Worker %d: Created" % wid)
 
     while True:
       with self._lock:
         try:
           if self._workers < len(self._pool):
             raise Empty
-          self._local.jid, func = self.get(False)
-          self._pool[thread] = self._local.jid
+          jid, func = self.get(False)
+          self._pool[thread] = jid
         except Empty:
           self._pool.pop(thread)
-          self._lock.notifyAll()
-          self._log.debug("Worker %d: Terminating" % self._local.wid)
+          self._log.debug("Worker %d: Terminating" % wid)
           return
 
-      self._work(func, self._local.jid)
+      self._work(func, jid, wid)
 
       self.task_done()
 
       # Signal that a job has finished
       with self._lock:
         self._pool[thread] = -1
-        self._lock.notifyAll()
 
-  def _work(self, func, jid):
+  def _work(self, func, jid, wid):
     """
        Execute a job
 
        @param func: The job to run
+       @type func: C{callable}
        @param jid: The job's ID
        @type jid: C{int}
+       @param wid: The worker's ID
+       @type wid: C{int}
     """
-    self._log.debug("Worker %d: Starting job %d" % (self._local.wid, jid))
+    self._log.debug("Worker %d: Starting job %d" % (wid, jid))
 
     try:
       func()
+    except KeyboardInterrupt:
+      from tools import terminate
+      terminate()
     except BaseException:
       self._log.exception("Worker %d: Job %d threw an exception"
-                          % (self._local.wid, jid))
+                          % (wid, jid))
     finally:
-      self._log.debug("Worker %d: Finished job %d" % (self._local.wid, jid))
+      self._log.debug("Worker %d: Finished job %d" % (wid, jid))
 
 config_queue  = WorkerQueue("config", 1)  #: Queue for configuring port options
-build_queue   = WorkerQueue("build", ncpu + 1)  #: Queue for building ports
+build_queue   = WorkerQueue("build", ncpu)  #: Queue for building ports
 fetch_queue   = WorkerQueue("fetch", 1)  #: Queue for fetching dist files
 install_queue = WorkerQueue("install", 1)  #: Queue for installing ports
 ports_queue   = WorkerQueue("ports", ncpu * 2)  #: Queue for fetching port info
+queues        = [config_queue, build_queue, fetch_queue, install_queue,
+                 ports_queue]  #: List of all the queues

@@ -41,9 +41,9 @@ class Caller(object):
     if callable(self.__callback):
       self.__callback()
 
-class TargetBuilder(object):
+class StageBuilder(object):
   """
-     The TargetBuilder class.  This class handles building a particular stage
+     The StageBuilder class.  This class handles building a particular stage
   """
 
   def __init__(self, stage, queue, prev_builder=None):
@@ -62,10 +62,9 @@ class TargetBuilder(object):
     from logging import getLogger
     from threading import Lock
     #: Logger for this Builder
-    self.__name = Port.STAGE_NAME[stage]  #: Name of this stage
     self.__lock = Lock()  #: Synchroniser lock for this builder
     #: Logger for this builder
-    self.__log = getLogger("pypkg.builder." + self.__name)
+    self.__log = getLogger("pypkg.builder." + Port.STAGE_NAME[stage])
     self.__stage = stage  #: The stage we are taking care of
     self.__queue = queue  #: The queue for this stage
     self.__prev_builder = prev_builder  #: The builder for the previous stage
@@ -156,9 +155,12 @@ class TargetBuilder(object):
        @type port: C{Port}
     """
     assert self.__building.has_key(port)
-    assert port.depends().check(self.__stage) > DependHandler.UNRESOLV
-    assert port.stage() == self.__stage - 1 and not port.working()
-    self.__queue.put(lambda: self.build(port))
+    if not port.failed():
+      assert port.depends().check(self.__stage) > DependHandler.UNRESOLV
+      assert port.stage() == self.__stage - 1 and not port.working()
+      self.__queue.put(lambda: self.build(port))
+    else:
+      self.build(port)
 
   def __call__(self, port, callback=None):
     """
@@ -267,43 +269,44 @@ def config_builder(port, callback=None):
   if callable(callback):
     callback()
 
-fetcher = TargetBuilder(Port.FETCH, fetch_queue)  #: The fetch builder
-def fetch_builder(port, callback=None, recurse=False):
+class FetchBuilder(StageBuilder):
   """
-     The builder for the fetch stage.  This is a wrapper around the
-     TargetBuilder for the fetch stage.  This wrapper adds the ability to
-     recursively fetch all dependancies' distfiles
-
-     @param port: The port to fetch
-     @type port: C{Port}
-     @param callback: The callback function
-     @type callback: C{callable}
-     @param recurse: Indicate if all dependancies need to be fetched
-     @type recurse: C{bool}
+     The FetchBuilder class.  This class is the same as StageBuilder except it
+     adds the ability to do a recursive fetch of all dependancies of the current
+     port.  Whereas one would have to be installing ports to get similar
+     behaviour otherwise.  
   """
-  if recurse:
-    if port.stage() < Port.CONFIG:
-      config_builder(port, lambda: fetch_builder(port, callback, True))
-      return
+  def __call__(self, port, callback=None, recurse=False):
+    """
+      The builder for the fetch stage.  This is a wrapper around the
+      TargetBuilder for the fetch stage.  This wrapper adds the ability to
+      recursively fetch all dependancies' distfiles
 
-    depends = []
-    new_depends = port.depends().dependancies()
-    while len(new_depends):
-      old_depends = new_depends
-      new_depends = []
-      for i in old_depends:
-        for j in i.dependancies():
-          if j not in depends:
-            new_depends.append(j)
-            depends.append(j)
+      @param port: The port to fetch
+      @type port: C{Port}
+      @param callback: The callback function
+      @type callback: C{callable}
+      @param recurse: Indicate if all dependancies need to be fetched
+      @type recurse: C{bool}
+    """
+    from tools import recurse_depends
 
-    if callable(callback):
-      callback = Caller(len(depends) + 1, callback)
-    for i in depends:
-      fetcher.put(i.port(), callback)
-  fetcher.put(port, callback)
+    if recurse:
+      if port.stage() < Port.CONFIG:
+        config_builder(port, lambda: fetch_builder(port, callback, True))
+        return
 
+      depends = recurse_depends(port)
+
+      if callable(callback):
+        callback = Caller(len(depends) + 1, callback)
+      for i in depends:
+        self.put(i.port(), callback)
+    self.put(port, callback)
+
+#: The builder for the fetch stage
+fetch_builder   = FetchBuilder(Port.FETCH, fetch_queue)
 #: The builder for the build stage
-build_builder   = TargetBuilder(Port.BUILD, build_queue, fetch_builder)
+build_builder   = StageBuilder(Port.BUILD, build_queue, fetch_builder)
 #: The builder for the install stage
-install_builder = TargetBuilder(Port.INSTALL, install_queue, build_builder)
+install_builder = StageBuilder(Port.INSTALL, install_queue, build_builder)

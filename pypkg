@@ -2,61 +2,66 @@
 """
 Controller for various ports operations
 """
-from port import ports
-from queue import ports_queue, install_queue
-import make
-import threading
+def main():
+  from port import ports
+  from queue import ports_queue
+  import make
+  import threading
 
-from logging import getLogger, StreamHandler, DEBUG
+  from logging import getLogger, StreamHandler, DEBUG
 
-handler = StreamHandler()
-handler.setLevel(DEBUG)
-getLogger('pypkg').addHandler(StreamHandler())
-getLogger('pypkg.port.DependHandler').setLevel(DEBUG)
+  handler = StreamHandler()
+  handler.setLevel(DEBUG)
+  getLogger('pypkg').addHandler(StreamHandler())
+  getLogger('pypkg.port.DependHandler').setLevel(DEBUG)
 
-make.pre_cmd = ['echo']
+  make.pre_cmd = ['echo']
 
-def statistics():
-  import queue
-  import port
-  import sys
-  import target
-  from time import sleep, time
+  def statistics():
+    import queue
+    import port
+    import sys
+    import target
+    from time import sleep, time
 
-  st = time()
+    st = time()
 
-  count = 0
-  while True:
-    stdout = sys.stdout
-    sys.stdout = sys.stderr
-    if count % 20 == 0:
-      print
-      print " Seconds | Port Cnt |    Fetch Cnt    |    Build Cnt    |   Install Cnt   "
-      print "         |          | Act Queue Total | Act Queue Total | Act Queue Total "
-      print "---------+----------+-----------------+-----------------+-----------------"
-    print " %7i | %8i | %3i %5i %5i | %3i %5i %5i | %3i %5i %5i " % \
-          (int(time() - st), # Seconds
-           len(port.ports),  # Port Cnt
-           len(queue.fetch_queue), queue.fetch_queue.qsize(), len(target.fetcher),
-           len(queue.build_queue), queue.build_queue.qsize(), len(target.build_builder),
-           len(queue.install_queue), queue.install_queue.qsize(), len(target.install_builder))
-    sys.stdout = stdout
-    stdout.flush()
-    sleep(1)
-    count += 1
-stats = threading.Thread(target=statistics)
-stats.setDaemon(True)
-stats.start()
+    count = 0
+    while True:
+      sleep(1)
+      count += 1
+      if len(queue.config_queue):
+        continue
+      stdout = sys.stdout
+      sys.stdout = sys.stderr
+      if count % 20 == 1:
+        print
+        print " Seconds | Port Cnt |    Fetch Cnt    |    Build Cnt    |   Install Cnt   "
+        print "         |          | Act Queue Total | Act Queue Total | Act Queue Total "
+        print "---------+----------+-----------------+-----------------+-----------------"
+      print " %7i | %8i | %3i %5i %5i | %3i %5i %5i | %3i %5i %5i " % \
+            (int(time() - st), # Seconds
+            len(port.ports),  # Port Cnt
+            len(queue.fetch_queue), queue.fetch_queue.qsize(), len(target.fetch_builder),
+            len(queue.build_queue), queue.build_queue.qsize(), len(target.build_builder),
+            len(queue.install_queue), queue.install_queue.qsize(), len(target.install_builder))
+      sys.stdout = stdout
+      stdout.flush()
 
-port = 'x11/xorg'
+  stats = threading.Thread(target=statistics)
+  stats.setDaemon(True)
+  stats.start()
 
-print "Getting '%s' port details..." % port
-p_obj = ports[port]
-print "\nWaiting for all port details to load..."
-ports_queue.join()
+  port = 'x11/xorg'
 
-print "\nInstalling for '%s'..." % port
-p_obj.install()
-install_queue.join()
+  ports.add(port)
+  ports_queue.join()
 
-exit(0)
+  ports[port].install()
+
+from threading import Thread
+from tools import auto_exit, exit_handler #, auto_term
+
+auto_exit(5)
+Thread(target=main).start()
+exit_handler.run()

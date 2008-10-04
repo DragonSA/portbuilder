@@ -149,6 +149,20 @@ Future release:
    - Add ability to update/install ports (basic)
    - Allow environment variables to be settable (like ports_dir)
  - Create target to build INDEX
+ * Port:
+   * Implement proper cleaning
+ * Rename TargetBuilder to StageBuilder
+ * Move fetch_builder to subclassed of StageBuilder
+ - Make config_builder API compatible with the other Builders
+ - Create progress monitor for the build process (aka top mode)
+ - Implement build logging for the ports
+ - Rename all Popen return status to 'SUCCESS'
+ - Rename ports to portcache
+ + Implement proper thread/system shutdown
+   * Create interrupt handlers
+   * Create exit handlers
+   - Provide easy interface for running main
+ * Fix preparation for stages
 
 0.0.3 - Milestone 3 (Target Builders):
  - Finish call documentation

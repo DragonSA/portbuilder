@@ -7,6 +7,7 @@ env = {}  #: The environment flags to pass to make, aka -D...
 pre_cmd = []  #: Prepend to command
 
 env["PORTSDIR"] = getenv("PORTSDIR", "/usr/ports/")  #: Location of ports
+env["BATCH"] = None  #: Default to use batch mode
 
 def make_target(origin, args, pipe=None, pre=True):
   """
@@ -27,7 +28,7 @@ def make_target(origin, args, pipe=None, pre=True):
 
   if isinstance(args, str):
     args = [args]
-  args = args + ["%s=%s" % (k, v) for k, v in env.iteritems()
+  args = args + [v and "%s=%s" % (k, v) or "-D%s" % k for k, v in env.items()
                   if (k != "PORTSDIR" or v != "/usr/ports/")]
 
   if pipe is True:

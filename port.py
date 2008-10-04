@@ -209,13 +209,35 @@ class Port(object):
 
     depends_obj = DependHandler(self, [self.attr(i) for i in
                   ('depend_build', 'depend_extract', 'depend_fetch',
-                  'depend_lib',   'depend_run',     'depend_patch')])
+                   'depend_lib',   'depend_run',     'depend_patch')])
 
     with self._lock:
       self._depends = depends_obj
       self._lock.notifyAll()
 
     return self._depends
+
+  def clean(self):
+    """
+       Clean the ports working directories
+
+       @return: The clean status
+       @rtype: C{bool}
+    """
+    from make import make_target
+
+    status = make_target(self._origin, ['clean']).wait() == 0
+
+    # Do some checks, to make sure we are in the correct state
+    with self._lock:
+      if not self._failed and self._stage > Port.FETCH and \
+          (self._stage != Port.INSTALL or self._working):
+        self._stage = Port.FETCH
+        self._working = False
+      elif self._stage in (Port.CONFIG, Port.FETCH):
+        self._failed = True
+
+    return status
 
   def build_stage(self, stage, queue=True):
     """
@@ -294,7 +316,7 @@ class Port(object):
     """
     from make import make_target
 
-    return make_target(self._origin, ['checksum', '-DBATCH']).wait() == 0
+    return make_target(self._origin, ['checksum']).wait() == 0
 
   build = lambda self: self.build_stage(Port.BUILD)
   def _build(self):
@@ -308,7 +330,7 @@ class Port(object):
     from make import make_target
 
     #make = make_target(self._origin, ['extract','patch','configure','build'])
-    make = make_target(self._origin, ['all', '-DBATCH'])
+    make = make_target(self._origin, ['all'])
     return make.wait() == 0
 
   install = lambda self: self.build_stage(Port.INSTALL)
@@ -321,7 +343,7 @@ class Port(object):
     """
     from make import make_target
 
-    make = make_target(self._origin, ['install', 'clean', '-DBATCH'])
+    make = make_target(self._origin, ['install'])
 
     status = Port.INSTALL, make.wait() == 0
     if status:
@@ -353,8 +375,6 @@ class Port(object):
           return False, True
 
       if self._failed:
-        self._log.warn("Port '%s' has failed but tried to start stage '%s'"
-                       % (self._origin, Port.STAGE_NAME[stage]))
         return False, False
 
       if self._stage == stage:
@@ -366,13 +386,11 @@ class Port(object):
 
       status = stage > Port.CONFIG and self.depends().check(stage) or \
                DependHandler.RESOLV
-      if status == DependHandler.FAILURE:
+      if status in (DependHandler.FAILURE, DependHandler.UNRESOLV):
         self._failed = True
         with invert(self._lock):
           self._depends.status_changed()
         return False, False
-
-      assert status > DependHandler.UNRESOLV
 
       self._working = True
 
@@ -398,6 +416,9 @@ class Port(object):
         self._failed = not status
         self._depends.status_changed()
       self._lock.notifyAll()
+
+    if self._failed and self._stage > Port.FETCH or self._stage == Port.INSTALL:
+      self.clean()
 
     if self._failed:
       self._depends.status_changed()
@@ -852,7 +873,8 @@ class PortCache(dict):
         self._log.error("Invalid port name '%s' passed" % key)
       self._lock.acquire()
       dict.__setitem__(self, key, port)
-      print key
+    except KeyboardInterrupt:
+      raise
     except BaseException:
       self._lock.acquire()
       dict.__setitem__(self, key, False)
@@ -911,8 +933,7 @@ def port_attr(origin, change=False):
 
   make = make_target(origin, args, pipe=True, pre=False)
   if make.wait() > 0:
-    log.error("Error in obtaining information for port '%s'" % origin)
-    return {}
+    raise RuntimeError, "Error in obtaining information for port '%s'" % origin
 
   attr_map = {}
   for name, value in ports_attr.iteritems():
