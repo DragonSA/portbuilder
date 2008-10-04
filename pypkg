@@ -5,7 +5,7 @@ Controller for various ports operations
 from tools import run_main
 
 def main():
-  from port import ports
+  from port import port_cache
   from queue import ports_queue
   import make
   import threading
@@ -43,7 +43,7 @@ def main():
         print "---------+----------+-----------------+-----------------+-----------------"
       print " %7i | %8i | %3i %5i %5i | %3i %5i %5i | %3i %5i %5i " % \
             (int(time() - st), # Seconds
-            len(port.ports),  # Port Cnt
+            len(port.port_cache),  # Port Cnt
             len(queue.fetch_queue), queue.fetch_queue.qsize(), len(target.fetch_builder),
             len(queue.build_queue), queue.build_queue.qsize(), len(target.build_builder),
             len(queue.install_queue), queue.install_queue.qsize(), len(target.install_builder))
@@ -56,9 +56,9 @@ def main():
 
   port = 'x11/xorg'
 
-  ports.add(port)
+  port_cache.add(port)
   ports_queue.join()
 
-  ports[port].install()
+  port_cache[port].install()
 
 run_main(main)

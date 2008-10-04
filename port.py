@@ -9,7 +9,7 @@ from make import env
 
 log = getLogger('pypkg.ports')
 
-ports = {}  #: A cache of ports available with auto creation features
+port_cache = {}  #: A cache of ports available with auto creation features
 
 ports_attr = {
 # Port naming
@@ -110,7 +110,7 @@ class Port(object):
     self._attr_map = port_attr(origin)
 
     for i in self._attr_map['depends']:
-      ports.add(i)
+      port_cache.add(i)
 
   def attr(self, attr):
     """
@@ -224,9 +224,9 @@ class Port(object):
        @return: The clean status
        @rtype: C{bool}
     """
-    from make import make_target
+    from make import make_target, SUCCESS
 
-    status = make_target(self._origin, ['clean']).wait() == 0
+    status = make_target(self._origin, ['clean']).wait() is SUCCESS
 
     # Do some checks, to make sure we are in the correct state
     with self._lock:
@@ -291,18 +291,18 @@ class Port(object):
        @return: The success status
        @rtype: C{bool}
     """
-    from make import make_target
+    from make import make_target, SUCCESS
 
     if len(self._attr_map['options']) == 0:
       return True
     else:
       make = make_target(self._origin, 'config', pipe=False)
-      status = make.wait() == 0
+      status = make.wait() is SUCCESS
 
       if status:
         self._attr_map = port_attr(self._origin)
         for i in self._attr_map['depends']:
-          ports.add(i)
+          port_cache.add(i)
 
       return status
 
@@ -314,9 +314,9 @@ class Port(object):
        @return: The success status
        @rtype: C{bool}
     """
-    from make import make_target
+    from make import make_target, SUCCESS
 
-    return make_target(self._origin, ['checksum']).wait() == 0
+    return make_target(self._origin, ['checksum']).wait() is SUCCESS
 
   build = lambda self: self.build_stage(Port.BUILD)
   def _build(self):
@@ -327,11 +327,11 @@ class Port(object):
         @return: The success status
         @rtype: C{bool}
     """
-    from make import make_target
+    from make import make_target, SUCCESS
 
     #make = make_target(self._origin, ['extract','patch','configure','build'])
     make = make_target(self._origin, ['all'])
-    return make.wait() == 0
+    return make.wait() is SUCCESS
 
   install = lambda self: self.build_stage(Port.INSTALL)
   def _install(self):
@@ -341,11 +341,11 @@ class Port(object):
         @return: The success status
         @rtype: C{bool}
     """
-    from make import make_target
+    from make import make_target, SUCCESS
 
     make = make_target(self._origin, ['install'])
 
-    status = Port.INSTALL, make.wait() == 0
+    status = Port.INSTALL, make.wait() is SUCCESS
     if status:
       self._install_status = Port.CURRENT
       self._depends.status_changed()
@@ -499,7 +499,7 @@ class DependHandler(object):
        @type typ: C{int}
     """
     try:
-      depends = ports[port].depends()
+      depends = port_cache[port].depends()
     except KeyError:
       ports_msg = (self._port.origin(), port)
       if ports_msg not in self._report_log:
@@ -882,7 +882,7 @@ class PortCache(dict):
     self._lock.notifyAll()
     self._lock.release()
 
-ports = PortCache()
+port_cache = PortCache()
 
 def port_status(origin):
   """
@@ -921,7 +921,7 @@ def port_attr(origin, change=False):
      @return: A dictionary of attributes
      @rtype: C{\{str:str|(str)|\}}
   """
-  from make import make_target
+  from make import make_target, SUCCESS
 
   if env['PORTSDIR'][-1] != '/':
     env['PORTSDIR'].join('/')
@@ -932,7 +932,7 @@ def port_attr(origin, change=False):
     args.append(i[0])
 
   make = make_target(origin, args, pipe=True, pre=False)
-  if make.wait() > 0:
+  if make.wait() is not SUCCESS:
     raise RuntimeError, "Error in obtaining information for port '%s'" % origin
 
   attr_map = {}

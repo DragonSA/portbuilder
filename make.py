@@ -9,6 +9,8 @@ pre_cmd = []  #: Prepend to command
 env["PORTSDIR"] = getenv("PORTSDIR", "/usr/ports/")  #: Location of ports
 env["BATCH"] = None  #: Default to use batch mode
 
+SUCCESS = 1
+
 def make_target(origin, args, pipe=None, pre=True):
   """
      Run make to build a target with the given arguments and the appropriate

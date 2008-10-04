@@ -1,6 +1,6 @@
 """
 The target module.  This module handles executing various stages for building
-ports
+ports.  
 """
 from __future__ import with_statement
 
@@ -215,15 +215,15 @@ class Configer(object):
   def config(self):
     """
        Configure the port and add all its dependancies onto the queue to be
-       configured
+       configured.
     """
-    from port import ports
+    from port import port_cache
     assert self.__port.stage() < Port.CONFIG and self.__count == 0
 
     if self.__port.build_stage(Port.CONFIG, False):
       self.__count = len(self.__port.attr('depends')) + 1
       for i in self.__port.attr('depends'):
-        port = ports[i]
+        port = port_cache[i]
         if port.stage() < Port.CONFIG:
           config_builder(port, self.finish)
         else:

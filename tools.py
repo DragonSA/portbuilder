@@ -123,7 +123,7 @@ class AutoExit(object):
        allow signals to be processed promptly.
     """
     from os import _exit
-    from port import ports, Port
+    from port import port_cache, Port
     from queue import queues
     from time import sleep
 
@@ -157,7 +157,7 @@ class AutoExit(object):
 
           print "all queues idle"
           # Cleanup all ports that have built but not installed
-          for i in ports.itervalues():
+          for i in port_cache.itervalues():
             if i and not i.failed() and (i.stage() == Port.BUILD or \
                 (i.stage() == Port.INSTALL and i.working())):
               i.clean()

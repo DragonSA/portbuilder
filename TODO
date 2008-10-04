@@ -156,8 +156,8 @@ Future release:
  - Make config_builder API compatible with the other Builders
  - Create progress monitor for the build process (aka top mode)
  - Implement build logging for the ports
- - Rename all Popen return status to 'SUCCESS'
- - Rename ports to portcache
+ * Rename all Popen return status to 'SUCCESS'
+ * Rename ports to portcache
  * Implement proper thread/system shutdown
    * Create interrupt handlers
    * Create exit handlers
