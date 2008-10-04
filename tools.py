@@ -4,7 +4,6 @@ the standard libraries) for ease of programming...
 """
 
 from contextlib import contextmanager
-from threading import Thread
 
 @contextmanager
 def invert(thing):
@@ -34,36 +33,26 @@ def recurse_depends(port):
     new = new.difference(depends)
   return [i.port() for i in depends]
 
-def terminate():
-  """
-     Shutdown the program properly.
-  """
-  exit_handler.start()
-  exit_handler.terminate()
-
-def auto_exit(timeout=5):
-  """
-     This function checks if the system is busy [via the queues] and terminates
-     the program if they are not busy.  Should never happen, but...
-
-     @param timeout: How often to check for idleness
-     @type timeout: C{int}
-     @return: The thread handling idle checking
-     @rtype: C{Thread}
-  """
-  exit_handler.timeout(timeout)
-  exit_handler.start()
-
-class AutoExit(Thread):
+class AutoExit(object):
   """
       Check if the queues are busy.  If all are idle terminate the program.
+      Also handle terminating the program, including cleaning up of left over
+      ports.  
   """
 
   def __init__(self, timeout, pause):
+    """
+       Create the exit handlers.  The shutdown handler is registered and
+       various signal handlers.
+
+       @param timeout: How often to check for a stall
+       @type timeout: C{float}
+       @param pause: How often to check for a terminate request
+       @type pause: C{float}
+    """
     from atexit import register
     from os import getpid, setpgrp
     from signal import signal, SIGINT, SIGTERM
-    Thread.__init__(self)
     self.__created = False
     self.__pause = pause
     self.__timeout = timeout
@@ -72,34 +61,45 @@ class AutoExit(Thread):
 
     setpgrp()
     register(terminate)
-    signal(SIGINT, lambda x, y: self.terminate())
-    signal(SIGTERM, lambda x, y: self.terminate())
+    signal(SIGINT, self.sig_handler)
+    signal(SIGTERM, self.sig_handler)
 
   def timeout(self, timeout):
+    """
+       Set the timeout value.
+
+       @param timeout: How often to check for a stall
+       @type timeout: C{float}
+    """
     self.__timeout = timeout
 
   def pause(self, pause):
+    """
+       Set a pause value.
+
+       @param pause: How often to check for a terminate request
+       @type pause: C{float}
+    """
     self.__pause = pause
 
-  def start(self):
-    if not self.__created:
-      self.__created = True
-      #self.setDaemon(True)
-      Thread.start(self)
-      # TODO, make proper handler, even if pid is different...
+  def sig_handler(self, sig, frame):
+    """
+       Signal handler, initiates a terminate request
 
-  def int_handler(self, sig, frame):
+       @param sig: The signal received
+       @type sig: C{int}
+       @param frame: The frame interrupted
+       @type frame: C{Frame}
+    """
     from os import getpid, kill
     from signal import signal, SIGINT, SIGTERM, SIG_DFL
 
     signal(SIGINT, SIG_DFL)
     signal(SIGTERM, SIG_DFL)
     if self.__pid != getpid():
-      print "Wrong pid"
       kill(self.__pid, sig)
       kill(getpid(), sig)
     else:
-      print "Right pid"
       terminate()
 
   def terminate(self):
@@ -111,15 +111,17 @@ class AutoExit(Thread):
     from signal import SIGTERM
 
     # Kill all running processes (they should clean themselves up)
-    print "RUNNING TERMINATE...", self.__term
     if not self.__term:
+      self.__term = True
       for i in queues:
         i.terminate()
-        assert i.pool() == 0
       killpg(0, SIGTERM)
-      self.__term = True
 
   def run(self):
+    """
+       Execute the main handlers.  This needs to be run from the main loop to
+       allow signals to be processed promptly.
+    """
     from os import _exit
     from port import ports, Port
     from queue import queues
@@ -164,4 +166,21 @@ class AutoExit(Thread):
       except KeyboardInterrupt:
         self.terminate()
 
-exit_handler = AutoExit(5, 0.1)
+exit_handler = AutoExit(0.1, 0.01)  #: Exit handler
+#: Alias for common functions of exit_handler
+terminate = exit_handler.terminate
+
+def run_main(main):
+  """
+     Run the main function in its own thread and then runs the exit handler
+     function.  This function does not return.
+
+     @param main: The main function to execute
+     @type main: C{callable}
+  """
+  from threading import Thread
+
+  assert callable(main)
+
+  Thread(target=main).start()
+  exit_handler.run()

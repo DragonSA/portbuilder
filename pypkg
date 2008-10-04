@@ -2,6 +2,8 @@
 """
 Controller for various ports operations
 """
+from tools import run_main
+
 def main():
   from port import ports
   from queue import ports_queue
@@ -59,9 +61,4 @@ def main():
 
   ports[port].install()
 
-from threading import Thread
-from tools import auto_exit, exit_handler #, auto_term
-
-auto_exit(5)
-Thread(target=main).start()
-exit_handler.run()
+run_main(main)

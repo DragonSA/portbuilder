@@ -158,10 +158,10 @@ Future release:
  - Implement build logging for the ports
  - Rename all Popen return status to 'SUCCESS'
  - Rename ports to portcache
- + Implement proper thread/system shutdown
+ * Implement proper thread/system shutdown
    * Create interrupt handlers
    * Create exit handlers
-   - Provide easy interface for running main
+   * Provide easy interface for running main
  * Fix preparation for stages
 
 0.0.3 - Milestone 3 (Target Builders):
