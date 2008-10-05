@@ -77,10 +77,17 @@ class StageBuilder(object):
        the given callback.
 
        @param port: The port to build
-       @type port: C{Port}
+       @type port: C{Port} or C{str}
        @param callback: The callback function
        @type callback: C{callable}
     """
+    if not isinstance(port, Port):
+      from port import port_cache
+      port = port_cache[port]
+      if not port:
+        if callable(callback):
+          callback()
+        return
     port_lock = port.lock()
     if port.stage() < Port.CONFIG:
       config_builder(port, lambda: self.put(port, callback))

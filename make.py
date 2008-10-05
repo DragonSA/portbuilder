@@ -63,21 +63,20 @@ def make_target(origin, args, pipe=None, pre=True):
   if isinstance(args, str):
     args = [args]
   args = args + [v and '%s="%s"' % (k, v) or "-D%s" % k for k, v in env.items()
-                  if (k, v) != ("PORTSDIR", "/usr/ports/")]
+                  if (k, v) != ("PORTSDIR", "/usr/ports/") and
+                    (args[0], k) != ('config', "BATCH")]
 
   if pipe is True:
     stdin, stdout, stderr = None, PIPE, STDOUT
-  elif pipe is False:
-    stdin, stdout, stderr = PIPE, None, None
   elif pipe:
     stdin, stdout, stderr = PIPE, pipe, STDOUT
+  elif pipe is False or (len(pre_cmd) and pre_cmd[0] == "echo"):
+    stdin, stdout, stderr = PIPE, None, None
   else:
     stdin, (stdout, stderr) = PIPE, log_files(origin)
 
   if pre:
     pre = pre_cmd
-    if pre:
-      stdout, stderr = None, None
   else:
     pre = []
 

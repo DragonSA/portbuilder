@@ -24,16 +24,19 @@ def main():
   parser = OptionParser(usage, version="%prog 0.0.4")
   parser.add_option("-D", dest="make_env", action="append", metavar="variable",
                     default=[], help="Define the given variable for make (i.e."\
-                    " add ``-D variable'' to the make calls")
+                    " add ``-D variable'' to the make calls.")
   parser.add_option("-i", "--install", dest="install", action="store_true",
                     default=True, help="Install mode.  Installs the listed " \
-                    "ports (and any dependancies required [default]")
+                    "ports (and any dependancies required [default].")
   parser.add_option("-n", dest="no_opt", action="store_true", default=False,
                     help="Display the commands that would have been executed, "\
-                    "but do not actually execute them")
+                    "but do not actually execute them.")
+  parser.add_option("-p", "--package", action="store_true", default=False,
+                    help="When installing ports, also generate packages (i.e." \
+                    " do a ``make package''.")
   parser.add_option("-u", "--update", dest="install", action="store_false",
                     default=True, help="Update mode.  Updates the given port." \
-                    "  The last -i or -u will be the determining one")
+                    "  The last -i or -u will be the determining one.")
   options, args = parser.parse_args()
 
   for i in options.make_env:
@@ -49,12 +52,12 @@ def main():
     pre_cmd.insert(0, 'echo')
 
   for i in args:
-    # TODO, extend install_builder to accept str
     install_builder.put(i)
 
-  stats = Thread(target=statistics)
-  stats.setDaemon(True)
-  stats.start()
+  if not options.no_opt:
+    stats = Thread(target=statistics)
+    stats.setDaemon(True)
+    stats.start()
 
   return
 
