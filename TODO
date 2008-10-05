@@ -97,7 +97,7 @@ Future release:
     - Allow a thread to indicate it has stalled (and create more to compensate)?
     - Add terminate and kill functions (to clean off threads)
 
-0.0.8 - Milestone 8 (Finish command line controller)
+0.0.8 - Milestone 8 (Finish command line controller):
  - Refine and condense code
  - Default to batch mode
  - Implement proper and complete logging (and comments)
@@ -105,7 +105,7 @@ Future release:
  - Vet the thread locking for deadlocks
  - Move variables from protected to private (were appropriate)
 
-0.0.7 - Milestone 7 (Finish Target Builders)
+0.0.7 - Milestone 7 (Finish Target Builders):
  - Refine and condense code
  - Implement proper and complete logging (and comments)
  - Ensure thread safety
@@ -113,7 +113,7 @@ Future release:
  - Move variables from protected to private (were appropriate)
  - Ensure gracefull handling of failed ports (does not appear to work)
 
-0.0.6 - Milestone 6 (Finish Dependant Handling)
+0.0.6 - Milestone 6 (Finish Dependant Handling):
  - Refine and condense code
  - Implement proper and complete logging (and comments)
  - Ensure thread safety
@@ -127,7 +127,7 @@ Future release:
    - _verify:
      - Add caching of dependancies (no need to check them multiple times)
 
-0.0.5 - Milestone 5 (Finish basic ports infrastructure)
+0.0.5 - Milestone 5 (Finish basic ports infrastructure):
  - Refine and condense code
  - Implement proper and complete logging (and comments)
  - Ensure thread safety
@@ -144,7 +144,7 @@ Future release:
  - make:
    - Have automatic logging of build commands (with archival)
 
-0.0.4 - Milestone 4 (Command line controller)
+0.0.4 - Milestone 4 (Command line controller):
  - pypkg:
    - Add ability to update/install ports (basic)
    - Allow environment variables to be settable (like ports_dir)
@@ -155,7 +155,7 @@ Future release:
  * Move fetch_builder to subclassed of StageBuilder
  - Make config_builder API compatible with the other Builders
  - Create progress monitor for the build process (aka top mode)
- - Implement build logging for the ports
+ * Implement build logging for the ports
  * Rename all Popen return status to 'SUCCESS'
  * Rename ports to portcache
  * Implement proper thread/system shutdown

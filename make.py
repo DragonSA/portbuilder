@@ -5,11 +5,43 @@ from os import getenv
 
 env = {}  #: The environment flags to pass to make, aka -D...
 pre_cmd = []  #: Prepend to command
+SUCCESS = 0  #: The value returns by a program on success
+log_dir = "/tmp/pypkg"  #: The directory in which to save logs
 
 env["PORTSDIR"] = getenv("PORTSDIR", "/usr/ports/")  #: Location of ports
 env["BATCH"] = None  #: Default to use batch mode
 
-SUCCESS = 1
+def log_files(origin):
+  """
+     Creates the log file handler for the given port.  This is for both stdout
+     and stderr.
+
+     @param origin: The ports origin
+     @type origin: C{str}
+     @return: The stdout and stderr file handlers
+     @rtype: C{(file, file)}
+  """
+  from os import makedirs as mkdirs
+  from os.path import isdir, join
+
+  if not isdir(log_dir):
+    mkdirs(log_dir)
+  log = open(join(log_dir, origin.replace('/', '_')), 'a')
+  return log, log
+
+def clean_log(origin):
+  """
+     Cleans the log files for the given port.
+
+     @param origin: The ports origin
+     @type origin: C{str}
+  """
+  from os import unlink
+  from os.path import isfile, join
+
+  log_file = join(log_dir, origin.replace('/', '_'))
+  if isfile(log_file):
+    unlink(log_file)
 
 def make_target(origin, args, pipe=None, pre=True):
   """
@@ -34,14 +66,13 @@ def make_target(origin, args, pipe=None, pre=True):
                   if (k != "PORTSDIR" or v != "/usr/ports/")]
 
   if pipe is True:
-    stdout, stderr = PIPE, STDOUT
+    stdin, stdout, stderr = None, PIPE, STDOUT
   elif pipe is False:
-    stdout, stderr = None, None
+    stdin, stdout, stderr = PIPE, None, None
   elif pipe:
-    stdout, stderr = pipe, STDOUT
+    stdin, stdout, stderr = PIPE, pipe, STDOUT
   else:
-    # TODO, record log of commands
-    stdout, stderr = None, None
+    stdin, (stdout, stderr) = PIPE, log_files(origin)
 
   if pre:
     pre = pre_cmd
@@ -51,6 +82,9 @@ def make_target(origin, args, pipe=None, pre=True):
     pre = []
 
   make = Popen(pre + ['make', '-C', join(env["PORTSDIR"], origin)] + args,
-               stdout=stdout, stderr=stderr)
+               stdin=stdin, stdout=stdout, stderr=stderr)
+
+  if stdin:
+    make.stdin.close()
 
   return make

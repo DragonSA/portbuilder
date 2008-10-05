@@ -224,9 +224,12 @@ class Port(object):
        @return: The clean status
        @rtype: C{bool}
     """
-    from make import make_target, SUCCESS
+    from make import clean_log, make_target, SUCCESS
 
     status = make_target(self._origin, ['clean']).wait() is SUCCESS
+
+    if not self._failed:
+      clean_log(self._origin)
 
     # Do some checks, to make sure we are in the correct state
     with self._lock:
@@ -910,14 +913,12 @@ def port_status(origin):
   else: #info == '=' or info == '?' or info =='*'
     return Port.CURRENT
 
-def port_attr(origin, change=False):
+def port_attr(origin):
   """
      Retrieves the attributes for a given port
 
      @param origin: The port identifier
      @type origin: C{str}
-     @param change: Indicates if the attributes may have changed
-     @type change: C{bool}
      @return: A dictionary of attributes
      @rtype: C{\{str:str|(str)|\}}
   """
