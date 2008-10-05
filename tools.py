@@ -61,8 +61,10 @@ class AutoExit(object):
 
     setpgrp()
     register(terminate)
-    signal(SIGINT, self.sig_handler)
-    signal(SIGTERM, self.sig_handler)
+    # Make pylint happier(otherwise sig_handler has an unused parameter 'frame')
+    sig_handler = lambda x, y: self.sig_handler(x)
+    signal(SIGINT, sig_handler)
+    signal(SIGTERM, sig_handler)
 
   def timeout(self, timeout):
     """
@@ -82,14 +84,12 @@ class AutoExit(object):
     """
     self.__pause = pause
 
-  def sig_handler(self, sig, frame):
+  def sig_handler(self, sig):
     """
        Signal handler, initiates a terminate request
 
        @param sig: The signal received
        @type sig: C{int}
-       @param frame: The frame interrupted
-       @type frame: C{Frame}
     """
     from os import getpid, kill
     from signal import signal, SIGINT, SIGTERM, SIG_DFL
@@ -136,7 +136,6 @@ class AutoExit(object):
         while count < cycles and not self.__term:
           sleep(self.__pause)
           count += 1
-        print "auto_handler cycle"
 
         # If a queue is busy then don't terminate
         term = True
@@ -146,22 +145,18 @@ class AutoExit(object):
             break
 
         if term or self.__term:
-          print "calling exit(0)"
           if not self.__term:
             terminate()
 
           # Wait for everyone to finish
           for i in queues:
-            #print i.pool(), len(i)
             i.join()
 
-          print "all queues idle"
           # Cleanup all ports that have built but not installed
           for i in port_cache.itervalues():
             if i and not i.failed() and (i.stage() == Port.BUILD or \
                 (i.stage() == Port.INSTALL and i.working())):
               i.clean()
-          print "all ports clean"
           _exit(self.__term and 0 or 1)
       except KeyboardInterrupt:
         self.terminate()
