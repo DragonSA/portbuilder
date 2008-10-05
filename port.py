@@ -81,13 +81,15 @@ class Port(object):
   BUILD   = 3  #: Status flag for a port that is building
   INSTALL = 4  #: Status flag for a port that is installing
 
+  #: Translation table for the install flags
   INSTALL_NAME = {ABSENT : "Not Installed", OLDER : "Older",
                   CURRENT : "Current", NEWER : "Newer"}
 
-  #: Translation table for the install flags
+  #: Translation table for the build flags
   STAGE_NAME = {CONFIG : "configure", FETCH : "fetch", BUILD : "build",
                 INSTALL : "install"}
-  #: Translation table for the build flags
+
+  package = False  #: If newly installed ports should be packaged
 
   _log = getLogger("pypkg.port.Port")
   _lock = Condition(Lock())  #: The notifier and locker for all ports
@@ -346,7 +348,8 @@ class Port(object):
     """
     from make import make_target, SUCCESS
 
-    make = make_target(self._origin, ['install'])
+    make = make_target(self._origin, ['install'] +
+                       (self.package and ['package'] or []))
 
     status = Port.INSTALL, make.wait() is SUCCESS
     if status:

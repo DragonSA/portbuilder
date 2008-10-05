@@ -25,9 +25,9 @@ def main():
   parser.add_option("-D", dest="make_env", action="append", metavar="variable",
                     default=[], help="Define the given variable for make (i.e."\
                     " add ``-D variable'' to the make calls.")
-  parser.add_option("-i", "--install", dest="install", action="store_true",
-                    default=True, help="Install mode.  Installs the listed " \
-                    "ports (and any dependancies required [default].")
+  parser.add_option("-i", "--install", action="store_true", default=True,
+                    help="Install mode.  Installs the listed ports (and any " \
+                    "dependancies required [default].")
   parser.add_option("-n", dest="no_opt", action="store_true", default=False,
                     help="Display the commands that would have been executed, "\
                     "but do not actually execute them.")
@@ -50,6 +50,10 @@ def main():
 
   if options.no_opt:
     pre_cmd.insert(0, 'echo')
+
+  if options.package:
+    from port import Port
+    Port.package = True
 
   for i in args:
     install_builder.put(i)
@@ -79,16 +83,16 @@ def statistics():
     stdout = sys.stdout
     sys.stdout = sys.stderr
     if count % 20 == 1:
-      print
-      print " Seconds | Port Cnt |    Fetch Cnt    |    Build Cnt    |   Install Cnt   "
-      print "         |          | Act Queue Total | Act Queue Total | Act Queue Total "
-      print "---------+----------+-----------------+-----------------+-----------------"
+      print """
+ Seconds | Port Cnt |    Fetch Cnt    |    Build Cnt    |   Install Cnt
+         |          | Act Queue Total | Act Queue Total | Act Queue Total
+---------+----------+-----------------+-----------------+-----------------"""
     print " %7i | %8i | %3i %5i %5i | %3i %5i %5i | %3i %5i %5i " % \
-          (int(time() - st), # Seconds
-          len(port.port_cache),  # Port Cnt
-          len(queue.fetch_queue), queue.fetch_queue.qsize(), len(target.fetch_builder),
-          len(queue.build_queue), queue.build_queue.qsize(), len(target.build_builder),
-          len(queue.install_queue), queue.install_queue.qsize(), len(target.install_builder))
+          (int(time() - st), len(port.port_cache), len(queue.fetch_queue),
+           queue.fetch_queue.qsize(), len(target.fetch_builder),
+           len(queue.build_queue), queue.build_queue.qsize(),
+           len(target.build_builder), len(queue.install_queue),
+           queue.install_queue.qsize(), len(target.install_builder))
     sys.stdout = stdout
     stdout.flush()
 
