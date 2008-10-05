@@ -60,7 +60,7 @@ class AutoExit(object):
     self.__pid = getpid()
 
     setpgrp()
-    register(terminate)
+    register(self.terminate)
     # Make pylint happier(otherwise sig_handler has an unused parameter 'frame')
     sig_handler = lambda x, y: self.sig_handler(x)
     signal(SIGINT, sig_handler)

@@ -62,8 +62,8 @@ def make_target(origin, args, pipe=None, pre=True):
 
   if isinstance(args, str):
     args = [args]
-  args = args + [v and "%s=%s" % (k, v) or "-D%s" % k for k, v in env.items()
-                  if (k != "PORTSDIR" or v != "/usr/ports/")]
+  args = args + [v and '%s="%s"' % (k, v) or "-D%s" % k for k, v in env.items()
+                  if (k, v) != ("PORTSDIR", "/usr/ports/")]
 
   if pipe is True:
     stdin, stdout, stderr = None, PIPE, STDOUT
