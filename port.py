@@ -840,7 +840,7 @@ class PortCache(dict):
     if not dict.has_key(self, key):
       return ports_queue.put_nowait(lambda: self._get(key))
 
-  def get(self, k):
+  def get(self, k, d=None):
     """
        Get a port from the database.
 
@@ -852,8 +852,8 @@ class PortCache(dict):
     """
     try:
       return self[k]
-    finally:
-      return None
+    except KeyError:
+      return d
 
   def _get(self, key):
     """

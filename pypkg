@@ -17,8 +17,10 @@ def main():
   """
   from make import env, pre_cmd
   from optparse import OptionParser
+  from port import Port, port_cache
   from target import install_builder
   from threading import Thread
+  from tools import terminate
 
   usage = "usage: %prog [-inu] [-D variable] [variable=value] target ..."
   parser = OptionParser(usage, version="%prog 0.0.4")
@@ -52,11 +54,20 @@ def main():
     pre_cmd.insert(0, 'echo')
 
   if options.package:
-    from port import Port
     Port.package = True
 
+  put_count = 0
   for i in args:
-    install_builder.put(i)
+    port = port_cache.get(i)
+    if port:
+      status = port.install_status()
+      if (options.install and status == Port.ABSENT) or \
+         (not options.install and status < Port.CURRENT):
+        install_builder.put(port)
+        put_count += 1
+
+  if not put_count:
+    terminate()
 
   if not options.no_opt:
     stats = Thread(target=statistics)
@@ -72,7 +83,7 @@ def statistics():
   import target
   from time import sleep, time
 
-  st = time()
+  start = time()
 
   count = 0
   while True:
@@ -88,7 +99,7 @@ def statistics():
          |          | Act Queue Total | Act Queue Total | Act Queue Total
 ---------+----------+-----------------+-----------------+-----------------"""
     print " %7i | %8i | %3i %5i %5i | %3i %5i %5i | %3i %5i %5i " % \
-          (int(time() - st), len(port.port_cache), len(queue.fetch_queue),
+          (int(time() - start), len(port.port_cache), len(queue.fetch_queue),
            queue.fetch_queue.qsize(), len(target.fetch_builder),
            len(queue.build_queue), queue.build_queue.qsize(),
            len(target.build_builder), len(queue.install_queue),

@@ -81,9 +81,9 @@ class StageBuilder(object):
        @param callback: The callback function
        @type callback: C{callable}
     """
-    if not isinstance(port, Port):
+    if isinstance(port, str):
       from port import port_cache
-      port = port_cache[port]
+      port = port_cache.get(port)
       if not port:
         if callable(callback):
           callback()
