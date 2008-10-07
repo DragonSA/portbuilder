@@ -5,7 +5,6 @@ ports.
 from __future__ import with_statement
 
 from port import DependHandler, Port
-from tools import invert
 from queue import config_queue, fetch_queue, build_queue, install_queue
 
 class Caller(object):
@@ -93,35 +92,38 @@ class StageBuilder(object):
       config_builder(port, lambda: self.put(port, callback))
       return
     # Make sure the ports dependant handler has been created:
-    depends = port.depends()
     with self.__lock:
       if self.__building.has_key(port):
         if callable(callback):
           self.__building[port].append(callback)
         return
+
       port_lock.acquire()
       stage = port.stage()
       if port.failed() or stage >= self.__stage:
-        working = port.working()
         port_lock.release()
         if callable(callback):
-          with invert(self.__lock):
+          try:
+            self.__lock.release()
             callback()
+          finally:
+            self.__lock.acquire()
         return
 
       self.__building[port] = callable(callback) and [callback] or []
+      depends = port.depends()
       if stage < self.__stage - 1 or \
            (port.working() and stage == self.__stage - 1):
-        # stage == self.__stage -> self.working()
-        assert stage != self.__stage or working
         assert self.__prev_builder is not None
         resolv_depends = False
       elif depends.check(self.__stage) > DependHandler.UNRESOLV:
         port_lock.release()
-        self.__building[port] = callable(callback) and [callback] or []
-        self.__queue.put(lambda: self.build(port))
+        self.queue(port)
         return
       else:
+        if port.working():
+          # TODO, port building outsite StageBuilder infrastructure!!!
+          pass
         resolv_depends = True
 
       depends = depends.dependancies(DependHandler.STAGE2DEPENDS[self.__stage])
@@ -163,6 +165,7 @@ class StageBuilder(object):
     """
     assert self.__building.has_key(port)
     if not port.failed():
+      # TODO: Assumptions may not be corrent, if a dependancy fails
       assert port.depends().check(self.__stage) > DependHandler.UNRESOLV
       assert port.stage() == self.__stage - 1 and not port.working()
       self.__queue.put(lambda: self.build(port))

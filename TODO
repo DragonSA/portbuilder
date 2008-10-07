@@ -147,8 +147,8 @@ Future release:
    - Have automatic logging of build commands (with archival)
 
 0.0.4 - Milestone 4 (Command line controller):
- + pypkg:
-   + Add ability to update/install ports (basic)
+ * pypkg:
+   * Add ability to update/install ports (basic)
    * Add package ability
    * Allow environment variables to be settable (like ports_dir)
  - Create target to build INDEX
@@ -166,6 +166,8 @@ Future release:
    * Create exit handlers
    * Provide easy interface for running main
  * Fix preparation for stages
+ - Cleanup the use of tools
+ - Move exit handling code to own module
 
 0.0.3 - Milestone 3 (Target Builders):
  - Finish call documentation
