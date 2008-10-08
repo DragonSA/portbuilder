@@ -34,10 +34,12 @@ ports_attr = {
 "depend_patch":   ["PATCH_DEPENDS",   tuple], # The port's patch dependancies
 
 # Sundry port information
-"categ":      ["CATEGORIES", tuple], # The port's categories
+"category":   ["CATEGORIES", tuple], # The port's categories
+"descr":      ["_DESCR",     str],   # The port's description file
 "comment":    ["COMMENT",    str],   # The port's comment
 "maintainer": ["MAINTAINER", str],   # The port's maintainer
 "options":    ["OPTIONS",    str],   # The port's options
+"prefix":     ["PREFIX",     str],   # The port's install prefix
 
 # Distribution information
 "distfiles": ["DISTFILES",   tuple], # The port's distfiles
@@ -121,10 +123,9 @@ class Port(object):
        @param attr: The port attribute to retrieve
        @type attr: C{str}
        @return: The attributes
-       @rtype: C{\{str:str|(str)|\}}
+       @rtype: C{str|(str)}
     """
-    if not self._attr_map:
-      self.config()
+    # TODO: Return blank when not in attr_map
     return self._attr_map[attr]
 
   def failed(self):
@@ -218,6 +219,42 @@ class Port(object):
       self._lock.notifyAll()
 
     return self._depends
+
+  def describe(self):
+    """
+       Creates a one line string that describes the port.  The following format
+       is used:
+         ${PKGNAME}|${PORTDIR}/${ORIGIN}|${PREFIX}|${COMMENT}|${DESCR_FILE}|
+         ${MAINTAINER}|${CATEGORIES}|${BUILD_DEPENDS}|${RUN_DEPENDS}|
+         ${WWW_SITE}|${EXTRACT_DEPENDS}|${PATCH_DEPENDS|${FETCH_DEPENDS}
+
+       @return: A one line description of this port
+       @rtype: C{str}
+    """
+    from os.path import join
+    from tools import recurse_depends
+
+    build_depends = ('depend_build', 'depend_lib')
+    extract_depends = ('depend_extract',)
+    fetch_depends = ('depend_fetch',)
+    patch_depends = ('depend_patch',)
+    run_depends = ('depend_lib', 'depend_run')
+
+    return "|".join((
+           self.attr('pkgname'),                    # ${PKGNAME}
+           join(env['PORTSDIR'], self._origin),     # ${PORTDIR}/${ORIGIN}
+           self.attr('prefix'),                     # ${PREFIX}
+           self.attr('comment'),                    # ${COMMENT}
+           self.attr('descr'),                      # ${DESCR_FILE}
+           self.attr('maintainer'),                 # ${MAINTAINER}
+           " ".join(self.attr('category')),         # ${CATEGORIES}
+           recurse_depends(self, build_depends),    # ${BUILD_DEPENDS}
+           recurse_depends(self, run_depends),      # ${RUN_DEPENDS}
+           '',                                      # ${WWW_SITE}
+           recurse_depends(self, extract_depends),  # ${EXTRACT_DEPENDS}
+           recurse_depends(self, patch_depends),    # ${PATCH_DEPENDS}
+           recurse_depends(self, fetch_depends),    # ${FETCH_DEPENDS}
+           )) 
 
   def clean(self):
     """

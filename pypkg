@@ -60,10 +60,13 @@ def main():
   for i in args:
     port = port_cache.get(i)
     if port:
+      print port
+      print port.describe()
+      print port
       status = port.install_status()
       if (options.install and status == Port.ABSENT) or \
          (not options.install and status < Port.CURRENT):
-        install_builder.put(port)
+        #install_builder.put(port)
         put_count += 1
 
   if not put_count:

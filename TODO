@@ -154,6 +154,7 @@ Future release:
  - Create target to build INDEX
  * Port:
    * Implement proper cleaning
+   * Add the describe method (same as the ports make version)
  * Rename TargetBuilder to StageBuilder
  * Move fetch_builder to subclassed of StageBuilder
  - Make config_builder API compatible with the other Builders

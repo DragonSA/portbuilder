@@ -16,22 +16,65 @@ def invert(thing):
   yield thing
   thing.__enter__()
 
-def recurse_depends(port):
-  """
-     Returns a list of all the dependancies of the given port.
+#def recurse_depends(port):
+  #"""
+     #Returns a list of all the dependancies of the given port.  Requires
+     #DependHandler for the port.
 
-     @param port: The port with which to get the dependancies
-     @type port: C{port}
-     @return: The complete list of dependancies
-     @rtype: C{[Port]}
+     #@param port: The port with which to get the dependancies.
+     #@type port: C{port}
+     #@return: The complete list of dependancies.
+     #@rtype: C{[Port]}
+  #"""
+  #depends = set()
+  #new = set((port.depends(),))
+  #while len(new):
+    #depends.update(new)
+    #new = set([[j for j in i.dependancies()] for i in new], [])
+    #new = new.difference(depends)
+  #return [i.port() for i in depends]
+
+def recurse_depends(port, category, cache={}):
   """
-  depends = set()
-  new = set((port.depends(),))
-  while len(new):
-    depends.update(new)
-    new = set([[j for j in i.dependancies()] for i in new], [])
-    new = new.difference(depends)
-  return [i.port() for i in depends]
+     Returns a sorted list of dependancies pkgname.  Only the categories are
+     evaluated.
+
+     @param port: The port the dependancies are for.
+     @type port: C{Port}
+     @param category: The dependancies to retrieve.
+     @type category: C{(str)}
+     @param cache: Use the given cache to increase speed
+     @type cache: C{\{str:(str)\}}
+     @return: A sorted list of dependancies
+     @rtype: C{str}
+  """
+  master = ('depend_lib', 'depend_run')
+  def retrieve(port, categories):
+    """
+       Get the categories for the port
+    """
+    from port import port_cache
+
+    depends = set()
+    for i in set([j[1] for j in sum([port.attr(i) for i in categories], [])]):
+      # TODO: Make sure does not fail on KeyError
+      i_port = port_cache[i]
+      depends.add(i_port.attr('pkgname'))
+      depends.update(cache.has_key(i) and cache[i] or retrieve(i_port, master))
+
+    depends = list(depends)
+    # TODO: This may not be required!!!
+    depends.sort()
+
+    if set(category) == set(master):
+      cache[port.origin()] = tuple(depends)
+
+    return depends
+
+  if set(category) == set(master) and cache.has_key(port.origin()):
+    return " ".join(cache[port.origin()])
+
+  return " ".join(retrieve(port, category))
 
 class AutoExit(object):
   """
