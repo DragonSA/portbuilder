@@ -45,7 +45,6 @@ ports_attr = {
 "distfiles": ["DISTFILES",   tuple], # The port's distfiles
 "subdir":    ["DIST_SUBDIR", str],   # The port's distfile's sub-directory
 
-
 "depends":  ["_DEPEND_DIRS", tuple], # The ports dependants
 } #: The attributes of the given port
 

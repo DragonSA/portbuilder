@@ -64,10 +64,13 @@ def recurse_depends(port, category, cache={}):
 
     depends = set()
     for i in set([j[1] for j in sum([port.attr(i) for i in categories], [])]):
-      # TODO: Make sure does not fail on KeyError
-      i_port = port_cache[i]
-      depends.add(i_port.attr('pkgname'))
-      depends.update(cache.has_key(i) and cache[i] or retrieve(i_port, master))
+      i_p = port_cache.get(i)
+      if i_p:
+        depends.add(i_p.attr('pkgname'))
+        depends.update(cache.has_key(i) and cache[i] or retrieve(i_p, master))
+      else:
+        # TODO
+        pass
 
     depends = list(depends)
     # TODO: This may not be required!!!
@@ -189,7 +192,7 @@ class AutoExit(object):
       try:
         count = 0
         cycles = int(self.__timeout / self.__pause)
-        while count < cycles and not self.__term or not self.__start:
+        while (count < cycles or not self.__start) and not self.__term:
           sleep(self.__pause)
           count += 1
 
@@ -233,5 +236,18 @@ def run_main(main):
 
   assert callable(main)
 
-  Thread(target=lambda: (main(), exit_handler.start())).start()
+  def call():
+    """
+       Call the main function and then start the idle checker.
+    """
+    try:
+      main()
+    except BaseException:
+      from logging import getLogger
+      getLogger("pypkg").exception("Main function failed")
+      terminate()
+    finally:
+      exit_handler.start()
+
+  Thread(target=call).start()
   exit_handler.run()
