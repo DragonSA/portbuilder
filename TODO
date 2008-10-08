@@ -104,7 +104,6 @@ Future release:
  - Ensure thread safety
  - Vet the thread locking for deadlocks
  - Move variables from protected to private (were appropriate)
- - Add a netstat/iostat type report mode
  - Get relative option parity with portupgrade
 
 0.0.7 - Milestone 7 (Finish Target Builders):
@@ -151,14 +150,17 @@ Future release:
    * Add ability to update/install ports (basic)
    * Add package ability
    * Allow environment variables to be settable (like ports_dir)
- - Create target to build INDEX
+ + Create target to build INDEX
  * Port:
    * Implement proper cleaning
    * Add the describe method (same as the ports make version)
+   - Make install status to late initialise
+   - Move internal references to external checks (install status)
  * Rename TargetBuilder to StageBuilder
  * Move fetch_builder to subclassed of StageBuilder
  - Make config_builder API compatible with the other Builders
  - Create progress monitor for the build process (aka top mode)
+ - Create progress monitor type 2 (aka iostat mode)
  * Implement build logging for the ports
  * Rename all Popen return status to 'SUCCESS'
  * Rename ports to portcache

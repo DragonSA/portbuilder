@@ -279,6 +279,46 @@ def config_builder(port, callback=None):
   if callable(callback):
     callback()
 
+def build_index():
+  """
+     Creates the INDEX of all the ports.
+  """
+  from make import make_target, SUCCESS
+  from os.path import join
+  from port import port_cache
+
+  subdir = ['-V', 'SUBDIR']
+
+  make = make_target('', subdir, pipe=True)
+  if make.wait() is not SUCCESS:
+    # TODO
+    return
+
+  ports = []
+  for i in make.stdout.read().split():
+    smake = make_target(i, subdir, pipe=True)
+    if smake.wait() is not SUCCESS:
+      # TODO
+      print "Failed to get subdirs for", i
+      continue
+    for j in smake.stdout.read().split():
+      port = join(i, j)
+      ports.append(port)
+      port_cache.add(port)
+
+  port_map = {}
+  for i in ports:
+    port = port_cache.get(i)
+    if port:
+      port_map[port.attr['pkgname']] = port
+
+  names = port_map.keys()
+  names.sort()
+  index = open('/tmp/INDEX')
+  for i in names:
+    # TODO
+    index.write(i.describe())
+
 #class FetchBuilder(StageBuilder):
   #"""
      #The FetchBuilder class.  This class is the same as StageBuilder except it

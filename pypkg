@@ -39,6 +39,8 @@ def main():
   parser.add_option("-u", "--update", dest="install", action="store_false",
                     default=True, help="Update mode.  Updates the given port." \
                     "  The last -i or -u will be the determining one.")
+  parser.add_option("--index", action="store_true", default=False,
+                    help="Create the INDEX file for the ports infrastructure.")
   options, args = parser.parse_args()
 
   for i in options.make_env:
@@ -56,26 +58,27 @@ def main():
   if options.package:
     Port.package = True
 
-  put_count = 0
-  for i in args:
-    port = port_cache.get(i)
-    if port:
-      print port
-      print port.describe()
-      print port
-      status = port.install_status()
-      if (options.install and status == Port.ABSENT) or \
-         (not options.install and status < Port.CURRENT):
-        #install_builder.put(port)
-        put_count += 1
-
-  if not put_count:
-    terminate()
-
   if not options.no_opt:
     stats = Thread(target=statistics)
     stats.setDaemon(True)
     stats.start()
+
+  if options.index:
+    from target import build_index
+    build_index()
+  else:
+    put_count = 0
+    for i in args:
+      port = port_cache.get(i)
+      if port:
+        status = port.install_status()
+        if (options.install and status == Port.ABSENT) or \
+          (not options.install and status < Port.CURRENT):
+          install_builder.put(port)
+          put_count += 1
+
+    if not put_count:
+      terminate()
 
   return
 

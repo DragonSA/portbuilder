@@ -52,6 +52,13 @@ def recurse_depends(port, category, cache={}):
   def retrieve(port, categories):
     """
        Get the categories for the port
+
+       @param port: The port the dependancies are for.
+       @type port: C{Port}
+       @param category: The dependancies to retrieve.
+       @type category: C{(str)}
+       @return: The sorted list of dependancies
+       @rtype: C{(str)}
     """
     from port import port_cache
 
@@ -96,7 +103,7 @@ class AutoExit(object):
     from atexit import register
     from os import getpid, setpgrp
     from signal import signal, SIGINT, SIGTERM
-    self.__created = False
+    self.__start = False
     self.__pause = pause
     self.__timeout = timeout
     self.__term = False
@@ -145,6 +152,12 @@ class AutoExit(object):
     else:
       terminate()
 
+  def start(self):
+    """
+       Tell the idle checker to start checking for idleness
+    """
+    self.__start = True
+
   def terminate(self):
     """
       Shutdown the program properly.
@@ -176,7 +189,7 @@ class AutoExit(object):
       try:
         count = 0
         cycles = int(self.__timeout / self.__pause)
-        while count < cycles and not self.__term:
+        while count < cycles and not self.__term or not self.__start:
           sleep(self.__pause)
           count += 1
 
@@ -220,5 +233,5 @@ def run_main(main):
 
   assert callable(main)
 
-  Thread(target=main).start()
+  Thread(target=lambda: (main(), exit_handler.start())).start()
   exit_handler.run()
