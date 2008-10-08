@@ -104,7 +104,7 @@ class Port(object):
        @type origin: C{str}
     """
     self._origin = origin  #: The origin of the port
-    self._install_status = port_status(origin) #: The install status of the port
+    self._install_status = None #: The install status of the port
     self._stage = 0  #: The (build) stage progress of the port
     self._attr_map = {}  #: The ports attributes
     self._working = False  #: Working flag
@@ -144,6 +144,10 @@ class Port(object):
        @return: The install status
        @rtype: C{int}
     """
+    if self._install_status is None:
+      with self._lock:
+        if self._install_status is None:
+          self._install_status = port_status(self._origin)
     return self._install_status
 
   def lock(self):
@@ -390,6 +394,7 @@ class Port(object):
 
     status = Port.INSTALL, make.wait() is SUCCESS
     if status:
+      #  Don't need to lock to change this as it will already have been set
       self._install_status = Port.CURRENT
       self._depends.status_changed()
 
@@ -516,6 +521,7 @@ class DependHandler(object):
     self._port = port  #: The port whom we handle
     self._report_log = []  #: Log of all problems reported (to prevent dups)
     # TODO: Change to actually check if we are resolved
+    # Port._install depends on install_status having been called here
     if port.install_status() > Port.ABSENT:
       self._status = DependHandler.RESOLV
     else:

@@ -154,8 +154,8 @@ Future release:
  * Port:
    * Implement proper cleaning
    * Add the describe method (same as the ports make version)
-   - Make install status to late initialise
-   - Move internal references to external checks (install status)
+   * Make install status to late initialise
+   * Move internal references to external checks (install status)
  * Rename TargetBuilder to StageBuilder
  * Move fetch_builder to subclassed of StageBuilder
  - Make config_builder API compatible with the other Builders
