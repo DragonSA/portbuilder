@@ -310,7 +310,7 @@ def build_index():
   for i in ports:
     port = port_cache.get(i)
     if port:
-      port_map[port.attr['pkgname']] = port
+      port_map[port.attr('pkgname')] = port
 
   names = port_map.keys()
   names.sort()

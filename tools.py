@@ -181,7 +181,6 @@ class AutoExit(object):
        Execute the main handlers.  This needs to be run from the main loop to
        allow signals to be processed promptly.
     """
-    from os import _exit
     from port import port_cache, Port
     from queue import queues
     from time import sleep
@@ -216,7 +215,7 @@ class AutoExit(object):
             if i and not i.failed() and (i.stage() == Port.BUILD or \
                 (i.stage() == Port.INSTALL and i.working())):
               i.clean()
-          _exit(self.__term and 0 or 1)
+          exit(self.__term and 0 or 1)
       except KeyboardInterrupt:
         self.terminate()
 
