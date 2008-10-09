@@ -43,7 +43,7 @@ def clean_log(origin):
   if isfile(log_file):
     unlink(log_file)
 
-def make_target(origin, args, pipe=None, pre=True):
+def make_target(origin, args, pipe=None):
   """
      Run make to build a target with the given arguments and the appropriate
      addition settings
@@ -52,8 +52,6 @@ def make_target(origin, args, pipe=None, pre=True):
      @type origin: C{str}
      @param args: Targets and arguments for make
      @type args: C{(str)}
-     @param pre: Prepend commands to be executed
-     @type pre: C{bool}
      @return: The make process interface
      @rtype: C{Popen}
   """
@@ -67,15 +65,15 @@ def make_target(origin, args, pipe=None, pre=True):
                     (args[0], k) != ('config', "BATCH")]
 
   if pipe is True:
-    stdin, stdout, stderr = None, PIPE, STDOUT
+    stdin, stdout, stderr = PIPE, PIPE, STDOUT
   elif pipe:
     stdin, stdout, stderr = PIPE, pipe, STDOUT
   elif pipe is False or (len(pre_cmd) and pre_cmd[0] == "echo"):
-    stdin, stdout, stderr = PIPE, None, None
+    stdin, stdout, stderr = None, None, None
   else:
     stdin, (stdout, stderr) = PIPE, log_files(origin)
 
-  if pre:
+  if pipe is not True:
     pre = pre_cmd
   else:
     pre = []

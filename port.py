@@ -975,7 +975,7 @@ def port_attr(origin):
     args.append('-V')
     args.append(i[0])
 
-  make = make_target(origin, args, pipe=True, pre=False)
+  make = make_target(origin, args, pipe=True)
   if make.wait() is not SUCCESS:
     raise RuntimeError, "Error in obtaining information for port '%s'" % origin
 
