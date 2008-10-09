@@ -98,6 +98,7 @@ class StageBuilder(object):
           self.__building[port].append(callback)
         return
 
+      depends = port.depends()  # Needs to be done outside of port_lock
       port_lock.acquire()
       stage = port.stage()
       if port.failed() or stage >= self.__stage:
@@ -111,14 +112,17 @@ class StageBuilder(object):
         return
 
       self.__building[port] = callable(callback) and [callback] or []
-      depends = port.depends()
       if stage < self.__stage - 1 or \
            (port.working() and stage == self.__stage - 1):
         assert self.__prev_builder is not None
         resolv_depends = False
       elif depends.check(self.__stage) > DependHandler.UNRESOLV:
         port_lock.release()
-        self.queue(port)
+        try:
+          self.__lock.release()
+          self.queue(port)
+        finally:
+          self.__lock.acquire()
         return
       else:
         if port.working():
@@ -238,6 +242,8 @@ class Configer(object):
           config_builder(port, self.finish)
         else:
           self.finish()
+    else:
+      self.__count = 1
     self.finish()
 
   def finish(self):
@@ -247,12 +253,12 @@ class Configer(object):
        from the configuration cache)
     """
     assert self.__count > 0
-    with self.lock:
-      self.__count -= 1
-      if self.__count == 0:
+    self.__count -= 1
+    if self.__count == 0:
+      with self.lock:
         self.cache.pop(self.__port)
-      else:
-        return
+    else:
+      return
     for i in self.__callback:
       i()
 
