@@ -239,6 +239,8 @@ def run_main(main):
     """
     try:
       main()
+    except SystemExit:
+      terminate()
     except BaseException:
       from logging import getLogger
       getLogger("pypkg").exception("Main function failed")
