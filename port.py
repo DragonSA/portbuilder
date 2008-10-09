@@ -104,7 +104,7 @@ class Port(object):
        @type origin: C{str}
     """
     self._origin = origin  #: The origin of the port
-    self._install_status = port_status(self._origin) #: The install status of the port
+    self._install_status = port_status(origin) #: The install status of the port
     self._stage = 0  #: The (build) stage progress of the port
     self._attr_map = {}  #: The ports attributes
     self._working = False  #: Working flag
@@ -144,10 +144,6 @@ class Port(object):
        @return: The install status
        @rtype: C{int}
     """
-    if self._install_status is None:
-      with self._lock:
-        if self._install_status is None:
-          self._install_status = port_status(self._origin)
     return self._install_status
 
   def lock(self):
@@ -944,7 +940,8 @@ def port_status(origin):
      @rtype: C{int}
   """
   from subprocess import Popen, PIPE, STDOUT
-  pkg_version = Popen(['pkg_version', '-O', origin], stdout=PIPE, stderr=STDOUT)
+  pkg_version = Popen(['pkg_version', '-O', origin], close_fds=True,
+                      stdout=PIPE, stderr=STDOUT)
   if pkg_version.wait() != 0:
     return Port.ABSENT
 
@@ -980,7 +977,6 @@ def port_attr(origin):
 
   make = make_target(origin, args, pipe=True, pre=False)
   if make.wait() is not SUCCESS:
-    print make.returncode
     raise RuntimeError, "Error in obtaining information for port '%s'" % origin
 
   attr_map = {}

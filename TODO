@@ -152,6 +152,7 @@ Future release:
    * Add package ability
    * Allow environment variables to be settable (like ports_dir)
  + Create target to build INDEX
+ - Add option to disable pkg_version... (for index builds)
  * Port:
    * Implement proper cleaning
    * Add the describe method (same as the ports make version)

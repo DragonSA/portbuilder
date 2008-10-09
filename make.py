@@ -81,7 +81,7 @@ def make_target(origin, args, pipe=None, pre=True):
     pre = []
 
   make = Popen(pre + ['make', '-C', join(env["PORTSDIR"], origin)] + args,
-               stdin=stdin, stdout=stdout, stderr=stderr)
+               close_fds=True, stdin=stdin, stdout=stdout, stderr=stderr)
 
   if stdin:
     make.stdin.close()
