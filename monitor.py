@@ -124,7 +124,7 @@ def line_mode():
   import target
   from time import sleep
 
-  count = 21
+  count = 20
   options = (False, False, False, False)
   while True:
     try:
@@ -137,7 +137,7 @@ def line_mode():
       options = (len(queue.ports_queue) != 0, len(target.fetch_builder) != 0,
                len(target.build_builder) != 0, len(target.install_builder) != 0)
 
-      if count > 21 or options != old_options:
+      if count > 20 or options != old_options:
         count = 0
         print_header(options)
 
