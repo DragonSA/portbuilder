@@ -90,6 +90,7 @@ class Port(object):
   STAGE_NAME = {CONFIG : "configure", FETCH : "fetch", BUILD : "build",
                 INSTALL : "install"}
 
+  configure = True  #: If the port should configure itself
   package = False  #: If newly installed ports should be packaged
 
   _log = getLogger("pypkg.port.Port")
@@ -103,7 +104,7 @@ class Port(object):
        @type origin: C{str}
     """
     self._origin = origin  #: The origin of the port
-    self._install_status = None #: The install status of the port
+    self._install_status = port_status(self._origin) #: The install status of the port
     self._stage = 0  #: The (build) stage progress of the port
     self._attr_map = {}  #: The ports attributes
     self._working = False  #: Working flag
@@ -338,7 +339,7 @@ class Port(object):
     """
     from make import make_target, SUCCESS
 
-    if len(self._attr_map['options']) == 0:
+    if len(self._attr_map['options']) == 0 or not Port.configure:
       return True
     else:
       make = make_target(self._origin, 'config', pipe=False)
@@ -979,6 +980,7 @@ def port_attr(origin):
 
   make = make_target(origin, args, pipe=True, pre=False)
   if make.wait() is not SUCCESS:
+    print make.returncode
     raise RuntimeError, "Error in obtaining information for port '%s'" % origin
 
   attr_map = {}

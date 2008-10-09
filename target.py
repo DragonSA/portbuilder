@@ -314,10 +314,10 @@ def build_index():
 
   names = port_map.keys()
   names.sort()
-  index = open('/tmp/INDEX')
+  index = open('/tmp/INDEX', 'w')
   for i in names:
     # TODO
-    index.write(i.describe())
+    index.write(port_map[i].describe() + '\n')
 
 #class FetchBuilder(StageBuilder):
   #"""

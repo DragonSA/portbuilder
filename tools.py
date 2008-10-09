@@ -185,8 +185,6 @@ class AutoExit(object):
     from queue import queues
     from time import sleep
 
-    self.__created = True
-
     while True:
       try:
         count = 0

@@ -105,6 +105,7 @@ Future release:
  - Vet the thread locking for deadlocks
  - Move variables from protected to private (were appropriate)
  - Get relative option parity with portupgrade
+ - Improve monitor interface, move to classes with 'pause' capabilities
 
 0.0.7 - Milestone 7 (Finish Target Builders):
  - Refine and condense code
@@ -160,7 +161,7 @@ Future release:
  * Move fetch_builder to subclassed of StageBuilder
  - Make config_builder API compatible with the other Builders
  - Create progress monitor for the build process (aka top mode)
- - Create progress monitor type 2 (aka iostat mode)
+ * Create progress monitor type 2 (aka iostat mode)
  * Implement build logging for the ports
  * Rename all Popen return status to 'SUCCESS'
  * Rename ports to portcache
@@ -171,9 +172,11 @@ Future release:
  * Fix preparation for stages
  - Cleanup the use of tools
  - Move exit handling code to own module
+ - PortCache:
+   - Normalise name (for getters)
 
 0.0.3 - Milestone 3 (Target Builders):
- - Finish call documentation
+ * Finish call documentation
  * Move type() checks to isinstance
  * Make sure all variable comments have a #:
  * Port:
