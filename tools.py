@@ -16,8 +16,9 @@ def invert(thing):
   yield thing
   thing.__enter__()
 
-# TODO: To be moved in with PortCache (or Port
-def recurse_depends(port, category, cache={}):
+# TODO: To be moved in with PortCache (or Port)
+recurse_depends_cache = dict()  #: Default recurse_depends' cache
+def recurse_depends(port, category, cache=recurse_depends_cache):
   """
      Returns a sorted list of dependancies pkgname.  Only the categories are
      evaluated.
