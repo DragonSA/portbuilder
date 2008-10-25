@@ -13,13 +13,14 @@ def monitor(mode):
      @param mode: The monitor to start
      @type mode: C{int}
   """
+  from logging import getLogger
   from threading import Thread
 
   target = None
   if mode is LINE:
     target = line_mode
   else:
-    # TODO
+    getLogger('pypkg.monitor').error("Unknown monitor code: %i" % mode)
     pass
 
   if target:
