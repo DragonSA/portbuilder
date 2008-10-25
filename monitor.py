@@ -19,8 +19,8 @@ def monitor(mode):
   if mode is LINE:
     target = line_mode
   else:
-    from logging import getLogger
-    getLogger('pypkg.monitor').error("Unknown monitor code: %i" % mode)
+    # TODO
+    pass
 
   if target:
     mon = Thread(target=target)

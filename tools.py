@@ -16,9 +16,25 @@ def invert(thing):
   yield thing
   thing.__enter__()
 
-# TODO: To be moved in with PortCache (or Port)
-recurse_depends_cache = dict()  #: Default recurse_depends' cache
-def recurse_depends(port, category, cache=recurse_depends_cache):
+#def recurse_depends(port):
+  #"""
+     #Returns a list of all the dependancies of the given port.  Requires
+     #DependHandler for the port.
+
+     #@param port: The port with which to get the dependancies.
+     #@type port: C{port}
+     #@return: The complete list of dependancies.
+     #@rtype: C{[Port]}
+  #"""
+  #depends = set()
+  #new = set((port.depends(),))
+  #while len(new):
+    #depends.update(new)
+    #new = set([[j for j in i.dependancies()] for i in new], [])
+    #new = new.difference(depends)
+  #return [i.port() for i in depends]
+
+def recurse_depends(port, category, cache={}):
   """
      Returns a sorted list of dependancies pkgname.  Only the categories are
      evaluated.
@@ -53,11 +69,11 @@ def recurse_depends(port, category, cache=recurse_depends_cache):
         depends.add(i_p.attr('pkgname'))
         depends.update(cache.has_key(i) and cache[i] or retrieve(i_p, master))
       else:
-        from logging import getLogger
-        getLogger('pypkg.tools.recurse_depends').warn("Port '%s' has a " \
-                  "(indirect) stale dependancy on '%s'" % (port.origin(), i))
+        # TODO
+        pass
 
     depends = list(depends)
+    # TODO: This may not be required!!!
     depends.sort()
 
     if set(category) == set(master):

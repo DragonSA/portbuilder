@@ -125,7 +125,6 @@ Future release:
    - Ensure _count is done properly
    - Have a dummy port for all stale ports
    - Do not do cyclic dependancy allocation (or move to late)
-   - DependHandler must handle the case when a dependancy fails unresolved
    - Check for cyclic dependancies
    - _verify:
      - Add caching of dependancies (no need to check them multiple times)
@@ -152,7 +151,6 @@ Future release:
    * Add ability to update/install ports (basic)
    * Add package ability
    * Allow environment variables to be settable (like ports_dir)
-   * Add fetch only option
  + Create target to build INDEX
  - Add option to disable pkg_version... (for index builds)
  * Port:
@@ -175,7 +173,6 @@ Future release:
  * Fix preparation for stages
  - Cleanup the use of tools
  - Move exit handling code to own module
- - Check all logging tags are correct
  - PortCache:
    - Normalise name (for getters)
 

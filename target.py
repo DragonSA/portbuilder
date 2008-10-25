@@ -125,6 +125,9 @@ class StageBuilder(object):
           self.__lock.acquire()
         return
       else:
+        if port.working():
+          # TODO, port building outsite StageBuilder infrastructure!!!
+          pass
         resolv_depends = True
 
       depends = depends.dependancies(DependHandler.STAGE2DEPENDS[self.__stage])
@@ -152,8 +155,11 @@ class StageBuilder(object):
     """
     assert self.__building.has_key(port)
     port.build_stage(self.__stage, False)
-    self.__callbacks(port)
-    
+    with self.__lock:
+      callbacks = self.__building.pop(port)
+    for i in callbacks:
+      i()
+
   def queue(self, port):
     """
        Place a port on the queue, this is for delayed queueing.
@@ -163,14 +169,12 @@ class StageBuilder(object):
     """
     assert self.__building.has_key(port)
     if not port.failed():
-      if port.depends().check(self.__stage) == DependHandler.FAILURE:
-        self.__callbacks(port)
-      else:
-        assert port.depends().check(self.__stage) > DependHandler.UNRESOLV
-        assert port.stage() == self.__stage - 1 and not port.working()
-        self.__queue.put(lambda: self.build(port))
+      # TODO: Assumptions may not be corrent, if a dependancy fails
+      assert port.depends().check(self.__stage) > DependHandler.UNRESOLV
+      assert port.stage() == self.__stage - 1 and not port.working()
+      self.__queue.put(lambda: self.build(port))
     else:
-      self.__callbacks(port)
+      self.build(port)
 
   def __call__(self, port, callback=None):
     """
@@ -186,18 +190,6 @@ class StageBuilder(object):
        @rtype: C{int}
     """
     return len(self.__building)
-
-  def __callbacks(self, port):
-    """
-       Call the callback functions for a given port.
-
-       @param port: The port
-       @type port: C{Port}
-    """
-    with self.__lock:
-      callbacks = self.__building.pop(port)
-    for i in callbacks:
-      i()
 
 class Configer(object):
   """
@@ -297,23 +289,23 @@ def build_index():
   """
      Creates the INDEX of all the ports.
   """
-  from logging import getLogger
-  from make import env, make_target, SUCCESS
+  from make import make_target, SUCCESS
   from os.path import join
   from port import port_cache
 
-  make = make_target('', ['-V', 'SUBDIR'], pipe=True)
+  subdir = ['-V', 'SUBDIR']
+
+  make = make_target('', subdir, pipe=True)
   if make.wait() is not SUCCESS:
-    getLogger('pypkg.target.build_index').error("Unable to get global " \
-              "directory list for ports at '%s'" % env['PORTSDIR'])
+    # TODO
     return
 
   ports = []
   for i in make.stdout.read().split():
-    smake = make_target(i, ['-V', 'SUBDIR'], pipe=True)
+    smake = make_target(i, subdir, pipe=True)
     if smake.wait() is not SUCCESS:
-      getLogger('pypkg.target.build_index').error("Unable to get subdirectory" \
-      "list for ports under '%s'" % join(env['PORTSDIR'], i))
+      # TODO
+      print "Failed to get subdirs for", i
       continue
     for j in smake.stdout.read().split():
       port = join(i, j)
@@ -330,8 +322,43 @@ def build_index():
   names.sort()
   index = open('/tmp/INDEX', 'w')
   for i in names:
-    # TODO: Output to the appropriate location
+    # TODO
     index.write(port_map[i].describe() + '\n')
+
+#class FetchBuilder(StageBuilder):
+  #"""
+     #The FetchBuilder class.  This class is the same as StageBuilder except it
+     #add the ability to do a recursive fetch of all dependancies of the current
+     #port.  Whereas one would have to be installing ports to get similar
+     #behaviour otherwise.  
+  #"""
+  #def __call__(self, port, callback=None, recurse=False):
+    #"""
+      #The builder for the fetch stage.  This is a wrapper around the
+      #TargetBuilder for the fetch stage.  This wrapper adds the ability to
+      #recursively fetch all dependancies' distfiles
+
+      #@param port: The port to fetch
+      #@type port: C{Port}
+      #@param callback: The callback function
+      #@type callback: C{callable}
+      #@param recurse: Indicate if all dependancies need to be fetched
+      #@type recurse: C{bool}
+    #"""
+    #from tools import recurse_depends
+
+    #if recurse:
+      #if port.stage() < Port.CONFIG:
+        #config_builder(port, lambda: fetch_builder(port, callback, True))
+        #return
+
+      #depends = recurse_depends(port)
+
+      #if callable(callback):
+        #callback = Caller(len(depends) + 1, callback)
+      #for i in depends:
+        #self.put(i.port(), callback)
+    #self.put(port, callback)
 
 #: The builder for the fetch stage
 fetch_builder   = StageBuilder(Port.FETCH, fetch_queue)
