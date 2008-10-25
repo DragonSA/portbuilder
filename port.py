@@ -656,6 +656,8 @@ class DependHandler(object):
        @return: The dependancy status
        @rtype: C{int}
     """
+    # This should not be called if we have already failed
+    assert self._status != DependHandler.FAILURE
     with self._lock:
       if self._count == 0 or stage == Port.CONFIG:
         return DependHandler.RESOLV
@@ -734,7 +736,7 @@ class DependHandler(object):
 
   def _check(self, depends):
     """
-       Check if a list of dependancies has been resolved
+       Check if a list of dependancies has been resolved.
 
        @param depends: List of dependancies
        @type depends: C{int} or C{(int)}

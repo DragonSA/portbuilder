@@ -125,6 +125,7 @@ Future release:
    - Ensure _count is done properly
    - Have a dummy port for all stale ports
    - Do not do cyclic dependancy allocation (or move to late)
+   - DependHandler must handle the case when a dependancy fails unresolved
    - Check for cyclic dependancies
    - _verify:
      - Add caching of dependancies (no need to check them multiple times)
