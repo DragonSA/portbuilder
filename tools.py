@@ -69,11 +69,11 @@ def recurse_depends(port, category, cache={}):
         depends.add(i_p.attr('pkgname'))
         depends.update(cache.has_key(i) and cache[i] or retrieve(i_p, master))
       else:
-        # TODO
-        pass
+        from logging import getLogger
+        getLogger('pypkg.tools.recurse_depends').warn("Port '%s' has a " \
+                  "(indirect) stale dependancy on '%s'" % (port.origin(), i))
 
     depends = list(depends)
-    # TODO: This may not be required!!!
     depends.sort()
 
     if set(category) == set(master):
