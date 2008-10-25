@@ -151,6 +151,7 @@ Future release:
    * Add ability to update/install ports (basic)
    * Add package ability
    * Allow environment variables to be settable (like ports_dir)
+   * Add fetch only option
  + Create target to build INDEX
  - Add option to disable pkg_version... (for index builds)
  * Port:

@@ -91,6 +91,7 @@ class Port(object):
                 INSTALL : "install"}
 
   configure = True  #: If the port should configure itself
+  fetch_only = False  #: Only fetch the port, skip all other stages
   package = False  #: If newly installed ports should be packaged
 
   _log = getLogger("pypkg.port.Port")
@@ -421,7 +422,8 @@ class Port(object):
       if self._failed:
         return False, False
 
-      if self._stage == stage:
+      if self._stage == stage  or (Port.fetch_only and stage > Port.FETCH):
+        self._stage = stage
         return False, True
 
       assert self._stage == stage - 1
