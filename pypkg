@@ -15,57 +15,19 @@ def main():
      The main event loop.  This sets the program on the corrent trajectory and
      then exits.  Everything else just 'runs'
   """
-  from make import env, pre_cmd
-  from optparse import OptionParser
   from port import Port, port_cache
   from target import install_builder
   from tools import terminate
 
-  usage = "usage: %prog [-inu] [-D variable] [variable=value] target ..."
-  parser = OptionParser(usage, version="%prog 0.0.4")
-  parser.add_option("-b", "--batch", action="store_true", default=False,
-                    help="Batch mode.  Skips the config stage.")
-  parser.add_option("-D", dest="make_env", action="append", metavar="variable",
-                    default=[], help="Define the given variable for make (i.e."\
-                    " add ``-D variable'' to the make calls.")
-  parser.add_option("-i", "--install", action="store_true", default=True,
-                    help="Install mode.  Installs the listed ports (and any " \
-                    "dependancies required [default].")
-  parser.add_option("-n", dest="no_opt", action="store_true", default=False,
-                    help="Display the commands that would have been executed, "\
-                    "but do not actually execute them.")
-  parser.add_option("-p", "--package", action="store_true", default=False,
-                    help="When installing ports, also generate packages (i.e." \
-                    " do a ``make package''.")
-  parser.add_option("-u", "--update", dest="install", action="store_false",
-                    default=True, help="Update mode.  Updates the given port." \
-                    "  The last -i or -u will be the determining one.")
-  parser.add_option("--index", action="store_true", default=False,
-                    help="Create the INDEX file for the ports infrastructure.")
-  options, args = parser.parse_args()
+  options, args = gen_parser().parse_args()
+  options.args = args
 
-  for i in options.make_env:
-    env[i] = None
-  for i in args[:]:
-    if i.find('=') != -1:
-      # TODO:  Make sure var, val take the correct values
-      var, val = i.split('=', 1)
-      env[var] = val
-      args.remove(i)
-
-  if options.no_opt:
-    pre_cmd.insert(0, 'echo')
-
-  if options.batch:
-    Port.configure = False
-
-  if options.package:
-    Port.package = True
-
+  # Set the monitor
   if not options.no_opt or True:
     from monitor import monitor, LINE
     monitor(LINE)
 
+  # Execute the primary build target
   if options.index:
     from target import build_index
     build_index()
@@ -85,5 +47,74 @@ def main():
         callback()
 
   return
+
+def gen_parser():
+  """
+     Create the options parser object
+
+     @return: The options parser
+     @rtype: C{OptionParser}
+  """
+  from optparse import OptionParser
+
+  usage = "usage: %prog [-inu] [-D variable] [variable=value] target ..."
+  parser = OptionParser(usage, version="%prog 0.0.4")
+  parser.add_option("-b", "--batch", action="store_true", default=False,
+                    help="Batch mode.  Skips the config stage.")
+  parser.add_option("-D", dest="make_env", action="append", metavar="variable",
+                    default=[], help="Define the given variable for make (i.e."\
+                    " add ``-D variable'' to the make calls.")
+  parser.add_option("-i", "--install", action="store_true", default=True,
+                    help="Install mode.  Installs the listed ports (and any " \
+                    "dependancies required [default].")
+  parser.add_option("-f", dest="fetch", action="store_true", default=False,
+                    help="Only fetch the distribution files for the ports")
+  parser.add_option("-n", dest="no_opt", action="store_true", default=False,
+                    help="Display the commands that would have been executed, "\
+                    "but do not actually execute them.")
+  parser.add_option("-p", "--package", action="store_true", default=False,
+                    help="When installing ports, also generate packages (i.e." \
+                    " do a ``make package''.")
+  parser.add_option("-u", "--update", dest="install", action="store_false",
+                    default=True, help="Update mode.  Updates the given port." \
+                    "  The last -i or -u will be the determining one.")
+  parser.add_option("--index", action="store_true", default=False,
+                    help="Create the INDEX file for the ports infrastructure.")
+  return parser
+
+def set_options(options, args):
+  """
+     Set all the global options.
+
+     @param options: The options
+     @type options: C{object}
+  """
+  from make import env, pre_cmd
+  from port import Port
+
+  # Add all -D options
+  for i in options.make_env:
+    env[i] = None
+
+  # Add other make env options (aka variable=value)
+  for i in options.args[:]:
+    if i.find('=') != -1:
+      # TODO:  Make sure var, val take the correct values
+      var, val = i.split('=', 1)
+      env[var] = val
+      args.remove(i)
+
+  # Batch mode, no configuring (-b)
+  Port.configure = not options.batch
+
+  # Only fetch the ports
+  Port.fetch_only = options.fetch
+
+  # No operations (-n)
+  if options.no_opt:
+    pre_cmd.insert(0, 'echo')
+
+  # Package the ports after installing (-p)
+  Port.package = options.package
 
 run_main(main)

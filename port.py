@@ -91,6 +91,7 @@ class Port(object):
                 INSTALL : "install"}
 
   configure = True  #: If the port should configure itself
+  fetch_only = False  #: Only fetch the port, skip all other stages
   package = False  #: If newly installed ports should be packaged
 
   _log = getLogger("pypkg.port.Port")
@@ -125,8 +126,12 @@ class Port(object):
        @return: The attributes
        @rtype: C{str|(str)}
     """
-    # TODO: Return blank when not in attr_map
-    return self._attr_map[attr]
+    try:
+      return self._attr_map[attr]
+    except KeyError:
+      # Silent failure, may be acceptable at times?
+      self._log.exception("Port attribute key error: ``%s''" % attr)
+      return ''
 
   def failed(self):
     """
@@ -421,7 +426,8 @@ class Port(object):
       if self._failed:
         return False, False
 
-      if self._stage == stage:
+      if self._stage == stage  or (Port.fetch_only and stage > Port.FETCH):
+        self._stage = stage
         return False, True
 
       assert self._stage == stage - 1
@@ -650,6 +656,8 @@ class DependHandler(object):
        @return: The dependancy status
        @rtype: C{int}
     """
+    # This should not be called if we have already failed
+    assert self._status != DependHandler.FAILURE
     with self._lock:
       if self._count == 0 or stage == Port.CONFIG:
         return DependHandler.RESOLV
@@ -728,7 +736,7 @@ class DependHandler(object):
 
   def _check(self, depends):
     """
-       Check if a list of dependancies has been resolved
+       Check if a list of dependancies has been resolved.
 
        @param depends: List of dependancies
        @type depends: C{int} or C{(int)}
