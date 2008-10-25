@@ -16,24 +16,7 @@ def invert(thing):
   yield thing
   thing.__enter__()
 
-#def recurse_depends(port):
-  #"""
-     #Returns a list of all the dependancies of the given port.  Requires
-     #DependHandler for the port.
-
-     #@param port: The port with which to get the dependancies.
-     #@type port: C{port}
-     #@return: The complete list of dependancies.
-     #@rtype: C{[Port]}
-  #"""
-  #depends = set()
-  #new = set((port.depends(),))
-  #while len(new):
-    #depends.update(new)
-    #new = set([[j for j in i.dependancies()] for i in new], [])
-    #new = new.difference(depends)
-  #return [i.port() for i in depends]
-
+# TODO: To be moved in with PortCache (or Port
 def recurse_depends(port, category, cache={}):
   """
      Returns a sorted list of dependancies pkgname.  Only the categories are

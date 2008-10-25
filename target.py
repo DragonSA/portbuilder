@@ -125,9 +125,6 @@ class StageBuilder(object):
           self.__lock.acquire()
         return
       else:
-        if port.working():
-          # TODO, port building outsite StageBuilder infrastructure!!!
-          pass
         resolv_depends = True
 
       depends = depends.dependancies(DependHandler.STAGE2DEPENDS[self.__stage])
