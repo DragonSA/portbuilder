@@ -126,8 +126,12 @@ class Port(object):
        @return: The attributes
        @rtype: C{str|(str)}
     """
-    # TODO: Return blank when not in attr_map
-    return self._attr_map[attr]
+    try:
+      return self._attr_map[attr]
+    except KeyError:
+      # Silent failure, may be acceptable at times?
+      self._log.exception("Port attribute key error: ``%s''" % attr)
+      return ''
 
   def failed(self):
     """
