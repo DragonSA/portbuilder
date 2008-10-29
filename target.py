@@ -172,13 +172,13 @@ class StageBuilder(object):
       self.__queues[1].append(port)
     if not port.failed():
       if port.depends().check(self.__stage) == DependHandler.FAILURE:
-        self.__callbacks(port)
+        self.__callbacks(port, 1)
       else:
         assert port.depends().check(self.__stage) > DependHandler.UNRESOLV
         assert port.stage() == self.__stage - 1 and not port.working()
         self.__queue.put(lambda: self.build(port))
     else:
-      self.__callbacks(port)
+      self.__callbacks(port, 1)
 
   def stats(self):
     """
@@ -208,16 +208,18 @@ class StageBuilder(object):
     """
     return len(self.__building)
 
-  def __callbacks(self, port):
+  def __callbacks(self, port, queue=0):
     """
        Call the callback functions for a given port.
 
        @param port: The port
        @type port: C{Port}
+       @param queue: The queue this port currently resides
+       @type queue: C{int}
     """
     with self.__lock:
       callbacks = self.__building.pop(port)
-      self.__queues[0].remove(port)
+      self.__queues[queue].remove(port)
     for i in callbacks:
       i()
 
