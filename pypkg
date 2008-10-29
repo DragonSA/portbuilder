@@ -19,15 +19,21 @@ def main():
   from target import install_builder
   from exit import terminate
 
-  options, args = gen_parser().parse_args()
+  parser = gen_parser()
+  options, args = parser.parse_args()
   options.args = args
 
   set_options(options)
 
   # Set the monitor
-  if not options.no_opt or True:
-    from monitor import set_monitor, Stat
-    set_monitor(Stat())
+  if not options.no_opt:
+    import monitor
+    if options.stat_mode:
+      if options.stat_mode < 0:
+        parser.error("SEC needs to be positive, not %i" % options.stat_mode)
+      monitor.set_monitor(monitor.Stat(options.stat_mode))
+    else:
+      monitor.set_monitor(monitor.Top())
 
   # Execute the primary build target
   if options.index:
@@ -80,6 +86,8 @@ def gen_parser():
   parser.add_option("-u", "--update", dest="install", action="store_false",
                     default=True, help="Update mode.  Updates the given port." \
                     "  The last -i or -u will be the determining one.")
+  parser.add_option("-w", dest="stat_mode", type="int", default=0, meta="SEC",
+                    help="Use the stats monitor with SEC delay between lines")
   parser.add_option("--index", action="store_true", default=False,
                     help="Create the INDEX file for the ports infrastructure.")
   return parser
