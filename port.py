@@ -883,7 +883,18 @@ class PortCache(dict):
     dict.__init__(self)
 
     from threading import Condition, Lock
-    self._lock = Condition(Lock())
+
+    self._lock = Condition(Lock())  #: The lock for this cache
+    self.__dead_cnt = 0  #: The number of 'bad' ports
+
+  def __len__(self):
+    """
+       The number of ports loaded.
+
+       @return: Number of ports
+       @rtype: C{int}
+    """
+    return dict.__len__(self) - self.__dead_cnt
 
   def __getitem__(self, key):
     """
@@ -999,13 +1010,15 @@ class PortCache(dict):
         port = False
         self._log.error("Invalid port name '%s' passed" % key)
       self._lock.acquire()
-      dict.__setitem__(self, key, port)
     except KeyboardInterrupt:
       raise
     except BaseException:
       self._lock.acquire()
-      dict.__setitem__(self, key, False)
+      port = False
       self._log.exception("Error while creating port '%s'" % key)
+    dict.__setitem__(self, key, port)
+    if not port:
+      self.__dead_cnt += 1
     self._lock.notifyAll()
     self._lock.release()
 
