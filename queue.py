@@ -147,7 +147,6 @@ class WorkerQueue(Queue):
 
     thread = currentThread()
 
-
     with self._lock:
       wid = self._worker_cnt
       self._worker_cnt += 1

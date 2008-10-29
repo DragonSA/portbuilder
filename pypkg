@@ -22,6 +22,8 @@ def main():
   options, args = gen_parser().parse_args()
   options.args = args
 
+  set_options(options)
+
   # Set the monitor
   if not options.no_opt or True:
     from monitor import monitor, LINE
@@ -82,7 +84,7 @@ def gen_parser():
                     help="Create the INDEX file for the ports infrastructure.")
   return parser
 
-def set_options(options, args):
+def set_options(options):
   """
      Set all the global options.
 
@@ -102,7 +104,7 @@ def set_options(options, args):
       # TODO:  Make sure var, val take the correct values
       var, val = i.split('=', 1)
       env[var] = val
-      args.remove(i)
+      options.args.remove(i)
 
   # Batch mode, no configuring (-b)
   Port.configure = not options.batch
