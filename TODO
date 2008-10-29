@@ -35,7 +35,8 @@ Future release:
    - Check for 100% compatibility
  - monitor:
    - Converge common functionality into Monitor
-   - Make statistics global and intergrate into Stat
+   + Make statistics global and intergrate into Stat
+   - Show information about failed ports
    - Stat:
      - Make options a class variable
    - Top:
@@ -174,7 +175,7 @@ Future release:
    * Move internal references to external checks (install status)
  * Rename TargetBuilder to StageBuilder
  * Move fetch_builder to subclassed of StageBuilder
- + Create progress monitor for the build process (aka top mode)
+ * Create progress monitor for the build process (aka top mode)
  * Create progress monitor type 2 (aka stat mode)
  * Implement build logging for the ports
  * Rename all Popen return status to 'SUCCESS'

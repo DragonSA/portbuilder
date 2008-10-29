@@ -455,7 +455,7 @@ class Port(object):
 
       status = stage > Port.CONFIG and self.depends().check(stage) or \
                DependHandler.RESOLV
-      if status is DependHandler.UNRESOLV:
+      if status in (DependHandler.FAILURE, DependHandler.UNRESOLV):
         self._failed = True
         try:
           self._lock.release()
@@ -730,9 +730,10 @@ class DependHandler(object):
        @return: The dependancy status
        @rtype: C{int}
     """
-    # This should not be called if we have already failed
-    assert self._status != DependHandler.FAILURE
+    # DependHandler status might change without Port's changing
     with self._lock:
+      if self._status == DependHandler.FAILURE:
+        return self._status
       if self._count == 0 or stage == Port.CONFIG:
         return DependHandler.RESOLV
       return self._check(DependHandler.STAGE2DEPENDS[stage])
