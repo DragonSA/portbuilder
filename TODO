@@ -142,6 +142,8 @@ Future release:
    - Add clean target (and have a failed port clean itself...)
    - Use batch mode for all stages except config
    - Precleaning
+   - Investigate fine grain locking (memory vs speed)
+     [and adjust locking appropriately]
  - WorkerQueue:
    - Remove condition (not needed and overexposing internals)
  - make:
@@ -173,7 +175,7 @@ Future release:
    * Create exit handlers
    * Provide easy interface for running main
  * Fix preparation for stages
- - Cleanup the use of tools
+ * Cleanup the use of tools
  * Move exit handling code to own module
  * Check all logging tags are correct
  * PortCache:

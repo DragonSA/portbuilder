@@ -235,7 +235,6 @@ class Port(object):
        @rtype: C{str}
     """
     from os.path import join
-    from tools import recurse_depends
 
     build_depends = ('depend_build', 'depend_lib')
     extract_depends = ('depend_extract',)
@@ -244,19 +243,19 @@ class Port(object):
     run_depends = ('depend_lib', 'depend_run')
 
     return "|".join((
-           self.attr('pkgname'),                    # ${PKGNAME}
-           join(env['PORTSDIR'], self._origin),     # ${PORTDIR}/${ORIGIN}
-           self.attr('prefix'),                     # ${PREFIX}
-           self.attr('comment'),                    # ${COMMENT}
-           self.attr('descr'),                      # ${DESCR_FILE}
-           self.attr('maintainer'),                 # ${MAINTAINER}
-           " ".join(self.attr('category')),         # ${CATEGORIES}
-           recurse_depends(self, build_depends),    # ${BUILD_DEPENDS}
-           recurse_depends(self, run_depends),      # ${RUN_DEPENDS}
-           '',                                      # ${WWW_SITE}
-           recurse_depends(self, extract_depends),  # ${EXTRACT_DEPENDS}
-           recurse_depends(self, patch_depends),    # ${PATCH_DEPENDS}
-           recurse_depends(self, fetch_depends),    # ${FETCH_DEPENDS}
+           self.attr('pkgname'),                        # ${PKGNAME}
+           join(env['PORTSDIR'], self._origin),         # ${PORTDIR}/${ORIGIN}
+           self.attr('prefix'),                         # ${PREFIX}
+           self.attr('comment'),                        # ${COMMENT}
+           self.attr('descr'),                          # ${DESCR_FILE}
+           self.attr('maintainer'),                     # ${MAINTAINER}
+           " ".join(self.attr('category')),             # ${CATEGORIES}
+           self.recurse_depends(self, build_depends),   # ${BUILD_DEPENDS}
+           self.recurse_depends(self, run_depends),     # ${RUN_DEPENDS}
+           '',                                          # ${WWW_SITE}
+           self.recurse_depends(self, extract_depends), # ${EXTRACT_DEPENDS}
+           self.recurse_depends(self, patch_depends),   # ${PATCH_DEPENDS}
+           self.recurse_depends(self, fetch_depends),   # ${FETCH_DEPENDS}
            )) 
 
   def clean(self):
@@ -410,8 +409,6 @@ class Port(object):
        @return: The proceed status (and succes status)
        @rtype: C{bool}
     """
-    from tools import invert
-
     with self._lock:
       if self._stage > stage:
         return False, True
@@ -436,8 +433,11 @@ class Port(object):
                DependHandler.RESOLV
       if status in (DependHandler.FAILURE, DependHandler.UNRESOLV):
         self._failed = True
-        with invert(self._lock):
+        try:
+          self._lock.release()
           self._depends.status_changed()
+        finally:
+          self._lock.acquire()
         return False, False
 
       self._working = True
@@ -473,6 +473,55 @@ class Port(object):
       self._log.error("Port '%s' has failed to complete stage '%s'"
                       % (self._origin, Port.STAGE_NAME[stage]))
     return status
+
+  def recurse_depends(self, port, category, cache=dict()):
+    """
+      Returns a sorted list of dependancies pkgname.  Only the categories are
+      evaluated.
+
+      @param port: The port the dependancies are for.
+      @type port: C{Port}
+      @param category: The dependancies to retrieve.
+      @type category: C{(str)}
+      @param cache: Use the given cache to increase speed
+      @type cache: C{\{str:(str)\}}
+      @return: A sorted list of dependancies
+      @rtype: C{str}
+    """
+    master = ('depend_lib', 'depend_run')
+    def retrieve(port, categories):
+      """
+        Get the categories for the port
+
+        @param port: The port the dependancies are for.
+        @type port: C{Port}
+        @param category: The dependancies to retrieve.
+        @type category: C{(str)}
+        @return: The sorted list of dependancies
+        @rtype: C{(str)}
+      """
+      depends = set()
+      for i in set([j[1] for j in sum([port.attr(i) for i in categories], [])]):
+        i_p = port_cache.get(i)
+        if i_p:
+          depends.add(i_p.attr('pkgname'))
+          depends.update(cache.has_key(i) and cache[i] or retrieve(i_p, master))
+        else:
+          self._log.warn("Port '%s' has a (indirect) stale dependancy " \
+                        "on '%s'" % (port.origin(), i))
+
+        depends = list(depends)
+        depends.sort()
+
+        if set(category) == set(master):
+          cache[port.origin()] = tuple(depends)
+
+        return depends
+
+    if set(category) == set(master) and cache.has_key(port.origin()):
+      return " ".join(cache[port.origin()])
+    return " ".join(retrieve(port, category))
+
 
 class DependHandler(object):
   """
