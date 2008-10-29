@@ -236,6 +236,27 @@ class Port(object):
     """
     from os.path import join
 
+    def get_www():
+      """
+         Get the WWW address in the description file
+
+         @return: The WWW URL
+         @rtype: C{str}
+      """
+      from os.path import isfile
+
+      descr = self.attr('descr')
+      if isfile(descr):
+        for i in open(descr, 'r'):
+          if i.startswith('WWW: '):
+            www = i[5:].split()[0]
+            if www.split('://', 1)[0] in ('http', 'https', 'ftp'):
+              return www
+            return 'http://' + www
+      else:
+        self._log.warn("Invalid description file for '%s'" % self._origin)
+      return ''
+
     build_depends = ('depend_build', 'depend_lib')
     extract_depends = ('depend_extract',)
     fetch_depends = ('depend_fetch',)
@@ -243,19 +264,19 @@ class Port(object):
     run_depends = ('depend_lib', 'depend_run')
 
     return "|".join((
-           self.attr('pkgname'),                        # ${PKGNAME}
-           join(env['PORTSDIR'], self._origin),         # ${PORTDIR}/${ORIGIN}
-           self.attr('prefix'),                         # ${PREFIX}
-           self.attr('comment'),                        # ${COMMENT}
-           self.attr('descr'),                          # ${DESCR_FILE}
-           self.attr('maintainer'),                     # ${MAINTAINER}
-           " ".join(self.attr('category')),             # ${CATEGORIES}
-           self.recurse_depends(self, build_depends),   # ${BUILD_DEPENDS}
-           self.recurse_depends(self, run_depends),     # ${RUN_DEPENDS}
-           '',                                          # ${WWW_SITE}
-           self.recurse_depends(self, extract_depends), # ${EXTRACT_DEPENDS}
-           self.recurse_depends(self, patch_depends),   # ${PATCH_DEPENDS}
-           self.recurse_depends(self, fetch_depends),   # ${FETCH_DEPENDS}
+           self.attr('pkgname'),                          # ${PKGNAME}
+           join(env['PORTSDIR'], self._origin),           # ${PORTDIR}/${ORIGIN}
+           self.attr('prefix'),                           # ${PREFIX}
+           self.attr('comment'),                          # ${COMMENT}
+           self.attr('descr'),                            # ${DESCR_FILE}
+           self.attr('maintainer'),                       # ${MAINTAINER}
+           " ".join(self.attr('category')),               # ${CATEGORIES}
+           self.__recurse_depends(self, build_depends),   # ${BUILD_DEPENDS}
+           self.__recurse_depends(self, run_depends),     # ${RUN_DEPENDS}
+           get_www(),                                     # ${WWW_SITE}
+           self.__recurse_depends(self, extract_depends), # ${EXTRACT_DEPENDS}
+           self.__recurse_depends(self, patch_depends),   # ${PATCH_DEPENDS}
+           self.__recurse_depends(self, fetch_depends),   # ${FETCH_DEPENDS}
            )) 
 
   def clean(self):
@@ -474,7 +495,7 @@ class Port(object):
                       % (self._origin, Port.STAGE_NAME[stage]))
     return status
 
-  def recurse_depends(self, port, category, cache=dict()):
+  def __recurse_depends(self, port, category, cache=dict()):
     """
       Returns a sorted list of dependancies pkgname.  Only the categories are
       evaluated.
@@ -510,13 +531,13 @@ class Port(object):
           self._log.warn("Port '%s' has a (indirect) stale dependancy " \
                         "on '%s'" % (port.origin(), i))
 
-        depends = list(depends)
-        depends.sort()
+      depends = list(depends)
+      depends.sort()
 
-        if set(category) == set(master):
-          cache[port.origin()] = tuple(depends)
+      if set(category) == set(master):
+        cache[port.origin()] = tuple(depends)
 
-        return depends
+      return depends
 
     if set(category) == set(master) and cache.has_key(port.origin()):
       return " ".join(cache[port.origin()])

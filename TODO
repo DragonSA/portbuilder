@@ -106,6 +106,7 @@ Future release:
  - Move variables from protected to private (were appropriate)
  - Get relative option parity with portupgrade
  - Improve monitor interface, move to classes with 'pause' capabilities
+ - build_index: Add option to direct file output (or just to stdout)
 
 0.0.7 - Milestone 7 (Finish Target Builders):
  - Refine and condense code
