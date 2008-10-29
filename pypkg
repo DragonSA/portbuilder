@@ -2,13 +2,12 @@
 """
 Controller for various ports operations
 """
-from logging import getLogger, StreamHandler, DEBUG
+from logging import getLogger, FileHandler, DEBUG
 from tools import run_main
 
-handler = StreamHandler()
+handler = FileHandler('/tmp/pypkg/log', 'w')
 handler.setLevel(DEBUG)
-getLogger('pypkg').addHandler(StreamHandler())
-getLogger('pypkg.port.DependHandler').setLevel(DEBUG)
+getLogger('pypkg').addHandler(handler)
 
 def main():
   """
