@@ -431,6 +431,8 @@ class Port(object):
        @return: The proceed status (and succes status)
        @rtype: C{bool}
     """
+    from time import time
+    
     with self._lock:
       if self._stage > stage:
         return False, True
@@ -462,7 +464,7 @@ class Port(object):
           self._lock.acquire()
         return False, False
 
-      self._working = True
+      self._working = time()
 
       return True, True
 

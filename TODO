@@ -40,6 +40,14 @@ Future release:
      - Make options a class variable
    - Top:
      - Fix termination (close down cleanly)
+     - Add option to:
+       - Exit program
+       - Change update rate
+       - Filter viewed ports (i.e. only active and or pending...)
+       - A help menu
+     - Add some colour???
+     - View output of port (via a window)
+     - Mouse support
  - pypkg:
    - Add -j option (fine tune concurrency)
 
@@ -165,7 +173,7 @@ Future release:
    * Move internal references to external checks (install status)
  * Rename TargetBuilder to StageBuilder
  * Move fetch_builder to subclassed of StageBuilder
- - Create progress monitor for the build process (aka top mode)
+ + Create progress monitor for the build process (aka top mode)
  * Create progress monitor type 2 (aka stat mode)
  * Implement build logging for the ports
  * Rename all Popen return status to 'SUCCESS'
