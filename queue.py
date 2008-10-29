@@ -108,7 +108,7 @@ class WorkerQueue(Queue):
         from threading import Thread
         thread = Thread(target=self._worker)
         self._pool[thread] = -1
-        thread.setDaemon(True)
+        #thread.setDaemon(True)
         thread.start()
       return jid
 

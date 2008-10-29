@@ -7,39 +7,83 @@ Coding standard:
 Future release:
  - Speed up port_version()
  - Add options for either individually executing make targets or in baulk
- - Allow KeyboardInterrupt to terminate program:
-   - Get threads to terminate kindly
-   - Allow double KeyboardInterrupt to kill all threads
-   - Check if threads should be daemonised
  - Check spelling for all documentation
- - Define working standards for logging
- - Create proper statistical handling of data (with easy collection methods)
  - Increase level of logging
- - Have a base class (and simple API) to manage logged messages
- - Add all assertions
- - Add process effiecient version of subprocess
  - Prevent multiple fetches of the same file!!!
  - When segterm, make sure logging is done properly
- - Remove invert as far as possible
  - Implement proper recording of ports installation (i.e. when they fail)
  - Refactor:
    - Break ports into its own libraries
    - Try isolate system and ports dependant code
+
+0.0.8 - Milestone 8 (Finish command line controller):
+ - Refine and condense code
+ - Default to batch mode
+ - Implement proper and complete logging (and comments)
+ - Ensure thread safety
+ - Vet the thread locking for deadlocks
+ - Move variables from protected to private (were appropriate)
+ - Add all assertions
+ - Get relative option parity with portupgrade
+ - Improve monitor interface, move to classes with 'pause' capabilities
+ - build_index:
+   - Add option to direct file output (or just to stdout)
+   - Add appropriate checks for duplicate port names...
+   - Do we need to sort per category, overall, if at all?
  - pypkg:
-   - Add -n option (only display commands, don't execute anything)
    - Add -j option (fine tune concurrency)
-   - Add support for DESTDIR= and PREFIX=
- - Split port into its subcomponents:
-   - Port
-   - PortCache
-   - DependHandler
-   - System interface (and apply appropriate abstraction)
-   - Develop proper API for the library
- - make:
-   - Add a command prefix (such as for socksify?)
-   - Add sudo support
- - Add option to disable pkg_version... (for index builds)
+
+0.0.7 - Milestone 7 (Finish Target Builders):
+ - Refine and condense code
+ - Implement proper and complete logging (and comments)
+ - Ensure thread safety
+ - Vet the thread locking for deadlocks
+ - Move variables from protected to private (were appropriate)
+ - Add all assertions
+ - Ensure gracefull handling of failed ports (does not appear to work)
+ - Make config_builder API compatible with the other Builders
+
+0.0.6 - Milestone 6 (Finish Dependant Handling):
+ - Refine and condense code
+ - Implement proper and complete logging (and comments)
+ - Ensure thread safety
+ - Vet the thread locking for deadlocks
+ - Move variables from protected to private (were appropriate)
+ - Add all assertions
+ - DependHandler:
+   - Ensure _count is done properly
+   - Have a dummy port for all stale ports
+   - Do not do cyclic dependancy allocation (or move to late)
+   - DependHandler must handle the case when a dependancy fails unresolved
+   - Check for cyclic dependancies
+   - _verify:
+     - Add caching of dependancies (no need to check them multiple times)
+   - Implement type specific checking (bin vs lib) [mimic ports]
+   - Add callback feature to Port (when resolved status has changed)
+   - Handle stale dependancies (with a dummy PortDepend)
+   - Handle a port having failed and still satisfy its dependants
+   - Add a handler to change our status (and notify all that is has)
+   - Add a concurrent implementation (and probably a cache of sorts)
+   - Allow a port to satisfy its dependants without state > Port.ABSENT or
+     having failed
+   - Make thread safe
+   - When doing individual checks, cache as they can be duplicated
+
+0.0.5 - Milestone 5 (Finish basic ports infrastructure):
+ - Refine and condense code
+ - Implement proper and complete logging (and comments)
+ - Ensure thread safety
+ - Vet the thread locking for deadlocks
+ - Move variables from protected to private (were appropriate)
+ - Add all assertions
+ - PortCache:
+   - Minimise duplicate job requests
  - Port:
+   - Add clean target (and have a failed port clean itself...)
+   - Use batch mode for all stages except config
+   - Precleaning
+   - Investigate fine grain locking (memory vs speed)
+     [and adjust locking appropriately]
    - Add distfiles checking (to optimise fetching)
    - Add support for DESTDIR= and PREFIX= (esp. with depends)
    - Allow switching for depends resolution (from complex to simple...)
@@ -83,77 +127,19 @@ Future release:
        - Update port install status properly
      - _prepare:
        - Add all dependants onto the queue and wait for them to complete
- - DependHandler:
-    - Implement type specific checking (bin vs lib) [mimic ports]
-    - Add callback feature to Port (when resolved status has changed)
-    - Handle stale dependancies (with a dummy PortDepend)
-    - Handle a port having failed and still satisfy its dependants
-    - Add a handler to change our status (and notify all that is has)
-    - Add a concurrent implementation (and probably a cache of sorts)
-    - Allow a port to satisfy its dependants without state > Port.ABSENT or
-      having failed
-    - Make thread safe
-    - When doing individual checks, cache as they can be duplicated
- - WorkerQueue:
-    - Handle worker thread crashing
-    - Allow a thread to indicate it has stalled (and create more to compensate)?
-    - Add terminate and kill functions (to clean off threads)
-
-0.0.8 - Milestone 8 (Finish command line controller):
- - Refine and condense code
- - Default to batch mode
- - Implement proper and complete logging (and comments)
- - Ensure thread safety
- - Vet the thread locking for deadlocks
- - Move variables from protected to private (were appropriate)
- - Get relative option parity with portupgrade
- - Improve monitor interface, move to classes with 'pause' capabilities
- - build_index:
-   - Add option to direct file output (or just to stdout)
-   - Add appropriate checks for duplicate port names...
-   - Do we need to sort per category, overall, if at all?
-
-0.0.7 - Milestone 7 (Finish Target Builders):
- - Refine and condense code
- - Implement proper and complete logging (and comments)
- - Ensure thread safety
- - Vet the thread locking for deadlocks
- - Move variables from protected to private (were appropriate)
- - Ensure gracefull handling of failed ports (does not appear to work)
-
-0.0.6 - Milestone 6 (Finish Dependant Handling):
- - Refine and condense code
- - Implement proper and complete logging (and comments)
- - Ensure thread safety
- - Vet the thread locking for deadlocks
- - Move variables from protected to private (were appropriate)
- - DependHandler:
-   - Ensure _count is done properly
-   - Have a dummy port for all stale ports
-   - Do not do cyclic dependancy allocation (or move to late)
-   - DependHandler must handle the case when a dependancy fails unresolved
-   - Check for cyclic dependancies
-   - _verify:
-     - Add caching of dependancies (no need to check them multiple times)
-
-0.0.5 - Milestone 5 (Finish basic ports infrastructure):
- - Refine and condense code
- - Implement proper and complete logging (and comments)
- - Ensure thread safety
- - Vet the thread locking for deadlocks
- - Move variables from protected to private (were appropriate)
- - PortCache:
-   - Minimise duplicate job requests
- - Port:
-   - Add clean target (and have a failed port clean itself...)
-   - Use batch mode for all stages except config
-   - Precleaning
-   - Investigate fine grain locking (memory vs speed)
-     [and adjust locking appropriately]
  - WorkerQueue:
    - Remove condition (not needed and overexposing internals)
+    - Handle worker thread crashing
  - make:
    - Have automatic logging of build commands (with archival)
+   - Add a command prefix (such as for socksify?)
+   - Add sudo support
+ - Split port into its subcomponents:
+   - Port
+   - PortCache
+   - DependHandler
+   - System interface (and apply appropriate abstraction)
+   - Develop proper API for the library
 
 0.0.4 - Milestone 4 (Command line controller):
  * pypkg:
@@ -161,6 +147,7 @@ Future release:
    * Add package ability
    * Allow environment variables to be settable (like ports_dir)
    * Add fetch only option
+   * Add -n option (only display commands, don't execute anything)
  * Create target to build INDEX
  * Port:
    * Implement proper cleaning
@@ -169,11 +156,11 @@ Future release:
    * Move internal references to external checks (install status)
  * Rename TargetBuilder to StageBuilder
  * Move fetch_builder to subclassed of StageBuilder
- - Make config_builder API compatible with the other Builders
  - Create progress monitor for the build process (aka top mode)
  * Create progress monitor type 2 (aka stat mode)
  * Implement build logging for the ports
  * Rename all Popen return status to 'SUCCESS'
+ * Remove invert as far as possible
  * Rename ports to portcache
  * Implement proper thread/system shutdown
    * Create interrupt handlers
@@ -182,9 +169,15 @@ Future release:
  * Fix preparation for stages
  * Cleanup the use of tools
  * Move exit handling code to own module
+ * Create proper statistical handling of data (with easy collection methods)
  * Check all logging tags are correct
+ * Allow KeyboardInterrupt to terminate program:
+   * Get threads to terminate kindly
+   * Check if threads should be daemonised
  * PortCache:
    * Normalise name (for getters)
+ * WorkerQueue:
+   * Add terminate and kill functions (to clean off threads)
 
 0.0.3 - Milestone 3 (Target Builders):
  * Finish call documentation
