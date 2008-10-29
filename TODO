@@ -48,6 +48,7 @@ Future release:
      - Add some colour???
      - View output of port (via a window)
      - Mouse support
+     - Improve output when rendering to small screens
  - pypkg:
    - Add -j option (fine tune concurrency)
 

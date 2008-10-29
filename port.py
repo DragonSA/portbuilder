@@ -445,17 +445,17 @@ class Port(object):
       if self._failed:
         return False, False
 
-      if self._stage == stage  or (Port.fetch_only and stage > Port.FETCH):
+      if self._stage == stage or (Port.fetch_only and stage > Port.FETCH):
         self._stage = stage
         return False, True
 
-      assert self._stage == stage - 1
+      assert self._stage == stage - 1 and not self._failed
 
       self._stage = stage
 
       status = stage > Port.CONFIG and self.depends().check(stage) or \
                DependHandler.RESOLV
-      if status in (DependHandler.FAILURE, DependHandler.UNRESOLV):
+      if status is DependHandler.UNRESOLV:
         self._failed = True
         try:
           self._lock.release()
@@ -486,14 +486,17 @@ class Port(object):
       self._working = False
       if self._failed != (not status):
         self._failed = not status
-        self._depends.status_changed()
+        try:
+          self._lock.release()
+          self._depends.status_changed()
+        finally:
+          self._lock.acquire()
       self._lock.notifyAll()
 
     if self._failed and self._stage > Port.FETCH or self._stage == Port.INSTALL:
       self.clean()
 
     if self._failed:
-      self._depends.status_changed()
       self._log.error("Port '%s' has failed to complete stage '%s'"
                       % (self._origin, Port.STAGE_NAME[stage]))
     return status
