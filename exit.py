@@ -63,15 +63,17 @@ class AutoExit(object):
        @type sig: C{int}
     """
     from os import getpid, kill
-    from signal import signal, SIGINT, SIGTERM, SIG_DFL
+    from signal import signal, SIGINT, SIGTERM, SIG_DFL, SIG_IGN
 
-    signal(SIGINT, SIG_DFL)
-    signal(SIGTERM, SIG_DFL)
     if self.__pid != getpid():
+      signal(SIGINT, SIG_DFL)
+      signal(SIGTERM, SIG_DFL)
       kill(self.__pid, sig)
       kill(getpid(), sig)
     else:
       from logging import getLogger
+      signal(SIGINT, SIG_IGN)
+      signal(SIGTERM, SIG_IGN)
       getLogger('pypkg.AutoExit').info("Sig Handler initiated, most of the " \
                 "following (and some previous) messages are a result of this " \
                 "and can be safely ignored")
