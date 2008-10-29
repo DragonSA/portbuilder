@@ -60,7 +60,6 @@ class StageBuilder(object):
     """
     from logging import getLogger
     from threading import Lock
-    #: Logger for this Builder
     self.__lock = Lock()  #: Synchroniser lock for this builder
     #: Logger for this builder
     self.__log = getLogger("pypkg.target." + Port.STAGE_NAME[stage])
@@ -69,6 +68,8 @@ class StageBuilder(object):
     self.__prev_builder = prev_builder  #: The builder for the previous stage
 
     self.__building = {}  #: List of ports we are working on
+    self.__queues = ([], [], [])  #: The location of the queues
+                                  # (active, queued, plending)
 
   def put(self, port, callback=None):
     """
@@ -112,6 +113,7 @@ class StageBuilder(object):
         return
 
       self.__building[port] = callable(callback) and [callback] or []
+      self.__queues[2].append(port)
       if stage < self.__stage - 1 or \
            (port.working() and stage == self.__stage - 1):
         assert self.__prev_builder is not None
@@ -151,17 +153,23 @@ class StageBuilder(object):
        @type port: C{Port}
     """
     assert self.__building.has_key(port)
+    with self.__lock:
+      self.__queues[1].remove(port)
+      self.__queues[0].append(port)
     port.build_stage(self.__stage, False)
     self.__callbacks(port)
     
   def queue(self, port):
     """
-       Place a port on the queue, this is for delayed queueing.
+       Place a port on the queue (this is for delayed queueing).
 
        @param port: The port to place on the queue
        @type port: C{Port}
     """
     assert self.__building.has_key(port)
+    with self.__lock:
+      self.__queues[2].remove(port)
+      self.__queues[1].append(port)
     if not port.failed():
       if port.depends().check(self.__stage) == DependHandler.FAILURE:
         self.__callbacks(port)
@@ -171,6 +179,19 @@ class StageBuilder(object):
         self.__queue.put(lambda: self.build(port))
     else:
       self.__callbacks(port)
+
+  def stats(self):
+    """
+       The statistics about the ports in the queue.  If the ports are active
+       (i.e. building), queued to be active or waiting for another port...
+
+       @return: The list of ports (active, queued, pending)
+       @rtype: C{([Port], [Port], [Port])}
+    """
+    from copy import copy
+    with self.__lock:
+      return (copy(self.__queues[0]), copy(self.__queues[1]),
+              copy(self.__queues[2]))
 
   def __call__(self, port, callback=None):
     """
@@ -196,6 +217,7 @@ class StageBuilder(object):
     """
     with self.__lock:
       callbacks = self.__building.pop(port)
+      self.__queues[0].remove(port)
     for i in callbacks:
       i()
 
