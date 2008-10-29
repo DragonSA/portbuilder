@@ -210,7 +210,7 @@ class Top(Monitor):
     self.__offset = 0
     self.__start = time()
     self.__stats_new = Statistics()
-    self.__stats_old = None
+    self.__stats_old = self.__stats_new
 
   def run(self):
     """
@@ -231,6 +231,7 @@ class Top(Monitor):
     from queue import config_queue
     from time import sleep
 
+    self.update_header(stdscr, True)
     while not self.stopped():
       try:
         if len(config_queue) and Port.configure:
@@ -269,7 +270,7 @@ class Top(Monitor):
     secs, mins, hours = offset % 60, offset / 60 % 60, offset / 60 / 60 % 60
     days = offset / 60 / 60 / 24
     running = "running %i+%i:%i:%i " % (days, hours, mins, secs)
-    running += strftime("%F:%M:%S")
+    running += strftime("%H:%M:%S")
     scr.addstr(0, scr.getmaxyx()[1] - len(running) - 1, running)
 
   def update_ports(self, scr, forced=False):
@@ -285,13 +286,13 @@ class Top(Monitor):
     port_new = self.__stats_new.ports()
     
     if port_old != port_new or forced:
-      msg = "port count: %i" + port_new[2]
+      msg = "port count: %i" % port_new[2]
       if port_new[0]:
         if port_new[1]:
           msg += "; retrieving %i (of %i)" % port_new[:2]
         else:
           msg += "r retrieving %i/%i" % (port_new[0], port_new[3])
-      scr.setstr(self.__offset, 0, msg)
+      scr.addstr(self.__offset, 0, msg)
 
     self.__offset += 1
 
@@ -307,17 +308,19 @@ class Top(Monitor):
     summary_old = self.__stats_old.summary()
     summary_new = self.__stats_new.summary()
 
-    if summary_old != summary_new or forced:
-      msg = "%i ports:" % sum(summary_new)
-      if summary_new[0]:
-        msg += " %i active" % summary_new[0]
-        if summary_new[1]:
-          msg += ", %i queued" % summary_new[1]
-        if summary_new[2]:
-          msg += ", %i pending" % summary_new[2]
-      scr.setstr(self.__offset, 0, msg)
+    ports = sum(summary_new)
+    if ports:
+      if summary_old != summary_new or forced:
+        msg = "%i ports:" % ports
+        if summary_new[0]:
+          msg += " %i active" % summary_new[0]
+          if summary_new[1]:
+            msg += ", %i queued" % summary_new[1]
+          if summary_new[2]:
+            msg += ", %i pending" % summary_new[2]
+        scr.addstr(self.__offset, 0, msg)
 
-    self.__offset += 1
+      self.__offset += 1
 
   def update_stage(self, scr, stage_name, stats, forced=False):
     """
@@ -347,7 +350,7 @@ class Top(Monitor):
             msg += ", %i pending" % stats_new[2]
         elif stats_new[2]:
           msg += " %i pending" % stats_new[2]
-        scr.setstr(self.__offset, 0, msg)
+        scr.addstr(self.__offset, 0, msg)
 
       self.__offset += 1
 
