@@ -825,6 +825,7 @@ class PortCache(dict):
        @return: The port requested
        @rtype: C{Port}
     """
+    key = self._normalise(key)
     with self._lock:
       try:
         value = dict.__getitem__(self, key)
@@ -854,6 +855,7 @@ class PortCache(dict):
        @param value: The port object
        @type value: C{str}
     """
+    key = self._normalise(key)
     with self._lock:
       dict.__setitem__(self, key, value)
 
@@ -866,6 +868,7 @@ class PortCache(dict):
        @return: If the port exists
        @rtype: C{bool}
     """
+    k = self._normalise(k)
     try:
       PortCache.__getitem__(self, k)
       return True
@@ -882,6 +885,7 @@ class PortCache(dict):
        @return: The job ID of the queued port
        @rtype: C{int}
     """
+    key = self._normalise(key)
     from queue import ports_queue
     if not dict.has_key(self, key):
       return ports_queue.put_nowait(lambda: self._get(key))
@@ -933,6 +937,37 @@ class PortCache(dict):
       self._log.exception("Error while creating port '%s'" % key)
     self._lock.notifyAll()
     self._lock.release()
+
+  def _normalise(self, origin):
+    """
+       Normalise the name of a port
+
+       @param origin: The current name of the port
+       @type origin: C{str}
+       @return: The normalised name of the port
+       @rtype: C{str}
+    """
+    from os import sep
+    new = origin.strip().rstrip('/').split('/')
+    index = 0
+    while index < len(new):
+      if new[index] in ('.', ''):
+        new.pop(index)
+      elif new[index] == '..':
+        if index == 0:
+          self._log.warn("Port name escapes port directory: '%s'" % origin)
+          return origin
+        new.pop(index)
+        new.pop(index - 1)
+        index -= 1
+      else:
+        index += 1
+
+    new = sep.join(new)
+    if new != origin:
+      self._log.warn("Non standard port name used: '%s'" % origin)
+    return new
+    
 
 port_cache = PortCache()
 

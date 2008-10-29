@@ -175,9 +175,9 @@ Future release:
  * Fix preparation for stages
  - Cleanup the use of tools
  * Move exit handling code to own module
- - Check all logging tags are correct
- - PortCache:
-   - Normalise name (for getters)
+ * Check all logging tags are correct
+ * PortCache:
+   * Normalise name (for getters)
 
 0.0.3 - Milestone 3 (Target Builders):
  * Finish call documentation
