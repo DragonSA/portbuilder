@@ -1,3 +1,31 @@
+0.0.4 - 2008 October 29:
+ * pypkg:
+   * Add a stripped down version that can
+     * Install/upgrade ports
+     * Make packages
+     * Allow variables to be passed to make
+     * fetch only
+     * No op (just prints the commands)
+   * Initial support for making INDEX (still too slow)
+ * Port:
+   * Can clean ports
+ * Rename TargetBuilder to StageBuilder
+ * Create progress monitor for the build process (aka top mode)
+ * Create progress monitor type 2 (aka stat mode)
+ * Implement proper thread/system shutdown
+   * Create interrupt handlers
+   * Create exit handlers
+   * Provide easy interface for running main
+ * Cleanup the use of tools
+ * Create proper statistical handling of data (with easy collection methods)
+ * Allow KeyboardInterrupt to terminate program:
+   * Get threads to terminate kindly
+ * PortCache:
+   * Normalise name (for getters)
+ * WorkerQueue:
+   * Add terminate and kill functions (to clean off threads)
+
+
 0.0.3 - 2008 September 30:
  * Port:
    * Make thread safe
@@ -6,8 +34,8 @@
    * Stage resolution fixes
  * DependHandler:
    * Make thread safe
-   * Allow constructor to initialise dependancies
-   * Add getters for dependancies and dependants (ports and/or field)
+   * Allow constructor to initialise dependencies
+   * Add getters for dependencies and dependants (ports and/or field)
  * WorkerQueue:
    * Have all threads terminate on exit()
  * queue:
