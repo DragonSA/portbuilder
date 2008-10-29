@@ -146,5 +146,5 @@ def line_mode():
       stdout.flush()
       sleep(1)
     except KeyboardInterrupt:
-      from tools import terminate
+      from exit import terminate
       terminate()

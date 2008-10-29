@@ -17,7 +17,7 @@ def main():
   """
   from port import Port, port_cache
   from target import install_builder
-  from tools import terminate
+  from exit import terminate
 
   options, args = gen_parser().parse_args()
   options.args = args
