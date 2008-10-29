@@ -226,7 +226,6 @@ class Top(Monitor):
        @param stdscr: The main window
        @type stdscr: C{Window}
     """
-    from curses import setsyx
     from port import Port
     from queue import config_queue
     from time import sleep
@@ -240,15 +239,17 @@ class Top(Monitor):
         self.__stats = Statistics()
         
         self.update_header(stdscr)
+        stdscr.move(self.__offset, 0)
 
         stdscr.refresh()
         sleep(self.__delay)
-        stdscr.clear()
-        setsyx(0, 0)
+        stdscr.erase()
       except KeyboardInterrupt:
         from exit import terminate
         terminate()
 
+    stdscr.erase()
+    stdscr.move(0, 0)
     stdscr.refresh()
 
   def update_header(self, scr):
@@ -270,7 +271,7 @@ class Top(Monitor):
     offset = self.__stats.time() - self.__start
     secs, mins, hours = offset % 60, offset / 60 % 60, offset / 60 / 60 % 60
     days = offset / 60 / 60 / 24
-    running = "running %i+%i:%i:%i " % (days, hours, mins, secs)
+    running = "running %i+%02i:%02i:%02i  " % (days, hours, mins, secs)
     running += strftime("%H:%M:%S")
     scr.addstr(0, scr.getmaxyx()[1] - len(running) - 1, running)
 
@@ -288,7 +289,7 @@ class Top(Monitor):
       if port_new[1]:
         msg += "; retrieving %i (of %i)" % port_new[:2]
       else:
-        msg += "r retrieving %i/%i" % (port_new[0], port_new[3])
+        msg += "; retrieving %i/%i" % (port_new[0], port_new[3])
     scr.addstr(self.__offset, 0, msg)
 
     self.__offset += 1
@@ -338,10 +339,10 @@ class Top(Monitor):
         if stats_new[2]:
           msg += ", %i pending" % stats_new[2]
       elif stats_new[2]:
-        msg += " %i pending" % stats_new[2]
+        msg += "%i pending" % stats_new[2]
       scr.addstr(self.__offset, 0, msg)
 
-    self.__offset += 1
+      self.__offset += 1
 
 class Statistics(object):
   """
