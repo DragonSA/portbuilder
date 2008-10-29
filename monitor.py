@@ -209,8 +209,7 @@ class Top(Monitor):
     self.__delay = 1
     self.__offset = 0
     self.__start = time()
-    self.__stats_new = Statistics()
-    self.__stats_old = self.__stats_new
+    self.__stats = Statistics()
 
   def run(self):
     """
@@ -227,102 +226,96 @@ class Top(Monitor):
        @param stdscr: The main window
        @type stdscr: C{Window}
     """
+    from curses import setsyx
     from port import Port
     from queue import config_queue
     from time import sleep
 
-    self.update_header(stdscr, True)
     while not self.stopped():
       try:
         if len(config_queue) and Port.configure:
           sleep(self.__delay)
           continue
 
-        self.__stats_old, self.__stats_new = self.__stats_new, Statistics()
+        self.__stats = Statistics()
         
         self.update_header(stdscr)
 
         stdscr.refresh()
         sleep(self.__delay)
+        stdscr.clear()
+        setsyx(0, 0)
       except KeyboardInterrupt:
         from exit import terminate
         terminate()
 
-  def update_header(self, scr, forced=False):
+    stdscr.refresh()
+
+  def update_header(self, scr):
     """
        Update the header details
 
        @param scr: The window to display the information on
        @type scr: C{Window}
-       @param forced: If we have to update
-       @type forced: C{bool}
     """
     from time import strftime
     self.__offset = 0
-    self.update_ports(scr, forced)
-    self.update_summary(scr, forced)
-    self.update_stage(scr, "Fetch", Statistics.fetch, forced)
-    #self.update_stage(src, "Config", Statistics.config, forced)
-    self.update_stage(scr, "Build", Statistics.build, forced)
-    self.update_stage(scr, "Install", Statistics.install, forced)
+    self.update_ports(scr)
+    self.update_summary(scr)
+    self.update_stage(scr, "Fetch", Statistics.fetch)
+    #self.update_stage(src, "Config", Statistics.config)
+    self.update_stage(scr, "Build", Statistics.build)
+    self.update_stage(scr, "Install", Statistics.install)
 
-    offset = self.__stats_new.time() - self.__start
+    offset = self.__stats.time() - self.__start
     secs, mins, hours = offset % 60, offset / 60 % 60, offset / 60 / 60 % 60
     days = offset / 60 / 60 / 24
     running = "running %i+%i:%i:%i " % (days, hours, mins, secs)
     running += strftime("%H:%M:%S")
     scr.addstr(0, scr.getmaxyx()[1] - len(running) - 1, running)
 
-  def update_ports(self, scr, forced=False):
+  def update_ports(self, scr):
     """
        Update the ports details
 
        @param scr: The window to display the information on
        @type scr: C{Window}
-       @param forced: If we have to update
-       @type forced: C{bool}
     """
-    port_old = self.__stats_old.ports()
-    port_new = self.__stats_new.ports()
+    port_new = self.__stats.ports()
     
-    if port_old != port_new or forced:
-      msg = "port count: %i" % port_new[2]
-      if port_new[0]:
-        if port_new[1]:
-          msg += "; retrieving %i (of %i)" % port_new[:2]
-        else:
-          msg += "r retrieving %i/%i" % (port_new[0], port_new[3])
-      scr.addstr(self.__offset, 0, msg)
+    msg = "port count: %i" % port_new[2]
+    if port_new[0]:
+      if port_new[1]:
+        msg += "; retrieving %i (of %i)" % port_new[:2]
+      else:
+        msg += "r retrieving %i/%i" % (port_new[0], port_new[3])
+    scr.addstr(self.__offset, 0, msg)
 
     self.__offset += 1
 
-  def update_summary(self, scr, forced=False):
+  def update_summary(self, scr):
     """
        Update the summary information
 
        @param scr: The window to display the information on
        @type scr: C{Window}
-       @param forced: If we have to update
-       @type forced: C{bool}
     """
-    summary_old = self.__stats_old.summary()
-    summary_new = self.__stats_new.summary()
+    summary_new = self.__stats.summary()
 
     ports = sum(summary_new)
     if ports:
-      if summary_old != summary_new or forced:
-        msg = "%i ports:" % ports
-        if summary_new[0]:
-          msg += " %i active" % summary_new[0]
-          if summary_new[1]:
-            msg += ", %i queued" % summary_new[1]
-          if summary_new[2]:
-            msg += ", %i pending" % summary_new[2]
-        scr.addstr(self.__offset, 0, msg)
+      msg = "%i ports:" % ports
+      if summary_new[0]:
+        msg += " %i active" % summary_new[0]
+        if summary_new[1]:
+          msg += ", %i queued" % summary_new[1]
+        if summary_new[2]:
+          msg += ", %i pending" % summary_new[2]
+      scr.addstr(self.__offset, 0, msg)
 
       self.__offset += 1
 
-  def update_stage(self, scr, stage_name, stats, forced=False):
+  def update_stage(self, scr, stage_name, stats):
     """
        Update various stage details
 
@@ -332,27 +325,23 @@ class Top(Monitor):
        @type stage_name: C{str}
        @param stats: A method that returns the stages statistics
        @type stats: C{method}
-       @param forced: If we have to update
-       @type forced: C{bool}
     """
-    stats_old = stats(self.__stats_old)
-    stats_new = stats(self.__stats_new)
+    stats_new = stats(self.__stats)
 
     if stats_new[0] or stats_new[2]:
-      if stats_old != stats_new or forced:
-        msg = "%s:" % stage_name
-        if stats_new[0]:
-          if not stats_new[1]:
-            msg += "%i/%i active" % (stats_new[0], stats_new[3])
-          else:
-            msg += "%i active, %i queued" % stats_new[0:2]
-          if stats_new[2]:
-            msg += ", %i pending" % stats_new[2]
-        elif stats_new[2]:
-          msg += " %i pending" % stats_new[2]
-        scr.addstr(self.__offset, 0, msg)
+      msg = "%s:" % stage_name
+      if stats_new[0]:
+        if not stats_new[1]:
+          msg += "%i/%i active" % (stats_new[0], stats_new[3])
+        else:
+          msg += "%i active, %i queued" % stats_new[0:2]
+        if stats_new[2]:
+          msg += ", %i pending" % stats_new[2]
+      elif stats_new[2]:
+        msg += " %i pending" % stats_new[2]
+      scr.addstr(self.__offset, 0, msg)
 
-      self.__offset += 1
+    self.__offset += 1
 
 class Statistics(object):
   """
