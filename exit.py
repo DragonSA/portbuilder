@@ -71,6 +71,10 @@ class AutoExit(object):
       kill(self.__pid, sig)
       kill(getpid(), sig)
     else:
+      from logging import getLogger
+      getLogger('pypkg.AutoExit').info("Sig Handler initiated, most of the " \
+                "following (and some previous) messages are a result of this " \
+                "and can be safely ignored")
       terminate()
 
   def start(self):
@@ -119,6 +123,7 @@ class AutoExit(object):
             break
 
         if term or self.__term:
+          from monitor import monitor
           if not self.__term:
             terminate()
 
@@ -131,7 +136,9 @@ class AutoExit(object):
             if i and not i.failed() and (i.stage() == Port.BUILD or \
                 (i.stage() == Port.INSTALL and i.working())):
               i.clean()
-          exit(self.__term and 0 or 1)
+
+          monitor.stop()
+          exit(0)
       except KeyboardInterrupt:
         self.terminate()
 

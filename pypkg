@@ -26,8 +26,8 @@ def main():
 
   # Set the monitor
   if not options.no_opt or True:
-    from monitor import monitor, LINE
-    monitor(LINE)
+    from monitor import set_monitor, Stat
+    set_monitor(Stat())
 
   # Execute the primary build target
   if options.index:

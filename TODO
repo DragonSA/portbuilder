@@ -19,6 +19,7 @@ Future release:
  - Add all assertions
  - Add process effiecient version of subprocess
  - Prevent multiple fetches of the same file!!!
+ - When segterm, make sure logging is done properly
  - Remove invert as far as possible
  - Implement proper recording of ports installation (i.e. when they fail)
  - Refactor:
@@ -37,6 +38,7 @@ Future release:
  - make:
    - Add a command prefix (such as for socksify?)
    - Add sudo support
+ - Add option to disable pkg_version... (for index builds)
  - Port:
    - Add distfiles checking (to optimise fetching)
    - Add support for DESTDIR= and PREFIX= (esp. with depends)
@@ -106,7 +108,10 @@ Future release:
  - Move variables from protected to private (were appropriate)
  - Get relative option parity with portupgrade
  - Improve monitor interface, move to classes with 'pause' capabilities
- - build_index: Add option to direct file output (or just to stdout)
+ - build_index:
+   - Add option to direct file output (or just to stdout)
+   - Add appropriate checks for duplicate port names...
+   - Do we need to sort per category, overall, if at all?
 
 0.0.7 - Milestone 7 (Finish Target Builders):
  - Refine and condense code
@@ -156,8 +161,7 @@ Future release:
    * Add package ability
    * Allow environment variables to be settable (like ports_dir)
    * Add fetch only option
- + Create target to build INDEX
- - Add option to disable pkg_version... (for index builds)
+ * Create target to build INDEX
  * Port:
    * Implement proper cleaning
    * Add the describe method (same as the ports make version)
@@ -167,7 +171,7 @@ Future release:
  * Move fetch_builder to subclassed of StageBuilder
  - Make config_builder API compatible with the other Builders
  - Create progress monitor for the build process (aka top mode)
- * Create progress monitor type 2 (aka iostat mode)
+ * Create progress monitor type 2 (aka stat mode)
  * Implement build logging for the ports
  * Rename all Popen return status to 'SUCCESS'
  * Rename ports to portcache
