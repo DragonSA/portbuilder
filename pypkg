@@ -31,8 +31,8 @@ def main():
 
   # Execute the primary build target
   if options.index:
-    from target import build_index
-    build_index()
+    from target import index_builder
+    index_builder()
   else:
     from target import Caller
     callback = Caller(len(args), terminate)

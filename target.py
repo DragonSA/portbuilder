@@ -293,7 +293,7 @@ def config_builder(port, callback=None):
   if callable(callback):
     callback()
 
-def build_index():
+def index_builder():
   """
      Creates the INDEX of all the ports.
   """
@@ -308,30 +308,29 @@ def build_index():
               "directory list for ports at '%s'" % env['PORTSDIR'])
     return
 
+  index = open('/tmp/INDEX', 'w')
   ports = []
+
   for i in make.stdout.read().split():
     smake = make_target(i, ['-V', 'SUBDIR'], pipe=True)
     if smake.wait() is not SUCCESS:
       getLogger('pypkg.builder.index').error("Unable to get subdirectory" \
       "list for ports under '%s'" % join(env['PORTSDIR'], i))
       continue
+    
     for j in smake.stdout.read().split():
       port = join(i, j)
       ports.append(port)
       port_cache.add(port)
-
-  port_map = {}
+      
   for i in ports:
-    port = port_cache.get(i)
-    if port:
-      port_map[port.attr('pkgname')] = port
+    try:
+      index.write(port_cache[i].describe())
+      index.write('\n')
+    except KeyError:
+      continue
 
-  names = port_map.keys()
-  names.sort()
-  index = open('/tmp/INDEX', 'w')
-  for i in names:
-    # TODO: Output to the appropriate location
-    index.write(port_map[i].describe() + '\n')
+  index.close()
 
 #: The builder for the fetch stage
 fetch_builder   = StageBuilder(Port.FETCH, fetch_queue)
