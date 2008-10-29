@@ -27,6 +27,7 @@ Future release:
  - Move variables from protected to private (were appropriate)
  - Add all assertions
  - Get relative option parity with portupgrade
+ - Improve logging settings (such as location, level)
  - index_builder:
    - Add option to direct file output (or just to stdout)
    - Add appropriate checks for duplicate port names...
@@ -37,6 +38,8 @@ Future release:
    - Make statistics global and intergrate into Stat
    - Stat:
      - Make options a class variable
+   - Top:
+     - Fix termination (close down cleanly)
  - pypkg:
    - Add -j option (fine tune concurrency)
 

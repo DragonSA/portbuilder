@@ -329,7 +329,7 @@ class Top(Monitor):
     stats_new = stats(self.__stats)
 
     if stats_new[0] or stats_new[2]:
-      msg = "%s:" % stage_name
+      msg = "%s: " % stage_name
       if stats_new[0]:
         if not stats_new[1]:
           msg += "%i/%i active" % (stats_new[0], stats_new[3])
