@@ -248,8 +248,9 @@ class Port(object):
       descr = self.attr('descr')
       if isfile(descr):
         for i in open(descr, 'r'):
-          if i.startswith('WWW: '):
-            www = i[5:].split()[0]
+          i = i.strip()
+          if i.startswith('WWW:'):
+            www = i[4:].lstrip()
             if www.split('://', 1)[0] in ('http', 'https', 'ftp'):
               return www
             return 'http://' + www
