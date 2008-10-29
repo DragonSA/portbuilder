@@ -194,6 +194,7 @@ class Stat(Monitor):
 
     print "|".join(line)
 
+
 class Top(Monitor):
   """
      The top monitor.  This monitor is modelled after the top(1) utility.
@@ -239,6 +240,7 @@ class Top(Monitor):
         self.__stats = Statistics()
         
         self.update_header(stdscr)
+        self.update_rows(stdscr)
         stdscr.move(self.__offset, 0)
 
         stdscr.refresh()
@@ -327,22 +329,95 @@ class Top(Monitor):
        @param stats: A method that returns the stages statistics
        @type stats: C{method}
     """
-    stats_new = stats(self.__stats)
+    stats = list(stats(self.__stats))
+    stats[2] -= stats[0] + stats[1]
 
-    if stats_new[0] or stats_new[2]:
+    if stats[0] or stats[2]:
       msg = "%s: " % stage_name
-      if stats_new[0]:
-        if not stats_new[1]:
-          msg += "%i/%i active" % (stats_new[0], stats_new[3])
+      if stats[0]:
+        if not stats[1]:
+          msg += "%i/%i active" % (stats[0], stats[3])
         else:
-          msg += "%i active, %i queued" % stats_new[0:2]
-        if stats_new[2]:
-          msg += ", %i pending" % stats_new[2]
-      elif stats_new[2]:
-        msg += "%i pending" % stats_new[2]
+          msg += "%i active, %i queued" % tuple(stats[0:2])
+        if stats[2]:
+          msg += ", %i pending" % stats[2]
+      elif stats[2]:
+        msg += "%i pending" % stats[2]
       scr.addstr(self.__offset, 0, msg)
 
       self.__offset += 1
+
+  def update_rows(self, scr):
+    """
+       Update the rows of port information
+
+       @param scr: The window to display the information on
+       @type scr: C{Window}
+    """
+    def get_stage(port, offset=0):
+      """
+         Get the ports stage name.  If it is 'install' then abreviate to
+         'instal' or if it is 'configure' then abreviate to 'config'
+
+         @param port: The port
+         @type port: C{Port}
+         @param offset: The stage from this one
+         @type offset: C{int}
+         @return: The stage's name
+         @rtype: C{str}
+      """
+      from port import Port
+      
+      stage = Port.STAGE_NAME[port.stage() + offset]
+      if stage[-1] == 'l':
+        return stage[:-1]
+      if stage.endswith('ure'):
+        return stage[:-3]
+      return stage
+      
+    def get_name(port):
+      """
+         Get the ports name
+
+         @param port: The port
+         @type port: C{Port}
+         @return: The name as 'origin (version)'
+         @rtype: C{str}
+      """
+      return '%s (%s)' % (port.origin(), port.attr('pkgname').rsplit('-', 1)[1])
+    
+    active, queued, pending = self.__stats.queues()
+
+    scr.addstr(self.__offset + 1, 2, 'PID  STAGE   STATE   TIME PORT (VERSION)')
+
+    lines, columns = scr.getmaxyx()
+    lines -= self.__offset + 2
+    offset = self.__offset + 2
+    for i in range(min(lines, len(active))):
+      port = active[i]
+      time = port.working()
+      if time:
+        offtime = self.__stats.time() - time
+        time = '%3i:%02i' % (offtime / 60, offtime % 60)
+      else:
+        time = ' ' * 6
+      scr.addnstr(offset + i, 0, '%5i %6s  active %s %s' %
+                  (0, get_stage(port), time, get_name(port)), columns)
+
+    lines -= len(active)
+    offset += len(active)
+    for i in range(min(lines, len(queued))):
+      port = queued[i]
+      scr.addnstr(offset + i, 0, '%5i %6s  queued        %s' %
+                  (0, get_stage(port, 1), get_name(port)), columns)
+
+    lines -= len(queued)
+    offset += len(queued)
+    for i in range(min(lines, len(pending))):
+      port = pending[i]
+      scr.addnstr(offset + i, 0, '%5i %6s pending        %s' %
+                  (0, get_stage(port, 1), get_name(port)), columns)
+      
 
 class Statistics(object):
   """
@@ -458,6 +533,7 @@ class Statistics(object):
     for i in fetch[2] + build[2] + install[2]:
       if i not in active and i not in queued:
         pending.append(i)
+    pending.reverse()
 
     return (tuple(active), tuple(queued), tuple(pending))
 
