@@ -137,7 +137,8 @@ class AutoExit(object):
                 (i.stage() == Port.INSTALL and i.working())):
               i.clean()
 
-          monitor.stop()
+          if monitor:
+            monitor.stop()
           exit(0)
       except KeyboardInterrupt:
         self.terminate()

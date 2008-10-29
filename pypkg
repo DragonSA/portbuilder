@@ -65,7 +65,8 @@ def gen_parser():
   """
   from optparse import OptionParser
 
-  usage = "usage: %prog [-inu] [-D variable] [variable=value] target ..."
+  usage = "\t%prog [-bifnpu] [-w SEC] [-D variable] [variable=value] target ..."
+  
   parser = OptionParser(usage, version="%prog 0.0.4")
   parser.add_option("-b", "--batch", action="store_true", default=False,
                     help="Batch mode.  Skips the config stage.")
@@ -86,8 +87,8 @@ def gen_parser():
   parser.add_option("-u", "--update", dest="install", action="store_false",
                     default=True, help="Update mode.  Updates the given port." \
                     "  The last -i or -u will be the determining one.")
-  parser.add_option("-w", dest="stat_mode", type="int", default=0, meta="SEC",
-                    help="Use the stats monitor with SEC delay between lines")
+  parser.add_option("-w", dest="stat_mode", type="int", default=0, metavar="SEC"
+                    , help="Use the stats monitor with SEC delay between lines")
   parser.add_option("--index", action="store_true", default=False,
                     help="Create the INDEX file for the ports infrastructure.")
   return parser
