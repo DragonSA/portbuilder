@@ -11,7 +11,9 @@ Future release:
  - Increase level of logging
  - Prevent multiple fetches of the same file!!!
  - When segterm, make sure logging is done properly
+ - Move the python 2.6 naming and styles (and make compatible with 3)
  - Implement proper recording of ports installation (i.e. when they fail)
+ - Check if KeyboardInterrupt is appropriate
  - Refactor:
    - Break ports into its own libraries
    - Try isolate system and ports dependant code
@@ -30,6 +32,11 @@ Future release:
    - Add appropriate checks for duplicate port names...
    - Do we need to sort per category, overall, if at all?
    - Check for 100% compatibility
+ - monitor:
+   - Converge common functionality into Monitor
+   - Make statistics global and intergrate into Stat
+   - Stat:
+     - Make options a class variable
  - pypkg:
    - Add -j option (fine tune concurrency)
 
