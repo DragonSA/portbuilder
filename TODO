@@ -25,11 +25,11 @@ Future release:
  - Move variables from protected to private (were appropriate)
  - Add all assertions
  - Get relative option parity with portupgrade
- - Improve monitor interface, move to classes with 'pause' capabilities
- - build_index:
+ - index_builder:
    - Add option to direct file output (or just to stdout)
    - Add appropriate checks for duplicate port names...
    - Do we need to sort per category, overall, if at all?
+   - Check for 100% compatibility
  - pypkg:
    - Add -j option (fine tune concurrency)
 
@@ -41,7 +41,7 @@ Future release:
  - Move variables from protected to private (were appropriate)
  - Add all assertions
  - Ensure gracefull handling of failed ports (does not appear to work)
- - Make config_builder API compatible with the other Builders
+ - Make config_builder API compatible with the other Builders?
 
 0.0.6 - Milestone 6 (Finish Dependant Handling):
  - Refine and condense code
@@ -85,7 +85,6 @@ Future release:
    - Investigate fine grain locking (memory vs speed)
      [and adjust locking appropriately]
    - Add distfiles checking (to optimise fetching)
-   - Add support for DESTDIR= and PREFIX= (esp. with depends)
    - Allow switching for depends resolution (from complex to simple...)
    - Add caching for port information (with refreshing checks)
    - Handles ports that do not exist
@@ -129,7 +128,7 @@ Future release:
        - Add all dependants onto the queue and wait for them to complete
  - WorkerQueue:
    - Remove condition (not needed and overexposing internals)
-    - Handle worker thread crashing
+   - Handle worker thread crashing
  - make:
    - Have automatic logging of build commands (with archival)
    - Add a command prefix (such as for socksify?)
@@ -171,6 +170,7 @@ Future release:
  * Move exit handling code to own module
  * Create proper statistical handling of data (with easy collection methods)
  * Check all logging tags are correct
+ * Improve monitor interface, move to classes
  * Allow KeyboardInterrupt to terminate program:
    * Get threads to terminate kindly
    * Check if threads should be daemonised
