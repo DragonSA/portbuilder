@@ -308,7 +308,6 @@ def index_builder():
               "directory list for ports at '%s'" % env['PORTSDIR'])
     return
 
-  index = open('/tmp/INDEX', 'w')
   ports = []
 
   for i in make.stdout.read().split():
@@ -323,6 +322,7 @@ def index_builder():
       ports.append(port)
       port_cache.add(port)
       
+  index = open('/tmp/INDEX', 'w')
   for i in ports:
     try:
       index.write(port_cache[i].describe())
