@@ -63,7 +63,7 @@ class StageBuilder(object):
     #: Logger for this Builder
     self.__lock = Lock()  #: Synchroniser lock for this builder
     #: Logger for this builder
-    self.__log = getLogger("pypkg.builder." + Port.STAGE_NAME[stage])
+    self.__log = getLogger("pypkg.target." + Port.STAGE_NAME[stage])
     self.__stage = stage  #: The stage we are taking care of
     self.__queue = queue  #: The queue for this stage
     self.__prev_builder = prev_builder  #: The builder for the previous stage
@@ -304,7 +304,7 @@ def build_index():
 
   make = make_target('', ['-V', 'SUBDIR'], pipe=True)
   if make.wait() is not SUCCESS:
-    getLogger('pypkg.target.build_index').error("Unable to get global " \
+    getLogger('pypkg.builder.index').error("Unable to get global " \
               "directory list for ports at '%s'" % env['PORTSDIR'])
     return
 
@@ -312,7 +312,7 @@ def build_index():
   for i in make.stdout.read().split():
     smake = make_target(i, ['-V', 'SUBDIR'], pipe=True)
     if smake.wait() is not SUCCESS:
-      getLogger('pypkg.target.build_index').error("Unable to get subdirectory" \
+      getLogger('pypkg.builder.index').error("Unable to get subdirectory" \
       "list for ports under '%s'" % join(env['PORTSDIR'], i))
       continue
     for j in smake.stdout.read().split():

@@ -4,10 +4,7 @@ managing port information.
 """
 from __future__ import with_statement
 
-from logging import getLogger
 from make import env
-
-log = getLogger('pypkg.ports')
 
 port_cache = {}  #: A cache of ports available with auto creation features
 
@@ -70,6 +67,7 @@ class Port(object):
      The class that contains all information about a given port, such as status,
      dependancies and dependants
   """
+  from logging import getLogger
   from threading import Condition, Lock
 
   ABSENT  = 0  #: Status flag for a port that is not installed
@@ -94,7 +92,7 @@ class Port(object):
   fetch_only = False  #: Only fetch the port, skip all other stages
   package = False  #: If newly installed ports should be packaged
 
-  _log = getLogger("pypkg.port.Port")
+  _log = getLogger("pypkg.port")
   _lock = Condition(Lock())  #: The notifier and locker for all ports
 
   def __init__(self, origin):
@@ -481,7 +479,7 @@ class DependHandler(object):
      The DependHandler class.  This class handles tracking the dependants
      and dependancies of a Port
   """
-
+  from logging import getLogger
   from threading import RLock
 
   # The type of dependancies
@@ -506,7 +504,7 @@ class DependHandler(object):
   } #: The dependancies for a given stage
 
   _lock = RLock()
-  _log = getLogger("pypkg.port.DependHandler")
+  _log = getLogger("pypkg.depend_handler")
 
   def __init__(self, port, depends=None):
     """
@@ -803,8 +801,9 @@ class PortCache(dict):
      The PortCache class.  This class keeps a cache of Port objects
      (note: this is an inflight cache)
   """
+  from logging import getLogger
 
-  _log = getLogger('pypkg.port.cache')  #: Logger for this cache
+  _log = getLogger('pypkg.cache')  #: Logger for this cache
 
   def __init__(self):
     """
@@ -955,7 +954,9 @@ def port_status(origin):
 
   info = pkg_version.stdout.read().split()
   if len(info) > 2:
-    log.warning("Multiple ports with same origin '%s'" % origin)
+    from logging import getLogger
+    getLogger('pypkg.port_status').warning("Multiple ports with same origin " \
+                                           "'%s'" % origin)
   info = info[1]
   if info == '<':
     return Port.OLDER

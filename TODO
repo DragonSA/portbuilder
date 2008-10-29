@@ -174,7 +174,7 @@ Future release:
    * Provide easy interface for running main
  * Fix preparation for stages
  - Cleanup the use of tools
- - Move exit handling code to own module
+ * Move exit handling code to own module
  - Check all logging tags are correct
  - PortCache:
    - Normalise name (for getters)
