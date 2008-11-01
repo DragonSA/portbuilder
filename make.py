@@ -62,8 +62,6 @@ def make_target(origin, args, pipe=None):
   from os.path import join
   from subprocess import Popen, PIPE, STDOUT
 
-  from .monitor import monitor
-
   if isinstance(args, str):
     args = [args]
   args = args + [v and '%s="%s"' % (k, v) or "-D%s" % k for k, v in env.items()
@@ -81,6 +79,7 @@ def make_target(origin, args, pipe=None):
     stdin, (stdout, stderr) = PIPE, log_files(origin)
 
   if pipe is False:
+    from .monitor import monitor
     monitor.pause()
 
   make = Popen(pre_cmd + ['make', '-C', join(env["PORTSDIR"], origin)] + args,
@@ -90,6 +89,7 @@ def make_target(origin, args, pipe=None):
     make.stdin.close()
 
   if pipe is False:
+    from .monitor import monitor
     make.wait()
     monitor.resume()
 
