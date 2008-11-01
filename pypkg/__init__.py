@@ -1,9 +1,7 @@
 """
-The Tools module.  This module contains various utilities (that should be in
-the standard libraries) for ease of programming...
+The pypkg module.
 """
 
-# TODO: Move into main module (__init__)
 def run_main(main):
   """
      Run the main function in its own thread and then runs the exit handler

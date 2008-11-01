@@ -3,7 +3,7 @@
 Controller for various ports operations
 """
 from logging import getLogger, FileHandler, DEBUG
-from tools import run_main
+from pypkg import run_main
 
 handler = FileHandler('/tmp/pypkg/log', 'w')
 handler.setLevel(DEBUG)
@@ -14,11 +14,10 @@ def main():
      The main event loop.  This sets the program on the corrent trajectory and
      then exits.  Everything else just 'runs'
   """
-  import monitor
-  import target
-
-  from port import Port, get
-  from exit import start, terminate
+  from pypkg.exit import start, terminate
+  from pypkg.port import Port, get
+  from pypkg import monitor
+  from pypkg import target
 
   parser = gen_parser()
   options, args = parser.parse_args()
@@ -101,8 +100,8 @@ def set_options(options):
      @param options: The options
      @type options: C{object}
   """
-  from make import env, pre_cmd
-  from port import Port
+  from pypkg.make import env, pre_cmd
+  from pypkg.port import Port
 
   # Add all -D options
   for i in options.make_env:
