@@ -99,8 +99,8 @@ Future release:
  - PortCache:
    - Minimise duplicate job requests
  - Port:
-   - Add clean target (and have a failed port clean itself...)
-   - Use batch mode for all stages except config
+   * Add clean target (and have a failed port clean itself...)
+   * Use batch mode for all stages except config
    - Precleaning
    - Investigate fine grain locking (memory vs speed)
      [and adjust locking appropriately]
