@@ -14,7 +14,7 @@ def main():
      The main event loop.  This sets the program on the corrent trajectory and
      then exits.  Everything else just 'runs'
   """
-  from port import Port, port_cache
+  from port import Port, get
   from target import install_builder
   from exit import terminate
 
@@ -42,7 +42,7 @@ def main():
     from target import Caller
     callback = Caller(len(args), terminate)
     for i in args:
-      port = port_cache.get(i)
+      port = get(i)
       if port:
         status = port.install_status()
         if (options.install and status == Port.ABSENT) or \

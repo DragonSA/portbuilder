@@ -82,8 +82,8 @@ class StageBuilder(object):
        @type callback: C{callable}
     """
     if isinstance(port, str):
-      from port import port_cache
-      port = port_cache.get(port)
+      from port import get
+      port = get(port)
       if not port:
         if callable(callback):
           callback()
@@ -263,13 +263,13 @@ class Configer(object):
        Configure the port and add all its dependancies onto the queue to be
        configured.
     """
-    from port import port_cache
+    from port import get
     assert self.__port.stage() < Port.CONFIG and self.__count == 0
 
     if self.__port.build_stage(Port.CONFIG, False):
       self.__count = len(self.__port.attr('depends')) + 1
       for i in self.__port.attr('depends'):
-        port = port_cache[i]
+        port = get(i)
         if port.stage() < Port.CONFIG:
           config_builder(port, self.finish)
         else:
@@ -324,7 +324,7 @@ def index_builder():
   from logging import getLogger
   from make import env, make_target, SUCCESS
   from os.path import join
-  from port import port_cache
+  from port import cache
 
   make = make_target('', ['-V', 'SUBDIR'], pipe=True)
   if make.wait() is not SUCCESS:
@@ -344,12 +344,12 @@ def index_builder():
     for j in smake.stdout.read().split():
       port = join(i, j)
       ports.append(port)
-      port_cache.add(port)
+      cache.add(port)
       
   index = open('/tmp/INDEX', 'w')
   for i in ports:
     try:
-      index.write(port_cache[i].describe())
+      index.write(cache[i].describe())
       index.write('\n')
     except KeyError:
       continue

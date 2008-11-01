@@ -102,7 +102,7 @@ class Port(object):
        @param origin: The ports origin (within the ports tree)
        @type origin: C{str}
     """
-    from . import port_cache
+    from . import cache
     self._origin = origin  #: The origin of the port
     self._install_status = port_status(origin) #: The install status of the port
     self._stage = 0  #: The (build) stage progress of the port
@@ -114,7 +114,7 @@ class Port(object):
     self._attr_map = port_attr(origin)
 
     for i in self._attr_map['depends']:
-      port_cache.add(i)
+      cache.add(i)
 
   def attr(self, attr):
     """
@@ -360,7 +360,7 @@ class Port(object):
        @return: The success status
        @rtype: C{bool}
     """
-    from . import port_cache
+    from . import cache
     from ..make import make_target, SUCCESS
 
     if len(self._attr_map['options']) == 0 or not Port.configure:
@@ -372,7 +372,7 @@ class Port(object):
       if status:
         self._attr_map = port_attr(self._origin)
         for i in self._attr_map['depends']:
-          port_cache.add(i)
+          cache.add(i)
 
       return status
 
@@ -532,10 +532,10 @@ class Port(object):
         @return: The sorted list of dependancies
         @rtype: C{(str)}
       """
-      from . import port_cache
+      from . import cache as pcache
       depends = set()
       for i in set([j[1] for j in sum([port.attr(i) for i in categories], [])]):
-        i_p = port_cache.get(i)
+        i_p = pcache.get(i)
         if i_p:
           depends.add(i_p.attr('pkgname'))
           depends.update(cache.has_key(i) and cache[i] or retrieve(i_p, master))

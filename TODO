@@ -113,8 +113,8 @@ Future release:
    - Add logging of port targets
    - Check need for status
    - Move prepare to a private method?
-   - Move from flags to linear for stages
-   - Use only one lock and condition for the port (should not cause too much
+   * Move from flags to linear for stages
+   * Use only one lock and condition for the port (should not cause too much
      contention since only a few instances will use it at once)
    - Offline cache of ports data
      - Handle changes in port config
@@ -153,12 +153,12 @@ Future release:
    - Have automatic logging of build commands (with archival)
    - Add a command prefix (such as for socksify?)
    - Add sudo support
- - Split port into its subcomponents:
-   - Port
-   - PortCache
-   - DependHandler
+ + Split port into its subcomponents:
+   * Port
+   * PortCache
+   * DependHandler
    - System interface (and apply appropriate abstraction)
-   - Develop proper API for the library
+   + Develop proper API for the library
 
 0.0.4 - Milestone 4 (Command line controller):
  * pypkg:

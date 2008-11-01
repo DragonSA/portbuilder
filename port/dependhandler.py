@@ -80,9 +80,9 @@ class DependHandler(object):
        @param typ: The type of dependancy
        @type typ: C{int}
     """
-    from . import port_cache
+    from . import cache
     try:
-      depends = port_cache[port].depends()
+      depends = cache[port].depends()
     except KeyError:
       ports_msg = (self._port.origin(), port)
       if ports_msg not in self._report_log:

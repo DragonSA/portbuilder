@@ -161,7 +161,7 @@ class Stat(Monitor):
     import queue
     import target
 
-    from port import port_cache
+    from port import cache
     from time import time
 
     offset = time() - self.__start
@@ -173,9 +173,9 @@ class Stat(Monitor):
     if port_q and not (fetch_q and build_q and install_q):
       line.append(" %3i %5i %5i " % (len(queue.ports_queue),
                                       queue.ports_queue.qsize(),
-                                      len(port_cache)))
+                                      len(cache)))
     else:
-      line.append(" %6i " % len(port_cache))
+      line.append(" %6i " % len(cache))
 
     if fetch_q:
       line.append(" %3i %5i %5i " % (len(queue.fetch_queue),
@@ -431,11 +431,11 @@ class Statistics(object):
     import queue
     import target
 
-    from port import port_cache
+    from port import cache
     from time import time
 
     self.__time = time()
-    self.__ports = Statistics.size(queue.ports_queue, port_cache)
+    self.__ports = Statistics.size(queue.ports_queue, cache)
     self.__fetch = Statistics.size(queue.fetch_queue, target.fetch_builder)
     #self.__config = Statistics.size(queue.config_queue,target.config_builder)
     self.__build = Statistics.size(queue.build_queue, target.build_builder)
