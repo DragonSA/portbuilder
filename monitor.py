@@ -104,6 +104,18 @@ class Monitor(Thread):
     """
     return self.__stop
 
+class NoneMonitor(Monitor):
+  """
+     This monitor is the equivalent to None, used when no monitor is required
+  """
+
+  def run(self):
+    """
+       We do nothing, just an empty look
+    """
+    while not self._stopped():
+      self._sleep()
+
 
 class Stat(Monitor):
   """

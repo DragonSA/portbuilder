@@ -14,8 +14,10 @@ def main():
      The main event loop.  This sets the program on the corrent trajectory and
      then exits.  Everything else just 'runs'
   """
+  import monitor
+  import target
+
   from port import Port, get
-  from target import install_builder
   from exit import terminate
 
   parser = gen_parser()
@@ -26,28 +28,27 @@ def main():
 
   # Set the monitor
   if not options.no_opt:
-    import monitor
     if options.stat_mode:
       if options.stat_mode < 0:
         parser.error("SEC needs to be positive, not %i" % options.stat_mode)
       monitor.set_monitor(monitor.Stat(options.stat_mode))
     else:
       monitor.set_monitor(monitor.Top())
+  else:
+    monitor.set_monitor(monitor.NoneMonitor())
 
   # Execute the primary build target
   if options.index:
-    from target import index_builder
-    index_builder()
+    target.index_builder()
   else:
-    from target import Caller
-    callback = Caller(len(args), terminate)
+    callback = target.Caller(len(args), terminate)
     for i in args:
       port = get(i)
       if port:
         status = port.install_status()
         if (options.install and status == Port.ABSENT) or \
           (not options.install and status < Port.CURRENT):
-          install_builder.put(port, callback)
+          target.install_builder.put(port, callback)
         else:
           callback()
       else:
