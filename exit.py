@@ -11,25 +11,25 @@ class AutoExit(object):
       ports.
   """
 
-  def __init__(self, timeout, pause):
+  def __init__(self, timeout):
     """
        Create the exit handlers.  The shutdown handler is registered and
        various signal handlers.
 
        @param timeout: How often to check for a stall
        @type timeout: C{float}
-       @param pause: How often to check for a terminate request
-       @type pause: C{float}
     """
     from atexit import register
     from os import getpid, setpgrp
     from signal import signal, SIGINT, SIGTERM
-    self.__start = False
-    self.__pause = pause
+    from threading import Condition, Lock
+    
+    self.__wait = Condition(Lock())
+    self.__pid = getpid()
     self.__timeout = timeout
     self.__term = False
-    self.__pid = getpid()
 
+    self.__wait.acquire()
     setpgrp()
     register(self.terminate)
     # Make pylint happier(otherwise sig_handler has an unused parameter 'frame')
@@ -37,7 +37,7 @@ class AutoExit(object):
     signal(SIGINT, sig_handler)
     signal(SIGTERM, sig_handler)
 
-  def timeout(self, timeout):
+  def set_timeout(self, timeout):
     """
        Set the timeout value.
 
@@ -45,15 +45,6 @@ class AutoExit(object):
        @type timeout: C{float}
     """
     self.__timeout = timeout
-
-  def pause(self, pause):
-    """
-       Set a pause value.
-
-       @param pause: How often to check for a terminate request
-       @type pause: C{float}
-    """
-    self.__pause = pause
 
   def sig_handler(self, sig):
     """
@@ -79,12 +70,6 @@ class AutoExit(object):
                 "and can be safely ignored")
       terminate()
 
-  def start(self):
-    """
-       Tell the idle checker to start checking for idleness
-    """
-    self.__start = True
-
   def terminate(self):
     """
       Shutdown the program properly.
@@ -99,24 +84,22 @@ class AutoExit(object):
       for i in queues:
         i.terminate()
       killpg(0, SIGTERM)
+      self.__wait.notify()
 
   def run(self):
     """
        Execute the main handlers.  This needs to be run from the main loop to
        allow signals to be processed promptly.
     """
+    from monitor import monitor
     from port import cache, Port
     from queue import queues
-    from time import sleep
 
-    while True:
-      try:
-        count = 0
-        cycles = int(self.__timeout / self.__pause)
-        while (count < cycles or not self.__start) and not self.__term:
-          sleep(self.__pause)
-          count += 1
-
+    try:
+      while self.__term:
+        if self.__wait.wait(self.__timeout):
+          break
+        
         # If a queue is busy then don't terminate
         term = True
         for i in queues:
@@ -124,27 +107,25 @@ class AutoExit(object):
             term = False
             break
 
-        if term or self.__term:
-          from monitor import monitor
-          if not self.__term:
-            terminate()
+        if term:
+          self.terminate()
+    except KeyboardInterrupt:
+      self.terminate()
 
-          # Wait for everyone to finish
-          for i in queues:
-            i.join()
+    # Wait for everyone to finish
+    for i in queues:
+      i.join()
 
-          # Cleanup all ports that have built but not installed
-          for i in cache.itervalues():
-            if i and not i.failed() and (i.stage() == Port.BUILD or \
-                (i.stage() == Port.INSTALL and i.working())):
-              i.clean()
+    # Cleanup all ports that have built but not installed
+    for i in cache.itervalues():
+      if i and not i.failed() and (i.stage() == Port.BUILD or \
+          (i.stage() == Port.INSTALL and i.working())):
+        i.clean()
 
-          if monitor:
-            monitor.stop()
-          exit(0)
-      except KeyboardInterrupt:
-        self.terminate()
+    monitor.stop()
+    exit(0)
+    
 
-exit_handler = AutoExit(0.1, 0.01)  #: Exit handler
+exit_handler = AutoExit(0.1)  #: Exit handler
 #: Alias for common functions of exit_handler
 terminate = exit_handler.terminate

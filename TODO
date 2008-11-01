@@ -38,7 +38,7 @@ Future release:
    + Make statistics global and integrate into Stat
    - Show information about failed ports
    - Split into separate modules
-   - Make the _sleep more interruptable (perhaps with a timeout lock???)
+   - Make the _sleep more interruptable (perhaps with a Condition wait???)
    - Stat:
      - Make options a class variable
    - Top:
@@ -102,7 +102,7 @@ Future release:
  * monitor:
    * Add pause and resume support
    * Add dummy monitor (aka no op)
- - Move AutoExit to lock waiting
+ * Move AutoExit to Condition waiting
  - PortCache:
    - Minimise duplicate job requests
  - Port:

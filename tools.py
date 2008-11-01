@@ -29,8 +29,6 @@ def run_main(main):
       from logging import getLogger
       getLogger("pypkg").exception("Main function failed")
       terminate()
-    finally:
-      exit_handler.start()
 
   Thread(target=call).start()
   exit_handler.run()
