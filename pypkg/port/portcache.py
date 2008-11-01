@@ -52,7 +52,7 @@ class PortCache(dict):
         if value:
           return value
       except KeyError:
-        self.add(key)
+        self.__add(key)
       else:
         if value is False:
           raise KeyError, key
@@ -106,8 +106,22 @@ class PortCache(dict):
        @rtype: C{int}
     """
     key = self._normalise(key)
+    with self._lock:
+      self.__add(key)
+
+  def __add(self, key):
+    """
+       Adds a port to be constructed (requires lock to be held)
+
+       @param key: The port for queueing
+       @type key: C{str}
+       @return: The job ID of the queued port
+       @rtype: C{int}
+    """
     if not dict.has_key(self, key):
       from pypkg.queue import ports_queue
+      dict.__setitem__(self, key, None)
+      self.__dead_cnt += 1
       return ports_queue.put_nowait(lambda: self._get(key))
 
   def get(self, k, d=None):
@@ -137,13 +151,6 @@ class PortCache(dict):
     from pypkg.make import env
     from pypkg.port import Port
 
-    with self._lock:
-      try:
-        dict.__getitem__(self, key)
-        return
-      except KeyError:
-        dict.__setitem__(self, key, None)
-
     try:
       # Time consuming task, done outside lock
       if isdir(join(env['PORTSDIR'], key)) and len(key.split('/')) == 2:
@@ -159,8 +166,8 @@ class PortCache(dict):
       port = False
       self._log.exception("Error while creating port '%s'" % key)
     dict.__setitem__(self, key, port)
-    if not port:
-      self.__dead_cnt += 1
+    if port:
+      self.__dead_cnt -= 1
     self._lock.notifyAll()
     self._lock.release()
 

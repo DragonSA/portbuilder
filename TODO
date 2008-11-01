@@ -54,6 +54,9 @@ Future release:
      - Improve output when rendering to small screens
  - pypkg:
    - Add -j option (fine tune concurrency)
+   - Add force config option
+   - Allow fuzzy port specification
+   - Implement most of portupgrade
 
 0.0.7 - Milestone 7 (Finish Target Builders):
  - Refine and condense code
@@ -103,8 +106,8 @@ Future release:
    * Add dummy monitor (aka no op)
    * Fix initialisation and deinitialisation
  * Move AutoExit to Condition waiting
- - PortCache:
-   - Minimise duplicate job requests
+ * PortCache:
+   * Minimise duplicate job requests
  - Port:
    * Add clean target (and have a failed port clean itself...)
    * Use batch mode for all stages except config
