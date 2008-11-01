@@ -76,7 +76,7 @@ class WorkerQueue(Queue):
     """
     return self._workers
 
-  def setpool(self, workers):
+  def set_pool(self, workers):
     """
        Changes the number of workers in the pool.  If more workers are currently
        running then some workers will be stopped after finishing their current
@@ -124,12 +124,12 @@ class WorkerQueue(Queue):
 
   def terminate(self):
     """
-       Shutdown this WorkerQueue.  Unlike setpool(0) all remaining queued
+       Shutdown this WorkerQueue.  Unlike set_pool(0) all remaining queued
        items are also removed.
     """
     from Queue import Empty
 
-    self.setpool(0)
+    self.set_pool(0)
     try:
       while True:
         self.get(False)

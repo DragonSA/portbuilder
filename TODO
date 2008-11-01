@@ -153,13 +153,14 @@ Future release:
        - Update port install status properly
      - _prepare:
        - Add all dependants onto the queue and wait for them to complete
- - WorkerQueue:
-   - Remove condition (not needed and overexposing internals)
-   - Handle worker thread crashing
+ * WorkerQueue:
+   * Remove condition (not needed and overexposing internals)
+   * Handle worker thread crashing
  - make:
    - Have automatic logging of build commands (with archival)
    * Add a command prefix (such as for socksify?)
-   - Add sudo support
+   - Add su/sudo support
+   - Fix the use of prefexing...
  * Split port into its subcomponents:
    * Port
    * PortCache
