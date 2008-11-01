@@ -2,8 +2,9 @@
 The Depend Handler module.  This module contains the depend handling code for
 Port
 """
-from __future__ import with_statement
-from .port import Port
+from __future__ import absolute_import, with_statement
+
+from pypkg.port import Port
 
 __all__ = ['DependHandler']
 
@@ -80,7 +81,7 @@ class DependHandler(object):
        @param typ: The type of dependancy
        @type typ: C{int}
     """
-    from ..port import cache
+    from pypkg.port import cache
     try:
       depends = cache[port].depends()
     except KeyError:

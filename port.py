@@ -7,7 +7,10 @@ from pypkg import run_main
 
 handler = FileHandler('/tmp/pypkg/log', 'w')
 handler.setLevel(DEBUG)
-getLogger('pypkg').addHandler(handler)
+log = getLogger('pypkg')
+log.addHandler(handler)
+
+# TODO: Add pylint check for `R0401'
 
 def main():
   """
@@ -33,6 +36,7 @@ def main():
       monitor.set_monitor(monitor.Stat(options.stat_mode))
     else:
       monitor.set_monitor(monitor.Top())
+      log.error("Starting Top monitor (%s)" % (monitor.monitor))
   else:
     monitor.set_monitor(monitor.NoneMonitor())
 

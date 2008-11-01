@@ -2,7 +2,7 @@
 The Port module.  This module contains all classes and utilities needed for
 managing port information.  
 """
-from __future__ import with_statement
+from __future__ import absolute_import, with_statement
 
 __all__ = ['Port']
 
@@ -79,7 +79,7 @@ def recurse_depends(port, category, cache=dict()):
       @return: The sorted list of dependancies
       @rtype: C{(str)}
     """
-    from ..port import cache as pcache
+    from pypkg.port import cache as pcache
     depends = set()
     for i in set([j[1] for j in sum([port.attr(i) for i in categories], [])]):
       i_p = pcache.get(i)
@@ -146,8 +146,8 @@ class Port(object):
        @param origin: The ports origin (within the ports tree)
        @type origin: C{str}
     """
-    from . import cache
-    from .arch import attr, status
+    from pypkg.port import cache
+    from pypkg.port.arch import attr, status
     self._origin = origin  #: The origin of the port
     self._install_status = status(origin) #: The install status of the port
     self._stage = 0  #: The (build) stage progress of the port
@@ -243,7 +243,7 @@ class Port(object):
     if self._depends:
       return self._depends
 
-    from . import DependHandler
+    from pypkg.port import DependHandler
 
     with self._lock:
       while self._depends is False:
@@ -284,7 +284,7 @@ class Port(object):
     """
     from os.path import join
 
-    from ..make import env
+    from pypkg.make import env
 
     build_depends = ('depend_build', 'depend_lib')
     extract_depends = ('depend_extract',)
@@ -315,7 +315,7 @@ class Port(object):
        @return: The clean status
        @rtype: C{bool}
     """
-    from ..make import clean_log, make_target, SUCCESS
+    from pypkg.make import clean_log, make_target, SUCCESS
 
     status = make_target(self._origin, ['clean']).wait() is SUCCESS
 
@@ -344,8 +344,8 @@ class Port(object):
        @return: The stage result
        @rtype: C{bool}
     """
-    from ..target import config_builder, fetch_builder, build_builder, \
-                         install_builder
+    from pypkg.target import config_builder, fetch_builder, build_builder, \
+                             install_builder
     stage_handler = {Port.CONFIG: self._config, Port.FETCH: self._fetch,
                      Port.BUILD: self._build, Port.INSTALL: self._install}
     stage_builder = {Port.CONFIG: config_builder, Port.FETCH: fetch_builder,
@@ -385,8 +385,8 @@ class Port(object):
        @return: The success status
        @rtype: C{bool}
     """
-    from . import cache
-    from ..make import make_target, SUCCESS
+    from pypkg.port import cache
+    from pypkg.make import make_target, SUCCESS
 
     if len(self._attr_map['options']) == 0 or Port.force_noconfig:
       return True
@@ -396,7 +396,7 @@ class Port(object):
       status = make.wait() is SUCCESS
 
       if status:
-        from .arch import attr
+        from pypkg.port.arch import attr
         self._attr_map = attr(self._origin)
         for i in self._attr_map['depends']:
           cache.add(i)
@@ -411,7 +411,7 @@ class Port(object):
        @return: The success status
        @rtype: C{bool}
     """
-    from ..make import make_target, SUCCESS
+    from pypkg.make import make_target, SUCCESS
 
     return make_target(self._origin, ['checksum']).wait() is SUCCESS
 
@@ -424,7 +424,7 @@ class Port(object):
         @return: The success status
         @rtype: C{bool}
     """
-    from ..make import make_target, SUCCESS
+    from pypkg.make import make_target, SUCCESS
 
     #make = make_target(self._origin, ['clean', 'extract', 'patch', 'configure',
                                       #'build'])
@@ -438,7 +438,7 @@ class Port(object):
         @return: The success status
         @rtype: C{bool}
     """
-    from ..make import make_target, SUCCESS
+    from pypkg.make import make_target, SUCCESS
 
     make = make_target(self._origin, ['install'] +
                        (Port.package and ['package'] or []))
@@ -462,7 +462,7 @@ class Port(object):
        @return: The proceed status (and succes status)
        @rtype: C{bool}
     """
-    from . import DependHandler
+    from pypkg.port import DependHandler
     from time import time
     
     with self._lock:

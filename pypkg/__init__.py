@@ -1,6 +1,7 @@
 """
 The pypkg module.
 """
+from __future__ import absolute_import
 
 def run_main(main):
   """
@@ -10,8 +11,9 @@ def run_main(main):
      @param main: The main function to execute
      @type main: C{callable}
   """
-  from exit import exit_handler, terminate
   from threading import Thread
+
+  from pypkg.exit import exit_handler, terminate
 
   assert callable(main)
 

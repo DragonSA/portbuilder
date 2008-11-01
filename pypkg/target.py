@@ -2,10 +2,10 @@
 The target module.  This module handles executing various stages for building
 ports.  
 """
-from __future__ import with_statement
+from __future__ import absolute_import, with_statement
 
-from port import DependHandler, Port
-from queue import config_queue, fetch_queue, build_queue, install_queue
+from pypkg.port import DependHandler, Port
+from pypkg.queue import config_queue, fetch_queue, build_queue, install_queue
 
 class Caller(object):
   """
@@ -82,7 +82,7 @@ class StageBuilder(object):
        @type callback: C{callable}
     """
     if isinstance(port, str):
-      from port import get
+      from pypkg.port import get
       port = get(port)
       if not port:
         if callable(callback):
@@ -263,7 +263,7 @@ class Configer(object):
        Configure the port and add all its dependancies onto the queue to be
        configured.
     """
-    from port import get
+    from pypkg.port import get
     assert self.__port.stage() < Port.CONFIG and self.__count == 0
 
     if self.__port.build_stage(Port.CONFIG, False):
@@ -322,9 +322,10 @@ def index_builder():
      Creates the INDEX of all the ports.
   """
   from logging import getLogger
-  from make import env, make_target, SUCCESS
   from os.path import join
-  from port import cache
+
+  from pypkg.make import env, make_target, SUCCESS
+  from pypkg.port import cache
 
   make = make_target('', ['-V', 'SUBDIR'], pipe=True)
   if make.wait() is not SUCCESS:

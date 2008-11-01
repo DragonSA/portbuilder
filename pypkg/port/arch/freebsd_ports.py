@@ -2,7 +2,9 @@
 The FreeBSD module.  This module contains all code specific to the FreeBSD Ports
 infrastructure.
 """
-from make import env
+from __future__ import absolute_import
+
+from pypkg.make import env
 
 __all__ = ['status', 'attr']
 
@@ -73,7 +75,7 @@ def status(origin):
   """
   from subprocess import Popen, PIPE, STDOUT
 
-  from ..port import Port  # TODO: Change to ``from .. import Port''
+  from pypkg.port import Port  # TODO: Change to ``from .. import Port''
 
   pkg_version = Popen(['pkg_version', '-O', origin], close_fds=True,
                       stdout=PIPE, stderr=STDOUT)
@@ -83,8 +85,8 @@ def status(origin):
   info = pkg_version.stdout.read().split()
   if len(info) > 2:
     from logging import getLogger
-    getLogger('pypkg.port_status').warning("Multiple ports with same origin " \
-                                           "'%s'" % origin)
+    getLogger('pypkg.port.arch.freebsd_port.port_status').warning(
+                                "Multiple ports with same origin '%s'" % origin)
   info = info[1]
   if info == '<':
     return Port.OLDER
@@ -102,7 +104,7 @@ def attr(origin):
      @return: A dictionary of attributes
      @rtype: C{\{str:str|(str)|\}}
   """
-  from ...make import make_target, SUCCESS
+  from pypkg.make import make_target, SUCCESS
 
   if env['PORTSDIR'][-1] != '/':
     env['PORTSDIR'].join('/')

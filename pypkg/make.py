@@ -1,6 +1,8 @@
 """
 The Make module.  This module provides an interface to `make'.
 """
+from __future__ import absolute_import
+
 from os import getenv
 
 __all__ = ['clean_log', 'env', 'log_dir', 'log_files', 'make_target',
@@ -79,7 +81,7 @@ def make_target(origin, args, pipe=None):
     stdin, (stdout, stderr) = PIPE, log_files(origin)
 
   if pipe is False:
-    from .monitor import monitor
+    from pypkg.monitor import monitor
     monitor.pause()
 
   make = Popen(pre_cmd + ['make', '-C', join(env["PORTSDIR"], origin)] + args,

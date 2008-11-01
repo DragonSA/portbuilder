@@ -3,7 +3,7 @@ The exit module.  This module handles the termination of the ports framework.
 In addition, it also checks for idleness and terminates the program when it
 occures
 """
-from __future__ import with_statement
+from __future__ import absolute_import, with_statement
 
 __all__ = ['set_timeout', 'start', 'terminate']
 
@@ -87,7 +87,7 @@ class AutoExit(object):
     from os import killpg
     from signal import SIGTERM
 
-    from queue import queues
+    from pypkg.queue import queues
 
     # Kill all running processes (they should clean themselves up)
     if not self.__term:
@@ -103,9 +103,9 @@ class AutoExit(object):
        Execute the main handlers.  This needs to be run from the main loop to
        allow signals to be processed promptly.
     """
-    from .monitor import monitor
-    from .port import cache, Port
-    from .queue import queues
+    from pypkg.port import cache, Port
+    from pypkg.queue import queues
+    from pypkg import monitor
 
     # Wait for the start signal (could be triggered via terminate or start)
     self.__wait.wait()
@@ -137,7 +137,7 @@ class AutoExit(object):
           (i.stage() == Port.INSTALL and i.working())):
         i.clean()
 
-    monitor.stop()
+    monitor.monitor.stop()
     exit(0)
     
 

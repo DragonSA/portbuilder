@@ -1,7 +1,7 @@
 """
 The Queue module.  This module handles the execution of time consuming tasks.
 """
-from __future__ import with_statement
+from __future__ import absolute_import, with_statement
 
 from subprocess import Popen, PIPE
 from Queue import Queue
@@ -188,7 +188,7 @@ class WorkerQueue(Queue):
     try:
       func()
     except KeyboardInterrupt:
-      from exit import terminate
+      from pypkg.exit import terminate
       terminate()
     except BaseException:
       self._log.exception("Worker %d: Job %d threw an exception"

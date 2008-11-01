@@ -1,7 +1,7 @@
 """
 The port cache module.  This module contains the cache of active ports
 """
-from __future__ import with_statement
+from __future__ import absolute_import, with_statement
 
 __all__ = ['PortCache']
 
@@ -106,8 +106,8 @@ class PortCache(dict):
        @rtype: C{int}
     """
     key = self._normalise(key)
-    from queue import ports_queue
     if not dict.has_key(self, key):
+      from pypkg.queue import ports_queue
       return ports_queue.put_nowait(lambda: self._get(key))
 
   def get(self, k, d=None):
@@ -132,9 +132,10 @@ class PortCache(dict):
        @param key: The port to get
        @type key: C{str}
     """
-    from ..make import env
     from os.path import isdir, join
-    from . import Port
+
+    from pypkg.make import env
+    from pypkg.port import Port
 
     with self._lock:
       try:

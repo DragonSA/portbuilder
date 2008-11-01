@@ -2,9 +2,11 @@
 The Port module.  This module contains all classes and utilities needed for
 managing port information.
 """
-from dependhandler import DependHandler
-from port import Port
-from portcache import PortCache
+from __future__ import absolute_import
+
+from pypkg.port.port import Port
+from pypkg.port.dependhandler import DependHandler
+from pypkg.port.portcache import PortCache
 
 __all__ = ['cache', 'get', 'Port', 'DependHandler']
 
