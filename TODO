@@ -11,9 +11,10 @@ Future release:
  - Increase level of logging
  - Prevent multiple fetches of the same file!!!
  - When segterm, make sure logging is done properly
- - Move the python 2.6 naming and styles (and make compatible with 3)
+ - Move to the python 2.6 naming and styles (and make compatible with 3)
  - Implement proper recording of ports installation (i.e. when they fail)
  - Check if KeyboardInterrupt is appropriate
+ - Move all package imports to relative
  - Refactor:
    - Break ports into its own libraries
    - Try isolate system and ports dependant code
@@ -34,7 +35,7 @@ Future release:
    - Do we need to sort per category, overall, if at all?
    - Check for 100% compatibility
  - monitor:
-   - Converge common functionality into Monitor (such as start time)
+   + Converge common functionality into Monitor (such as start time)
    + Make statistics global and integrate into Stat
    - Show information about failed ports
    - Split into separate modules
@@ -42,8 +43,6 @@ Future release:
    - Stat:
      - Make options a class variable
    - Top:
-     - Fix termination (close down cleanly using stop override)
-     - Remove wrapper, override start
      - Add option to:
        - Exit program
        - Change update rate
@@ -102,6 +101,7 @@ Future release:
  * monitor:
    * Add pause and resume support
    * Add dummy monitor (aka no op)
+   * Fix initialisation and deinitialisation
  * Move AutoExit to Condition waiting
  - PortCache:
    - Minimise duplicate job requests

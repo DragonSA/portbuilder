@@ -4,6 +4,8 @@ In addition, it also checks for idleness and terminates the program when it
 occures
 """
 
+__all__ = ['set_timeout', 'start', 'terminate']
+
 class AutoExit(object):
   """
       Check if the queues are busy.  If all are idle terminate the program.
@@ -70,13 +72,20 @@ class AutoExit(object):
                 "and can be safely ignored")
       terminate()
 
+  def start(self):
+    """
+       Start the idle monitor.
+    """
+    self.__wait.notify()
+
   def terminate(self):
     """
-      Shutdown the program properly.
+       Shutdown the program properly.
     """
     from os import killpg
-    from queue import queues
     from signal import SIGTERM
+
+    from .queue import queues
 
     # Kill all running processes (they should clean themselves up)
     if not self.__term:
@@ -91,9 +100,12 @@ class AutoExit(object):
        Execute the main handlers.  This needs to be run from the main loop to
        allow signals to be processed promptly.
     """
-    from monitor import monitor
-    from port import cache, Port
-    from queue import queues
+    from .monitor import monitor
+    from .port import cache, Port
+    from .queue import queues
+
+    # Wait for the start signal (could be triggered via terminate or start)
+    self.__wait.wait()
 
     try:
       while self.__term:
@@ -127,5 +139,6 @@ class AutoExit(object):
     
 
 exit_handler = AutoExit(0.1)  #: Exit handler
-#: Alias for common functions of exit_handler
+set_timeout = exit_handler.set_timeout
+start = exit_handler.start
 terminate = exit_handler.terminate

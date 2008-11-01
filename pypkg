@@ -18,7 +18,7 @@ def main():
   import target
 
   from port import Port, get
-  from exit import terminate
+  from exit import start, terminate
 
   parser = gen_parser()
   options, args = parser.parse_args()
@@ -38,6 +38,7 @@ def main():
     monitor.set_monitor(monitor.NoneMonitor())
 
   # Execute the primary build target
+  start()
   if options.index:
     target.index_builder()
   else:

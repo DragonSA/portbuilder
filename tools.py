@@ -24,11 +24,11 @@ def run_main(main):
     try:
       main()
     except SystemExit:
-      terminate()
+      pass
     except BaseException:
       from logging import getLogger
       getLogger("pypkg").exception("Main function failed")
-      terminate()
+    terminate()
 
   Thread(target=call).start()
   exit_handler.run()
