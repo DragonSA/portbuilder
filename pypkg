@@ -116,7 +116,7 @@ def set_options(options):
       options.args.remove(i)
 
   # Batch mode, no configuring (-b)
-  Port.configure = not options.batch
+  Port.force_noconfig = options.batch
 
   # Only fetch the ports
   Port.fetch_only = options.fetch

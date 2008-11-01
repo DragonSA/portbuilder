@@ -148,9 +148,6 @@ class Stat(Monitor):
     options = (False, False, False, False)
     while not self._stopped():
       try:
-        if len(queue.config_queue) and Port.configure:
-          self._sleep()
-          continue
         count += 1
 
         old_options = options
@@ -293,10 +290,6 @@ class Top(Monitor):
 
     while not self._stopped():
       try:
-        if len(config_queue) and Port.configure:
-          self._sleep()
-          continue
-
         self.__stats = Statistics()
 
         stdscr.erase()

@@ -6,6 +6,105 @@ from __future__ import with_statement
 
 __all__ = ['Port']
 
+def check_config(optionfile, pkgname):
+  """
+     Check the options file to see if it is upto date, if so return False
+
+     @param optionfile: The file containing the options
+     @type optionfile: C{str}
+     @param pkgname: The full versioned name of the port
+     @type pkgname: C{str}
+     @return: If the port needs to be configured
+     @rtype: C{bool}
+  """
+  from os.path import isfile
+
+  if isfile(optionfile):
+    for i in open(pkgname, 'r'):
+      if i.startswith('_OPTIONS_READ='):
+        if i[14:-1] == pkgname:
+          return False
+        else:
+          return True
+  return True
+
+def get_www(descr):
+  """
+      Get the WWW address in the description file
+
+      @param descr: The description file
+      @type descr: C{str}
+      @return: The WWW URL
+      @rtype: C{str}
+  """
+  from os.path import isfile
+
+  if isfile(descr):
+    for i in open(descr, 'r'):
+      i = i.strip()
+      if i.startswith('WWW:'):
+        www = i[4:].lstrip()
+        if www.split('://', 1)[0] in ('http', 'https', 'ftp'):
+          return www
+        return 'http://' + www
+  else:
+    # TODO
+    #self._log.warn("Invalid description file for '%s'" % self._origin)
+    pass
+  return ''
+
+def recurse_depends(port, category, cache=dict()):
+  """
+    Returns a sorted list of dependancies pkgname.  Only the categories are
+    evaluated.
+
+    @param port: The port the dependancies are for.
+    @type port: C{Port}
+    @param category: The dependancies to retrieve.
+    @type category: C{(str)}
+    @param cache: Use the given cache to increase speed
+    @type cache: C{\{str:(str)\}}
+    @return: A sorted list of dependancies
+    @rtype: C{str}
+  """
+  master = ('depend_lib', 'depend_run')
+  def retrieve(port, categories):
+    """
+      Get the categories for the port
+
+      @param port: The port the dependancies are for.
+      @type port: C{Port}
+      @param category: The dependancies to retrieve.
+      @type category: C{(str)}
+      @return: The sorted list of dependancies
+      @rtype: C{(str)}
+    """
+    from . import cache as pcache
+    depends = set()
+    for i in set([j[1] for j in sum([port.attr(i) for i in categories], [])]):
+      i_p = pcache.get(i)
+      if i_p:
+        depends.add(i_p.attr('pkgname'))
+        depends.update(cache.has_key(i) and cache[i] or retrieve(i_p, master))
+      else:
+        # TODO
+        #self._log.warn("Port '%s' has a (indirect) stale dependancy " \
+                      #"on '%s'" % (port.origin(), i))
+        pass
+
+    depends = list(depends)
+    depends.sort()
+
+    if set(category) == set(master):
+      cache[port.origin()] = tuple(depends)
+
+    return depends
+
+  if set(category) == set(master) and cache.has_key(port.origin()):
+    return " ".join(cache[port.origin()])
+  return " ".join(retrieve(port, category))
+
+
 class Port(object):
   """
      The class that contains all information about a given port, such as status,
@@ -32,7 +131,8 @@ class Port(object):
   STAGE_NAME = {CONFIG : "configure", FETCH : "fetch", BUILD : "build",
                 INSTALL : "install"}
 
-  configure = True  #: If the port should configure itself
+  force_noconf = False  #: If the port should not configure itself
+  force_config = False  #: Force issueing a `make config'
   fetch_only = False  #: Only fetch the port, skip all other stages
   package = False  #: If newly installed ports should be packaged
 
@@ -186,28 +286,6 @@ class Port(object):
 
     from ..make import env
 
-    def get_www():
-      """
-         Get the WWW address in the description file
-
-         @return: The WWW URL
-         @rtype: C{str}
-      """
-      from os.path import isfile
-
-      descr = self.attr('descr')
-      if isfile(descr):
-        for i in open(descr, 'r'):
-          i = i.strip()
-          if i.startswith('WWW:'):
-            www = i[4:].lstrip()
-            if www.split('://', 1)[0] in ('http', 'https', 'ftp'):
-              return www
-            return 'http://' + www
-      else:
-        self._log.warn("Invalid description file for '%s'" % self._origin)
-      return ''
-
     build_depends = ('depend_build', 'depend_lib')
     extract_depends = ('depend_extract',)
     fetch_depends = ('depend_fetch',)
@@ -215,19 +293,19 @@ class Port(object):
     run_depends = ('depend_lib', 'depend_run')
 
     return "|".join((
-           self.attr('pkgname'),                          # ${PKGNAME}
-           join(env['PORTSDIR'], self._origin),           # ${PORTDIR}/${ORIGIN}
-           self.attr('prefix'),                           # ${PREFIX}
-           self.attr('comment'),                          # ${COMMENT}
-           self.attr('descr'),                            # ${DESCR_FILE}
-           self.attr('maintainer'),                       # ${MAINTAINER}
-           " ".join(self.attr('category')),               # ${CATEGORIES}
-           self.__recurse_depends(self, build_depends),   # ${BUILD_DEPENDS}
-           self.__recurse_depends(self, run_depends),     # ${RUN_DEPENDS}
-           get_www(),                                     # ${WWW_SITE}
-           self.__recurse_depends(self, extract_depends), # ${EXTRACT_DEPENDS}
-           self.__recurse_depends(self, patch_depends),   # ${PATCH_DEPENDS}
-           self.__recurse_depends(self, fetch_depends),   # ${FETCH_DEPENDS}
+           self.attr('pkgname'),                   # ${PKGNAME}
+           join(env['PORTSDIR'], self._origin),    # ${PORTDIR}/${ORIGIN}
+           self.attr('prefix'),                    # ${PREFIX}
+           self.attr('comment'),                   # ${COMMENT}
+           self.attr('descr'),                     # ${DESCR_FILE}
+           self.attr('maintainer'),                # ${MAINTAINER}
+           " ".join(self.attr('category')),        # ${CATEGORIES}
+           recurse_depends(self, build_depends),   # ${BUILD_DEPENDS}
+           recurse_depends(self, run_depends),     # ${RUN_DEPENDS}
+           get_www(self.attr('descr')),            # ${WWW_SITE}
+           recurse_depends(self, extract_depends), # ${EXTRACT_DEPENDS}
+           recurse_depends(self, patch_depends),   # ${PATCH_DEPENDS}
+           recurse_depends(self, fetch_depends),   # ${FETCH_DEPENDS}
            )) 
 
   def clean(self):
@@ -310,9 +388,10 @@ class Port(object):
     from . import cache
     from ..make import make_target, SUCCESS
 
-    if len(self._attr_map['options']) == 0 or not Port.configure:
+    if len(self._attr_map['options']) == 0 or Port.force_noconfig:
       return True
-    else:
+    elif Port.force_config or check_config(self.attr('optionsfile'),
+                                           self.attr('pkgname')):
       make = make_target(self._origin, 'config', pipe=False)
       status = make.wait() is SUCCESS
 
@@ -453,52 +532,3 @@ class Port(object):
       self._log.error("Port '%s' has failed to complete stage '%s'"
                       % (self._origin, Port.STAGE_NAME[stage]))
     return status
-
-  def __recurse_depends(self, port, category, cache=dict()):
-    """
-      Returns a sorted list of dependancies pkgname.  Only the categories are
-      evaluated.
-
-      @param port: The port the dependancies are for.
-      @type port: C{Port}
-      @param category: The dependancies to retrieve.
-      @type category: C{(str)}
-      @param cache: Use the given cache to increase speed
-      @type cache: C{\{str:(str)\}}
-      @return: A sorted list of dependancies
-      @rtype: C{str}
-    """
-    master = ('depend_lib', 'depend_run')
-    def retrieve(port, categories):
-      """
-        Get the categories for the port
-
-        @param port: The port the dependancies are for.
-        @type port: C{Port}
-        @param category: The dependancies to retrieve.
-        @type category: C{(str)}
-        @return: The sorted list of dependancies
-        @rtype: C{(str)}
-      """
-      from . import cache as pcache
-      depends = set()
-      for i in set([j[1] for j in sum([port.attr(i) for i in categories], [])]):
-        i_p = pcache.get(i)
-        if i_p:
-          depends.add(i_p.attr('pkgname'))
-          depends.update(cache.has_key(i) and cache[i] or retrieve(i_p, master))
-        else:
-          self._log.warn("Port '%s' has a (indirect) stale dependancy " \
-                        "on '%s'" % (port.origin(), i))
-
-      depends = list(depends)
-      depends.sort()
-
-      if set(category) == set(master):
-        cache[port.origin()] = tuple(depends)
-
-      return depends
-
-    if set(category) == set(master) and cache.has_key(port.origin()):
-      return " ".join(cache[port.origin()])
-    return " ".join(retrieve(port, category))

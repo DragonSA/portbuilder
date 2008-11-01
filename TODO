@@ -108,7 +108,8 @@ Future release:
  - Port:
    * Add clean target (and have a failed port clean itself...)
    * Use batch mode for all stages except config
-   - Precleaning
+   * Precleaning
+   * Only clean port (don't do recursive cleaning)
    - Investigate fine grain locking (memory vs speed)
      [and adjust locking appropriately]
    - Add distfiles checking (to optimise fetching)
