@@ -1,6 +1,8 @@
 """
 The Monitor module.  This module provides a variaty of displays for the user.
 """
+from __future__ import absolute_import
+
 from threading import Thread
 
 monitor = None
@@ -55,7 +57,7 @@ class Monitor(Thread):
     assert self.__started is False
     self.__started = True
     self._init()
-    Thread.__init__(self)
+    Thread.start(self)
 
   def stop(self):
     """
@@ -157,9 +159,9 @@ class Stat(Monitor):
     """
        Run the monitor.
     """
-    import queue
-    import target
-    from port import Port
+    from pypkg.port import Port
+    from pypkg import queue
+    from pypkg import target
 
     count = 20
     options = (False, False, False, False)
@@ -233,11 +235,11 @@ class Stat(Monitor):
       @param start: The initial time to use.
       @type start: C{int}
     """
-    import queue
-    import target
-
-    from port import cache
     from time import time
+    
+    from pypkg.port import cache
+    from pypkg import queue
+    from pypkg import target
 
     offset = time() - self.__start
     secs, mins, hour = offset % 60, offset / 60 % 60, offset / 60 / 60
@@ -282,7 +284,7 @@ def get_stage(port, offset=0):
     @return: The stage's name
     @rtype: C{str}
   """
-  from port import Port
+  from pypkg.port import Port
 
   stage = Port.STAGE_NAME[port.stage() + offset]
   if stage[-1] == 'l':
@@ -313,7 +315,8 @@ class Top(Monitor):
     """
     from time import time
     Monitor.__init__(self)
-    
+
+    self._end = 0
     self._offset = 0
     self.__start = time()
     self._stdscr = None
@@ -338,7 +341,7 @@ class Top(Monitor):
         
         self._sleep()
       except KeyboardInterrupt:
-        from exit import terminate
+        from pypkg.exit import terminate
         terminate()
 
   def _init(self):
@@ -350,6 +353,7 @@ class Top(Monitor):
     self._stdscr = initscr()
     self._stdscr.keypad(1)
     self._stdscr.nodelay(1)
+    self._stdscr.clear()
     cbreak()
     noecho()
 
@@ -358,16 +362,15 @@ class Top(Monitor):
        Shutdown the curses library.
     """
     from curses import nocbreak, echo, endwin
+    from sys import stdout
     
-    maxyx = self._stdscr.getmaxyx()
-    self._stdscr.addstr(maxyx[0] - 1, 0, ' ' * maxyx[1])
-    self._stdscr.move(maxyx[0] - 1, 0)
-    self._stdscr.refresh()
+    self._stdscr.move(self._end, 0)
 
     self._stdscr.keypad(0)
     nocbreak()
     echo()
     endwin()
+    stdout.write('\n')
 
   def _update_header(self, scr):
     """
@@ -500,6 +503,9 @@ class Top(Monitor):
       port = pending[i]
       scr.addnstr(offset + i, 0, '%5i %6s pending        %s' %
                   (0, get_stage(port, 1), get_name(port)), columns)
+
+    self._end = min(lines, self._offset + 2 + len(active) + len(queued) +
+                           len(pending)) - 1
       
 
 class Statistics(object):
@@ -511,11 +517,11 @@ class Statistics(object):
     """
         Collect the statistics
     """
-    import queue
-    import target
-
-    from port import cache
     from time import time
+
+    from pypkg.port import cache
+    from pypkg import queue
+    from pypkg import target
 
     self.__time = time()
     self.__ports = Statistics.size(queue.ports_queue, cache)
@@ -604,7 +610,7 @@ class Statistics(object):
     """
         Collate ordered information about the ports in various queues.
     """
-    from target import fetch_builder, build_builder, install_builder
+    from pypkg.target import fetch_builder, build_builder, install_builder
       # and config_builder
     fetch = fetch_builder.stats()
     build = build_builder.stats()
