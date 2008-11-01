@@ -315,8 +315,7 @@ class Top(Monitor):
     """
     from time import time
     Monitor.__init__(self)
-
-    self._end = 0
+    
     self._offset = 0
     self.__start = time()
     self._stdscr = None
@@ -362,15 +361,15 @@ class Top(Monitor):
        Shutdown the curses library.
     """
     from curses import nocbreak, echo, endwin
-    from sys import stdout
     
-    self._stdscr.move(self._end, 0)
+    self._stdscr.move(self._stdscr.getmaxyx()[0] - 1, 0)
+    self._stdscr.clrtoeol()
+    self._stdscr.refresh()
 
     self._stdscr.keypad(0)
     nocbreak()
     echo()
     endwin()
-    stdout.write('\n')
 
   def _update_header(self, scr):
     """
@@ -503,9 +502,6 @@ class Top(Monitor):
       port = pending[i]
       scr.addnstr(offset + i, 0, '%5i %6s pending        %s' %
                   (0, get_stage(port, 1), get_name(port)), columns)
-
-    self._end = min(lines, self._offset + 2 + len(active) + len(queued) +
-                           len(pending)) - 1
       
 
 class Statistics(object):
