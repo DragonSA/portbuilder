@@ -143,17 +143,14 @@ Future release:
      - Naming scheme
    - Handlers:
      - Provide output stream (as work in progress)
-     - config:
-       - Check for caching of options
-       - Allow forcing of config options
-       - Only reget attr if options have changed
+     * config:
+       * Check for caching of options
+       * Allow forcing of config options
      - fetch:
        - Add proxy support and changing the fetcher (e.g. wget)
        - Add a cache for fetching
      - install:
        - Update port install status properly
-     - _prepare:
-       - Add all dependants onto the queue and wait for them to complete
  * WorkerQueue:
    * Remove condition (not needed and overexposing internals)
    * Handle worker thread crashing

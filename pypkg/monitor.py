@@ -181,7 +181,7 @@ class Stat(Monitor):
 
         self._sleep()
       except KeyboardInterrupt:
-        from exit import terminate
+        from pypkg.exit import terminate
         terminate()
 
   @staticmethod

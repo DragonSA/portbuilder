@@ -18,7 +18,7 @@ def main():
      The main event loop.  This sets the program on the corrent trajectory and
      then exits.  Everything else just 'runs'
   """
-  from pypkg.exit import start, terminate
+  from pypkg.exit import terminate
   from pypkg.port import Port, get
   from pypkg import monitor
   from pypkg import target
@@ -42,7 +42,6 @@ def main():
     monitor.set_monitor(monitor.NoneMonitor())
 
   # Execute the primary build target
-  start()
   if options.index:
     target.index_builder()
   else:

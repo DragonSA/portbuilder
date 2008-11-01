@@ -13,7 +13,7 @@ def run_main(main):
   """
   from threading import Thread
 
-  from pypkg.exit import exit_handler, terminate
+  from pypkg.exit import exit_handler, start, terminate
 
   assert callable(main)
 
@@ -23,6 +23,7 @@ def run_main(main):
     """
     try:
       main()
+      start()
     except SystemExit:
       terminate()
     except BaseException:

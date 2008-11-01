@@ -20,7 +20,7 @@ def check_config(optionfile, pkgname):
   from os.path import isfile
 
   if isfile(optionfile):
-    for i in open(pkgname, 'r'):
+    for i in open(optionfile, 'r'):
       if i.startswith('_OPTIONS_READ='):
         if i[14:-1] == pkgname:
           return False
@@ -388,10 +388,9 @@ class Port(object):
     from pypkg.port import cache
     from pypkg.make import make_target, SUCCESS
 
-    if len(self._attr_map['options']) == 0 or Port.force_noconfig:
-      return True
-    elif Port.force_config or check_config(self.attr('optionsfile'),
-                                           self.attr('pkgname')):
+    if len(self._attr_map['options']) != 0  and not Port.force_config and \
+         check_config(self.attr('optionsfile'), self.attr('pkgname')) or \
+         Port.force_config:
       make = make_target(self._origin, 'config', pipe=False)
       status = make.wait() is SUCCESS
 
@@ -400,8 +399,11 @@ class Port(object):
         self._attr_map = attr(self._origin)
         for i in self._attr_map['depends']:
           cache.add(i)
+      else:
+        open('/tmp/it', 'a').write(self._origin + '\n')
 
       return status
+    return True
 
   fetch = lambda self: self.build_stage(Port.FETCH)
   def _fetch(self):
@@ -464,7 +466,7 @@ class Port(object):
     """
     from pypkg.port import DependHandler
     from time import time
-    
+
     with self._lock:
       if self._stage > stage:
         return False, True

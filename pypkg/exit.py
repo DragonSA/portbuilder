@@ -29,12 +29,14 @@ class AutoExit(object):
     from threading import Condition, Lock
 
     self._log = getLogger('pypkg.AutoExit')
-    self.__wait = Condition(Lock())
+    self.__lock = Lock()
+    self.__wait = Condition(self.__lock)
     self.__pid = getpid()
+    self.__started = False
     self.__timeout = timeout
     self.__term = False
 
-    self.__wait.acquire()
+    self.__lock.acquire()
     setpgrp()
     register(self.terminate)
     # Make pylint happier(otherwise sig_handler has an unused parameter 'frame')
@@ -78,7 +80,9 @@ class AutoExit(object):
     """
        Start the idle monitor.
     """
-    with self.__wait:
+    with self.__lock:
+      assert not self.__started
+      self.__started = True
       self.__wait.notify()
 
   def terminate(self):
@@ -96,7 +100,7 @@ class AutoExit(object):
       for i in queues:
         i.terminate()
       killpg(0, SIGTERM)
-      with self.__wait:
+      with self.__lock:
         self.__wait.notify()
 
   def run(self):
@@ -115,21 +119,24 @@ class AutoExit(object):
       while not self.__term:
         if self.__wait.wait(self.__timeout):
           break
-        
+
         # If a queue is busy then don't terminate
         term = True
-        for i in queues:
+        for i in queues[:-1]:
           if len(i):
             term = False
             break
 
         if term:
-          #self._log.info("No queues active, terminating")
+          self._log.info("No queues active, terminating")
+          self.__lock.release()
           self.terminate()
     except KeyboardInterrupt:
+      if self.__lock.locked():
+        self.__lock.release()
       self.terminate()
 
-    #self._log.info("Initiating terminate sequance")
+    self._log.info("Initiating terminate sequance")
 
     # Wait for everyone to finish
     for i in queues:
@@ -143,7 +150,7 @@ class AutoExit(object):
 
     monitor.monitor.stop()
     exit(0)
-    
+
 
 exit_handler = AutoExit(0.1)  #: Exit handler
 set_timeout = exit_handler.set_timeout
