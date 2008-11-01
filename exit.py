@@ -3,6 +3,7 @@ The exit module.  This module handles the termination of the ports framework.
 In addition, it also checks for idleness and terminates the program when it
 occures
 """
+from __future__ import with_statement
 
 __all__ = ['set_timeout', 'start', 'terminate']
 
@@ -76,7 +77,8 @@ class AutoExit(object):
     """
        Start the idle monitor.
     """
-    self.__wait.notify()
+    with self.__wait:
+      self.__wait.notify()
 
   def terminate(self):
     """
@@ -85,7 +87,7 @@ class AutoExit(object):
     from os import killpg
     from signal import SIGTERM
 
-    from .queue import queues
+    from queue import queues
 
     # Kill all running processes (they should clean themselves up)
     if not self.__term:
@@ -93,7 +95,8 @@ class AutoExit(object):
       for i in queues:
         i.terminate()
       killpg(0, SIGTERM)
-      self.__wait.notify()
+      with self.__wait:
+        self.__wait.notify()
 
   def run(self):
     """

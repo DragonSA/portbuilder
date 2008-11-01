@@ -79,7 +79,7 @@ def recurse_depends(port, category, cache=dict()):
       @return: The sorted list of dependancies
       @rtype: C{(str)}
     """
-    from . import cache as pcache
+    from ..port import cache as pcache
     depends = set()
     for i in set([j[1] for j in sum([port.attr(i) for i in categories], [])]):
       i_p = pcache.get(i)

@@ -3,7 +3,7 @@ The Depend Handler module.  This module contains the depend handling code for
 Port
 """
 from __future__ import with_statement
-from . import Port
+from .port import Port
 
 __all__ = ['DependHandler']
 
@@ -80,7 +80,7 @@ class DependHandler(object):
        @param typ: The type of dependancy
        @type typ: C{int}
     """
-    from . import cache
+    from ..port import cache
     try:
       depends = cache[port].depends()
     except KeyError:
