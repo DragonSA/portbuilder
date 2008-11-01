@@ -3,7 +3,7 @@ The Depend Handler module.  This module contains the depend handling code for
 Port
 """
 from __future__ import with_statement
-from .port import Port
+from . import Port
 
 __all__ = ['DependHandler']
 

@@ -134,7 +134,7 @@ class PortCache(dict):
     """
     from ..make import env
     from os.path import isdir, join
-    from .port import Port
+    from . import Port
 
     with self._lock:
       try:

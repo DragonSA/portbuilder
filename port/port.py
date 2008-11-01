@@ -195,7 +195,7 @@ class Port(object):
        @return: The dependant handler
        @rtype: C{DependHandler}
     """
-    from .dependhandler import DependHandler
+    from . import DependHandler
 
     if self._depends:
       return self._depends
@@ -435,7 +435,7 @@ class Port(object):
        @return: The proceed status (and succes status)
        @rtype: C{bool}
     """
-    from .dependhandler import DependHandler
+    from . import DependHandler
     from time import time
     
     with self._lock:
