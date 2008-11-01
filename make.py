@@ -62,6 +62,8 @@ def make_target(origin, args, pipe=None):
   from os.path import join
   from subprocess import Popen, PIPE, STDOUT
 
+  from .monitor import monitor
+
   if isinstance(args, str):
     args = [args]
   args = args + [v and '%s="%s"' % (k, v) or "-D%s" % k for k, v in env.items()
@@ -73,20 +75,22 @@ def make_target(origin, args, pipe=None):
     stdin, stdout, stderr = PIPE, PIPE, STDOUT
   elif pipe:
     stdin, stdout, stderr = PIPE, pipe, STDOUT
-  elif pipe is False or (len(pre_cmd) and pre_cmd[0] == "echo"):
+  elif pipe is False:
     stdin, stdout, stderr = None, None, None
   else:
     stdin, (stdout, stderr) = PIPE, log_files(origin)
 
-  if pipe is not True:
-    pre = pre_cmd
-  else:
-    pre = []
+  if pipe is False:
+    monitor.pause()
 
-  make = Popen(pre + ['make', '-C', join(env["PORTSDIR"], origin)] + args,
+  make = Popen(pre_cmd + ['make', '-C', join(env["PORTSDIR"], origin)] + args,
                close_fds=True, stdin=stdin, stdout=stdout, stderr=stderr)
 
   if stdin:
     make.stdin.close()
+
+  if pipe is False:
+    make.wait()
+    monitor.resume()
 
   return make
