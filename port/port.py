@@ -232,7 +232,7 @@ class Port(object):
 
   def clean(self):
     """
-       Clean the ports working directories
+       Clean the ports working directories.
 
        @return: The clean status
        @rtype: C{bool}
@@ -347,9 +347,9 @@ class Port(object):
     """
     from ..make import make_target, SUCCESS
 
-    #make = make_target(self._origin, ['extract','patch','configure','build'])
-    make = make_target(self._origin, ['all'])
-    return make.wait() is SUCCESS
+    #make = make_target(self._origin, ['clean', 'extract', 'patch', 'configure',
+                                      #'build'])
+    return make_target(self._origin, ['clean', 'all']).wait() is SUCCESS
 
   install = lambda self: self.build_stage(Port.INSTALL)
   def _install(self):
@@ -362,7 +362,7 @@ class Port(object):
     from ..make import make_target, SUCCESS
 
     make = make_target(self._origin, ['install'] +
-                       (self.package and ['package'] or []))
+                       (Port.package and ['package'] or []))
 
     status = Port.INSTALL, make.wait() is SUCCESS
     if status:

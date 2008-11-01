@@ -3,6 +3,9 @@ The Make module.  This module provides an interface to `make'.
 """
 from os import getenv
 
+__all__ = ['clean_log', 'env', 'log_dir', 'log_files', 'make_target',
+           'pre_cmd', 'SUCCESS']
+
 env = {}  #: The environment flags to pass to make, aka -D...
 pre_cmd = []  #: Prepend to command
 SUCCESS = 0  #: The value returns by a program on success
@@ -10,6 +13,7 @@ log_dir = "/tmp/pypkg"  #: The directory in which to save logs
 
 env["PORTSDIR"] = getenv("PORTSDIR", "/usr/ports/")  #: Location of ports
 env["BATCH"] = None  #: Default to use batch mode
+env["NOCLEANDEPENDS"] = None  #: Default to only clean ports
 
 def log_files(origin):
   """
@@ -62,7 +66,8 @@ def make_target(origin, args, pipe=None):
     args = [args]
   args = args + [v and '%s="%s"' % (k, v) or "-D%s" % k for k, v in env.items()
                   if (k, v) != ("PORTSDIR", "/usr/ports/") and
-                    (args[0], k) != ('config', "BATCH")]
+                    (args[0], k) != ('config', "BATCH") and
+                    (k != "NOCLEANDEPENDS" or 'clean' in args)]
 
   if pipe is True:
     stdin, stdout, stderr = PIPE, PIPE, STDOUT
