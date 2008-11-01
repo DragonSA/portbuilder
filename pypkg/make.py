@@ -89,8 +89,7 @@ def make_target(origin, args, pipe=None):
 
   if stdin:
     make.stdin.close()
-
-  if pipe is False:
+  else: #if pipe is False:
     make.wait()
     monitor.resume()
 

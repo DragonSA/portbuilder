@@ -2,13 +2,14 @@
 """
 Controller for various ports operations
 """
-from logging import getLogger, FileHandler, DEBUG
+from logging import getLogger, FileHandler, DEBUG, INFO
 from pypkg import run_main
 
 handler = FileHandler('/tmp/pypkg/log', 'w')
 handler.setLevel(DEBUG)
 log = getLogger('pypkg')
 log.addHandler(handler)
+log.setLevel(INFO)
 
 # TODO: Add pylint check for `R0401'
 

@@ -23,10 +23,12 @@ class AutoExit(object):
        @type timeout: C{float}
     """
     from atexit import register
+    from logging import getLogger
     from os import getpid, setpgrp
     from signal import signal, SIGINT, SIGTERM
     from threading import Condition, Lock
-    
+
+    self._log = getLogger('pypkg.AutoExit')
     self.__wait = Condition(Lock())
     self.__pid = getpid()
     self.__timeout = timeout
@@ -65,12 +67,11 @@ class AutoExit(object):
       kill(self.__pid, sig)
       kill(getpid(), sig)
     else:
-      from logging import getLogger
       signal(SIGINT, SIG_IGN)
       signal(SIGTERM, SIG_IGN)
-      getLogger('pypkg.AutoExit').info("Sig Handler initiated, most of the " \
-                "following (and some previous) messages are a result of this " \
-                "and can be safely ignored")
+      self._log.info("Sig Handler initiated, most of the following (and some " \
+                "previous) messages are a result of this and can be safely " \
+                "ignored")
       terminate()
 
   def start(self):
@@ -111,7 +112,7 @@ class AutoExit(object):
     self.__wait.wait()
 
     try:
-      while self.__term:
+      while not self.__term:
         if self.__wait.wait(self.__timeout):
           break
         
@@ -123,9 +124,12 @@ class AutoExit(object):
             break
 
         if term:
+          #self._log.info("No queues active, terminating")
           self.terminate()
     except KeyboardInterrupt:
       self.terminate()
+
+    #self._log.info("Initiating terminate sequance")
 
     # Wait for everyone to finish
     for i in queues:
