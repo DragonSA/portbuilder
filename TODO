@@ -1,6 +1,6 @@
 Coding standard:
  * Handle appropriate exceptions
- * Log all relevent events
+ * Log all relevant events
  * Document all classes, methods, functions and (global|class) variables
  * Specify a public API (via __all___)
 
@@ -34,13 +34,15 @@ Future release:
    - Do we need to sort per category, overall, if at all?
    - Check for 100% compatibility
  - monitor:
-   - Converge common functionality into Monitor
-   + Make statistics global and intergrate into Stat
+   - Converge common functionality into Monitor (such as start time)
+   + Make statistics global and integrate into Stat
    - Show information about failed ports
+   - Split into separate modules
    - Stat:
      - Make options a class variable
    - Top:
-     - Fix termination (close down cleanly)
+     - Fix termination (close down cleanly using stop override)
+     - Remove wrapper, override start
      - Add option to:
        - Exit program
        - Change update rate
@@ -60,7 +62,7 @@ Future release:
  - Vet the thread locking for deadlocks
  - Move variables from protected to private (were appropriate)
  - Add all assertions
- - Ensure gracefull handling of failed ports (does not appear to work)
+ - Ensure graceful handling of failed ports (does not appear to work)
  - Make config_builder API compatible with the other Builders?
 
 0.0.6 - Milestone 6 (Finish Dependant Handling):
@@ -73,14 +75,14 @@ Future release:
  - DependHandler:
    - Ensure _count is done properly
    - Have a dummy port for all stale ports
-   - Do not do cyclic dependancy allocation (or move to late)
-   - DependHandler must handle the case when a dependancy fails unresolved
-   - Check for cyclic dependancies
+   - Do not do cyclic dependency allocation (or move to late)
+   - DependHandler must handle the case when a dependency fails unresolved
+   - Check for cyclic dependencies
    - _verify:
-     - Add caching of dependancies (no need to check them multiple times)
+     - Add caching of dependencies (no need to check them multiple times)
    - Implement type specific checking (bin vs lib) [mimic ports]
    - Add callback feature to Port (when resolved status has changed)
-   - Handle stale dependancies (with a dummy PortDepend)
+   - Handle stale dependencies (with a dummy PortDepend)
    - Handle a port having failed and still satisfy its dependants
    - Add a handler to change our status (and notify all that is has)
    - Add a concurrent implementation (and probably a cache of sorts)
@@ -96,6 +98,9 @@ Future release:
  - Vet the thread locking for deadlocks
  - Move variables from protected to private (were appropriate)
  - Add all assertions
+ - monitor:
+   - Add pause and resume support
+   - Add dummy monitor (aka no op)
  - PortCache:
    - Minimise duplicate job requests
  - Port:
@@ -151,14 +156,14 @@ Future release:
    - Handle worker thread crashing
  - make:
    - Have automatic logging of build commands (with archival)
-   - Add a command prefix (such as for socksify?)
+   * Add a command prefix (such as for socksify?)
    - Add sudo support
- + Split port into its subcomponents:
+ * Split port into its subcomponents:
    * Port
    * PortCache
    * DependHandler
-   - System interface (and apply appropriate abstraction)
-   + Develop proper API for the library
+   * System interface (and apply appropriate abstraction)
+   * Develop proper API for the library
 
 0.0.4 - Milestone 4 (Command line controller):
  * pypkg:
@@ -209,17 +214,17 @@ Future release:
    * Convert install status flags to linear
    * Convert stage status flags to linear
    * Move targets to queue (not build directly)
-   * Fix filtering (for dependancies) [actually remove, missplaced]
-   * Make depends return once competely initiated
+   * Fix filtering (for dependencies) [actually remove, miss-placed]
+   * Make depends return once completely initiated
    * _prepare:
      * Finish queue handling
      * Move to TargetBuilder
      * Fix resolving previous stages
  * DependHandler:
    * Make thread safe
-   * Allow constructor to initialise dependancies
+   * Allow constructor to initialise dependencies
    * Rename to be more descriptive
-   * Add getters for dependancies and dependants (ports and/or field)
+   * Add getters for dependencies and dependants (ports and/or field)
  * WorkerQueue:
    * Add queue putter that returns once run
    * Remove logger (needed?)

@@ -28,20 +28,82 @@ class Monitor(Thread):
     """
        Initialise the monitor
     """
+    from threading import Lock
+    
     Thread.__init__(self)
+
+    self.__delay = 1  #: Delay between monitor iterations
+    self.__lock = Lock()  #: Lock, to manage operations
+    self.__paused = False  #: If we are pausing
+    self.__started = False  #: Indicate if we have started
     self.__stop = False  #: Indicate the stopped status
+
+  def set_delay(self, delay):
+    """
+       Set the delay for displaying a new line
+
+       @param delay: The delay
+       @type delay: C{int}
+    """
+    self.__delay = delay
+
+  def start(self):
+    """
+       Start the monitor
+    """
+    self.__lock.acquire()
+    assert self.__started is False
+    self.__started = True
+
+    Thread.__init__(self)
 
   def stop(self):
     """
        Stop the monitor
     """
+    assert self.__started is True
     self.__stop = True
+    self.join()
 
-  def stopped(self):
+  def pause(self):
+    """
+       Pause the monitor
+    """
+    self.__lock.acquire()
+    assert self.__paused is False
+    self.__paused = True
+
+  def resume(self):
+    """
+       Resume the monitor
+    """
+    assert self.__paused is True
+    self.__paused = False
+    self.__lock.release()
+
+  def _sleep(self):
+    """
+       Sleep for the required time
+    """
+    from time import sleep
+
+    self.__lock.release()
+    if self.__stop:
+      return
+    sleep(self.__delay)
+    if self.__stop:
+      return
+    self.__lock.acquire()
+
+  def _stopped(self):
     """
        Indicate if the monitor has been stopped
+
+       @return: If the monitor has stopeed
+       @rtype: C{bool}
     """
     return self.__stop
+
 
 class Stat(Monitor):
   """
@@ -58,26 +120,24 @@ class Stat(Monitor):
     """
     from time import time
     Monitor.__init__(self)
+    self.set_delay(delay)
     
-    self.__delay = delay  #: Delay between line prints
     self.__start = time()  #: The time we started
 
   def run(self):
     """
        Run the monitor
     """
-    from port import Port
     import queue
-    from sys import stdout
     import target
-    from time import sleep
+    from port import Port
 
     count = 20
     options = (False, False, False, False)
-    while not self.stopped():
+    while not self._stopped():
       try:
         if len(queue.config_queue) and Port.configure:
-          sleep(self.__delay)
+          self._sleep()
           continue
         count += 1
 
@@ -92,20 +152,10 @@ class Stat(Monitor):
 
         self._print_line(options)
 
-        stdout.flush()
-        sleep(self.__delay)
+        self._sleep()
       except KeyboardInterrupt:
         from exit import terminate
         terminate()
-
-  def set_delay(self, delay):
-    """
-       Set the delay for displaying a new line
-
-       @param delay: The delay
-       @type delay: C{int}
-    """
-    self.__delay = delay
 
   @staticmethod
   def _print_header(options):
@@ -207,7 +257,6 @@ class Top(Monitor):
     from time import time
     Monitor.__init__(self)
     
-    self.__delay = 1
     self.__offset = 0
     self.__start = time()
     self.__stats = Statistics()
@@ -229,30 +278,25 @@ class Top(Monitor):
     """
     from port import Port
     from queue import config_queue
-    from time import sleep
 
-    while not self.stopped():
+    while not self._stopped():
       try:
         if len(config_queue) and Port.configure:
-          sleep(self.__delay)
+          self._sleep()
           continue
 
         self.__stats = Statistics()
-        
+
+        stdscr.erase()
         self.update_header(stdscr)
         self.update_rows(stdscr)
         stdscr.move(self.__offset, 0)
-
         stdscr.refresh()
-        sleep(self.__delay)
-        stdscr.erase()
+        
+        self._sleep()
       except KeyboardInterrupt:
         from exit import terminate
         terminate()
-
-    stdscr.erase()
-    stdscr.move(0, 0)
-    stdscr.refresh()
 
   def update_header(self, scr):
     """
