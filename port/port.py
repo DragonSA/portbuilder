@@ -4,63 +4,7 @@ managing port information.
 """
 from __future__ import with_statement
 
-from make import env
-
 __all__ = ['Port']
-
-ports_attr = {
-# Port naming
-"name":     ["PORTNAME",     str], # The port's name
-"version":  ["PORTVERSION",  str], # The port's version
-"revision": ["PORTREVISION", str], # The port's revision
-"epoch":    ["PORTEPOCH",    str], # The port's epoch
-
-# Port's package naming
-"pkgname": ["PKGNAME",       str], # The port's package name
-"prefix":  ["PKGNAMEPREFIX", str], # The port's package prefix
-"suffix":  ["PKGNAMESUFFIX", str], # The port's package suffix
-
-# Port's dependancies and conflicts
-"conflicts":      ["CONFLICTS",       tuple], # The port's conflictions
-"depends":        ["_DEPEND_DIRS",    tuple], # The port's dependency list
-"depend_build":   ["BUILD_DEPENDS",   tuple], # The port's build dependancies
-"depend_extract": ["EXTRACT_DEPENDS", tuple], # The port's extract dependancies
-"depend_fetch":   ["FETCH_DEPENDS",   tuple], # The port's fetch dependancies
-"depend_lib":     ["LIB_DEPENDS",     tuple], # The port's library dependancies
-"depend_run":     ["RUN_DEPENDS",     tuple], # The port's run dependancies
-"depend_patch":   ["PATCH_DEPENDS",   tuple], # The port's patch dependancies
-
-# Sundry port information
-"category":   ["CATEGORIES", tuple], # The port's categories
-"descr":      ["_DESCR",     str],   # The port's description file
-"comment":    ["COMMENT",    str],   # The port's comment
-"maintainer": ["MAINTAINER", str],   # The port's maintainer
-"options":    ["OPTIONS",    str],   # The port's options
-"prefix":     ["PREFIX",     str],   # The port's install prefix
-
-# Distribution information
-"distfiles": ["DISTFILES",   tuple], # The port's distfiles
-"subdir":    ["DIST_SUBDIR", str],   # The port's distfile's sub-directory
-
-"depends":  ["_DEPEND_DIRS", tuple], # The ports dependants
-} #: The attributes of the given port
-
-# The following are 'fixes' for various attributes
-ports_attr["depends"].append(lambda x: [i[len(env['PORTSDIR']):] for i in x])
-ports_attr["depends"].append(lambda x: ([x.remove(i) for i in x
-                                         if x.count(i) > 1], x)[1])
-ports_attr["distfiles"].append(lambda x: [i.split(':', 1)[0] for i in x])
-
-strip_depends = lambda x: [(i.split(':', 1)[0].strip(),
-                  i.split(':', 1)[1][len(env['PORTSDIR']):].strip()) for i in x]
-ports_attr["depend_build"].append(strip_depends)
-ports_attr["depend_extract"].append(strip_depends)
-ports_attr["depend_fetch"].append(strip_depends)
-ports_attr["depend_lib"].append(strip_depends)
-ports_attr["depend_run"].append(strip_depends)
-ports_attr["depend_patch"].append(strip_depends)
-
-del strip_depends
 
 class Port(object):
   """
@@ -103,15 +47,16 @@ class Port(object):
        @type origin: C{str}
     """
     from . import cache
+    from .arch import attr, status
     self._origin = origin  #: The origin of the port
-    self._install_status = port_status(origin) #: The install status of the port
+    self._install_status = status(origin) #: The install status of the port
     self._stage = 0  #: The (build) stage progress of the port
     self._attr_map = {}  #: The ports attributes
     self._working = False  #: Working flag
     self._failed = False  #: Failed flag
     self._depends = None  #: The dependant handlers for various stages
 
-    self._attr_map = port_attr(origin)
+    self._attr_map = attr(origin)
 
     for i in self._attr_map['depends']:
       cache.add(i)
@@ -195,10 +140,10 @@ class Port(object):
        @return: The dependant handler
        @rtype: C{DependHandler}
     """
-    from . import DependHandler
-
     if self._depends:
       return self._depends
+
+    from . import DependHandler
 
     with self._lock:
       while self._depends is False:
@@ -238,6 +183,8 @@ class Port(object):
        @rtype: C{str}
     """
     from os.path import join
+
+    from ..make import env
 
     def get_www():
       """
@@ -370,7 +317,8 @@ class Port(object):
       status = make.wait() is SUCCESS
 
       if status:
-        self._attr_map = port_attr(self._origin)
+        from .arch import attr
+        self._attr_map = attr(self._origin)
         for i in self._attr_map['depends']:
           cache.add(i)
 
@@ -554,67 +502,3 @@ class Port(object):
     if set(category) == set(master) and cache.has_key(port.origin()):
       return " ".join(cache[port.origin()])
     return " ".join(retrieve(port, category))
-
-
-def port_status(origin):
-  """
-     Get the current status of a port.  A port is either ABSENT, OLDER, CURRENT
-     or NEWER
-
-     @param origin: The origin of the port queried
-     @type origin: C{str}
-     @return: The port's status
-     @rtype: C{int}
-  """
-  from subprocess import Popen, PIPE, STDOUT
-  pkg_version = Popen(['pkg_version', '-O', origin], close_fds=True,
-                      stdout=PIPE, stderr=STDOUT)
-  if pkg_version.wait() != 0:
-    return Port.ABSENT
-
-  info = pkg_version.stdout.read().split()
-  if len(info) > 2:
-    from logging import getLogger
-    getLogger('pypkg.port_status').warning("Multiple ports with same origin " \
-                                           "'%s'" % origin)
-  info = info[1]
-  if info == '<':
-    return Port.OLDER
-  elif info == '>':
-    return Port.NEWER
-  else: #info == '=' or info == '?' or info =='*'
-    return Port.CURRENT
-
-def port_attr(origin):
-  """
-     Retrieves the attributes for a given port
-
-     @param origin: The port identifier
-     @type origin: C{str}
-     @return: A dictionary of attributes
-     @rtype: C{\{str:str|(str)|\}}
-  """
-  from ..make import make_target, SUCCESS
-
-  if env['PORTSDIR'][-1] != '/':
-    env['PORTSDIR'].join('/')
-
-  args = []
-  for i in ports_attr.itervalues():
-    args.append('-V')
-    args.append(i[0])
-
-  make = make_target(origin, args, pipe=True)
-  if make.wait() is not SUCCESS:
-    raise RuntimeError, "Error in obtaining information for port '%s'" % origin
-
-  attr_map = {}
-  for name, value in ports_attr.iteritems():
-    if value[1] is str:
-      attr_map[name] = make.stdout.readline().strip()
-    else:
-      attr_map[name] = value[1](make.stdout.readline().split())
-    for i in value[2:]:
-      attr_map[name] = i(attr_map[name])
-
-  return attr_map
