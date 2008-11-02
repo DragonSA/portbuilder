@@ -5,13 +5,14 @@ from __future__ import absolute_import
 
 from os import getenv
 
-__all__ = ['clean_log', 'env', 'log_dir', 'log_files', 'make_target',
-           'pre_cmd', 'SUCCESS']
+__all__ = ['clean_log', 'env', 'log_dir', 'make_target', 'no_opt', 'pre_cmd',
+           'SUCCESS']
 
 env = {}  #: The environment flags to pass to make, aka -D...
+log_dir = "/tmp/pypkg"  #: The directory in which to save logs
+no_opt = False  #: Indicate if we should not issue a command
 pre_cmd = []  #: Prepend to command
 SUCCESS = 0  #: The value returns by a program on success
-log_dir = "/tmp/pypkg"  #: The directory in which to save logs
 
 env["PORTSDIR"] = getenv("PORTSDIR", "/usr/ports/")  #: Location of ports
 env["BATCH"] = None  #: Default to use batch mode
@@ -49,6 +50,22 @@ def clean_log(origin):
   if isfile(log_file):
     unlink(log_file)
 
+def cmdtostr(args):
+  """
+     Convert a list of arguments to a single string.
+
+     @param args: The list of arguments
+     @type args: C{[str]}
+     @return: The arguments as a string
+     @rtype: C{str}
+  """
+  argstr = []
+  for i in args:
+    argstr.append(i.replace('"', '\"').replace("'", "\'").replace('\n', '\\\n'))
+    if ' ' in i or '\t' in i or '\n' in i:
+      argstr[-1] = "'%s'" & argstr[-1]
+  return ' '.join(argstr)
+
 def make_target(origin, args, pipe=None):
   """
      Run make to build a target with the given arguments and the appropriate
@@ -80,17 +97,35 @@ def make_target(origin, args, pipe=None):
   else:
     stdin, (stdout, stderr) = PIPE, log_files(origin)
 
-  if pipe is False:
+  if pipe is False and not no_opt:
     from pypkg.monitor import monitor
     monitor.pause()
 
-  make = Popen(pre_cmd + ['make', '-C', join(env["PORTSDIR"], origin)] + args,
-               close_fds=True, stdin=stdin, stdout=stdout, stderr=stderr)
+  args = pre_cmd + ['make', '-C', join(env["PORTSDIR"], origin)] + args
+  if pipe or not no_opt:
+    make = Popen(args, stdin=stdin, stdout=stdout, stderr=stderr,
+                 close_fds=True)
+  else:
+    print cmdtostr(args)
+    make = PopenNone()
 
-  if stdin:
+  if stdin and (pipe or not no_opt):
     make.stdin.close()
-  else: #if pipe is False:
+  elif pipe is False and not no_opt:
     make.wait()
     monitor.resume()
 
   return make
+
+# TODO: Implement some more psuedo-functions
+class PopenNone(object):
+  """
+     An empty replacement for Popen
+  """
+
+  @staticmethod
+  def wait():
+    """
+       Return SUCCESS
+    """
+    return SUCCESS

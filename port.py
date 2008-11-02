@@ -104,19 +104,19 @@ def set_options(options):
      @param options: The options
      @type options: C{object}
   """
-  from pypkg.make import env, pre_cmd
   from pypkg.port import Port
+  from pypkg import make
 
   # Add all -D options
   for i in options.make_env:
-    env[i] = None
+    make.env[i] = None
 
   # Add other make env options (aka variable=value)
   for i in options.args[:]:
     if i.find('=') != -1:
       # TODO:  Make sure var, val take the correct values
       var, val = i.split('=', 1)
-      env[var] = val
+      make.env[var] = val
       options.args.remove(i)
 
   # Batch mode, no configuring (-b)
@@ -127,7 +127,7 @@ def set_options(options):
 
   # No operations (-n)
   if options.no_opt:
-    pre_cmd.insert(0, 'echo')
+    make.no_opt = True
 
   # Package the ports after installing (-p)
   Port.package = options.package

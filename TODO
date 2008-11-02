@@ -101,6 +101,7 @@ Future release:
  - Vet the thread locking for deadlocks
  - Move variables from protected to private (were appropriate)
  - Add all assertions
+ - Fix sig_handler, should not be called under normal program termination
  * monitor:
    * Add pause and resume support
    * Add dummy monitor (aka no op)
