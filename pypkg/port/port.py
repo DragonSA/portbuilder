@@ -450,9 +450,12 @@ class Port(object):
 
     status = Port.INSTALL, make.wait() is SUCCESS
     if status:
+      from pypkg.port.arch import status
       #  Don't need to lock to change this as it will already have been set
-      self._install_status = Port.CURRENT
-      self._depends.status_changed()
+      install_status = self._install_status
+      self._install_status = status(self._origin)
+      if install_status != self._install_status:
+        self._depends.status_changed()
 
     return status
 

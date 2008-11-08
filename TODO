@@ -151,8 +151,8 @@ Future release:
        * Allow forcing of config options
      - fetch:
        - Add a cache for fetching
-     + install:
-       - Update port install status properly
+     * install:
+       * Update port install status properly
        * Handle when a port is already installed
  * WorkerQueue:
    * Remove condition (not needed and overexposing internals)

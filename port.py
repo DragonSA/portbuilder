@@ -37,7 +37,6 @@ def main():
       monitor.set_monitor(monitor.Stat(options.stat_mode))
     else:
       monitor.set_monitor(monitor.Top())
-      log.error("Starting Top monitor (%s)" % (monitor.monitor))
   else:
     monitor.set_monitor(monitor.NoneMonitor())
 
