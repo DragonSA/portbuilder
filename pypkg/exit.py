@@ -61,7 +61,7 @@ class AutoExit(object):
        @type sig: C{int}
     """
     from os import getpid, kill
-    from signal import signal, SIGINT, SIGTERM, SIG_DFL, SIG_IGN
+    from signal import signal, SIGINT, SIGTERM, SIG_DFL
 
     if self.__pid != getpid():
       signal(SIGINT, SIG_DFL)
@@ -69,8 +69,6 @@ class AutoExit(object):
       kill(self.__pid, sig)
       kill(getpid(), sig)
     else:
-      signal(SIGINT, SIG_IGN)
-      signal(SIGTERM, SIG_IGN)
       self._log.info("Sig Handler initiated, most of the following (and some " \
                 "previous) messages are a result of this and can be safely " \
                 "ignored")
@@ -89,17 +87,8 @@ class AutoExit(object):
     """
        Shutdown the program properly.
     """
-    from os import killpg
-    from signal import SIGTERM
-
-    from pypkg.queue import queues
-
-    # Kill all running processes (they should clean themselves up)
     if not self.__term:
       self.__term = True
-      for i in queues:
-        i.terminate()
-      killpg(0, SIGTERM)
       with self.__lock:
         self.__wait.notify()
 
@@ -108,6 +97,9 @@ class AutoExit(object):
        Execute the main handlers.  This needs to be run from the main loop to
        allow signals to be processed promptly.
     """
+    from os import killpg
+    from signal import signal, SIGINT, SIGTERM, SIG_IGN
+    
     from pypkg.port import cache, Port
     from pypkg.queue import queues
     from pypkg import monitor
@@ -138,6 +130,17 @@ class AutoExit(object):
 
     self._log.info("Initiating terminate sequance")
 
+    # Switching off sig handling.  This is the end
+    signal(SIGINT, SIG_IGN)
+    signal(SIGTERM, SIG_IGN)
+
+    # Terminating all queues
+    for i in queues:
+      i.terminate()
+
+    # Killing all spawned processes
+    killpg(0, SIGTERM)
+    
     # Wait for everyone to finish
     for i in queues:
       i.join()
