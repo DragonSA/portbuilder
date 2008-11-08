@@ -117,12 +117,10 @@ Future release:
    * Only clean port (don't do recursive cleaning)
    * Investigate fine grain locking (memory vs speed)
      [and adjust locking appropriately]
-   - Add distfiles checking (to optimise fetching)
    - Allow switching for depends resolution (from complex to simple...)
-   - Add caching for port information (with refreshing checks)
    - Handles ports that do not exist
    - Add logging of port targets
-   - Check need for status
+   * Check need for status
    - Move prepare to a private method?
    * Move from flags to linear for stages
    * Use only one lock and condition for the port (should not cause too much
@@ -141,10 +139,7 @@ Future release:
      - DEPRECIATION...
      - NO_BUILD option (and implement)
      - etc
-   - Check all attributes are correctly formatted:
-     - Port categories
-     - Naming scheme
-   - Handlers:
+   + Handlers:
      - Provide output stream (as work in progress)
      * config:
        * Check for caching of options

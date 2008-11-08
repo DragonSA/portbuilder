@@ -42,8 +42,9 @@ ports_attr = {
 "distfiles": ["DISTFILES",   tuple], # The port's distfiles
 "subdir":    ["DIST_SUBDIR", str],   # The port's distfile's sub-directory
 
-"optionsfile":  ["OPTIONSFILE", str],    # The options file
-"depends":      ["_DEPEND_DIRS", tuple], # The ports dependants
+"depends":      ["_DEPEND_DIRS", tuple],   # The ports dependants
+"makefiles":    [".MAKEFILE_LIST", tuple], # The makefiles included
+"optionsfile":  ["OPTIONSFILE", str],      # The options file
 } #: The attributes of the given port
 
 # The following are 'fixes' for various attributes
@@ -60,6 +61,7 @@ ports_attr["depend_fetch"].append(strip_depends)
 ports_attr["depend_lib"].append(strip_depends)
 ports_attr["depend_run"].append(strip_depends)
 ports_attr["depend_patch"].append(strip_depends)
+ports_attr["makefiles"].append(lambda x: [i for i in x if i != '..'])
 
 del strip_depends
 
