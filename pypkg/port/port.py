@@ -442,8 +442,11 @@ class Port(object):
     """
     from pypkg.make import make_target, SUCCESS
 
-    make = make_target(self._origin, ['install'] +
-                       (Port.package and ['package'] or []))
+    if self.install_status() == Port.ABSENT:
+      arg = ['install']
+    else:
+      arg = ['deinstall', 'reinstall']
+    make = make_target(self._origin, arg + (Port.package and ['package'] or []))
 
     status = Port.INSTALL, make.wait() is SUCCESS
     if status:

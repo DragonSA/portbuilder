@@ -110,19 +110,17 @@ Future release:
  * Move AutoExit to Condition waiting
  * PortCache:
    * Minimise duplicate job requests
- - Port:
+ + Port:
    * Add clean target (and have a failed port clean itself...)
    * Use batch mode for all stages except config
    * Precleaning
    * Only clean port (don't do recursive cleaning)
-   - Investigate fine grain locking (memory vs speed)
+   * Investigate fine grain locking (memory vs speed)
      [and adjust locking appropriately]
    - Add distfiles checking (to optimise fetching)
    - Allow switching for depends resolution (from complex to simple...)
    - Add caching for port information (with refreshing checks)
    - Handles ports that do not exist
-   - Allow information collection from alternative sources
-     (/var/db/pkg/* or portupgrade)
    - Add logging of port targets
    - Check need for status
    - Move prepare to a private method?
@@ -152,15 +150,15 @@ Future release:
        * Check for caching of options
        * Allow forcing of config options
      - fetch:
-       - Add proxy support and changing the fetcher (e.g. wget)
        - Add a cache for fetching
-     - install:
+     + install:
        - Update port install status properly
+       * Handle when a port is already installed
  * WorkerQueue:
    * Remove condition (not needed and overexposing internals)
    * Handle worker thread crashing
- - make:
-   - Have automatic logging of build commands (with archival)
+ + make:
+   - Have logging of build commands (with archival)
    * Add a command prefix (such as for socksify?)
    - Add su/sudo support
    * Fix the use of prefexing...
