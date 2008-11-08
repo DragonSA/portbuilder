@@ -101,7 +101,7 @@ Future release:
  - Vet the thread locking for deadlocks
  - Move variables from protected to private (were appropriate)
  - Add all assertions
- - Fix pkg_version (when some data has corrupted)
+ * Fix pkg_version (when some data has corrupted)
  * Fix sig_handler, should not be called under normal program termination
  * monitor:
    * Add pause and resume support
@@ -163,7 +163,8 @@ Future release:
    - Have automatic logging of build commands (with archival)
    * Add a command prefix (such as for socksify?)
    - Add su/sudo support
-   - Fix the use of prefexing...
+   * Fix the use of prefexing...
+   * Fix no opt command displaying
  * Split port into its subcomponents:
    * Port
    * PortCache

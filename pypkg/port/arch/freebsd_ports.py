@@ -82,12 +82,17 @@ def status(origin):
   if pkg_version.wait() != 0:
     return Port.ABSENT
 
-  info = pkg_version.stdout.read().split()
-  if len(info) > 2:
+  info = []
+  for i in pkg_version.stdout.readlines():
+    if not i.startswith("pkg_version: "):
+      info.append(i[:-1])
+  
+  if len(info) > 1:
     from logging import getLogger
     getLogger('pypkg.port.arch.freebsd_port.port_status').warning(
                                 "Multiple ports with same origin '%s'" % origin)
-  info = info[1]
+
+  info = info[0].split()[1]
   if info == '<':
     return Port.OLDER
   elif info == '>':
