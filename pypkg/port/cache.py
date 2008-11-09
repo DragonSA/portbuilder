@@ -124,20 +124,20 @@ class PortCache(dict):
       self.__dead_cnt += 1
       return ports_queue.put_nowait(lambda: self._get(key))
 
-  def get(self, k, d=None):
+  def get(self, key, default=None):
     """
        Get a port from the database.
 
-       @param k: The ports origin
-       @type k: C{str}
-       @param d: The default argument
+       @param key: The ports origin
+       @type key: C{str}
+       @param default: The default argument
        @return: The port or None
        @rtype: C{Port}
     """
     try:
-      return self[k]
+      return self[key]
     except KeyError:
-      return d
+      return default
 
   def _get(self, key):
     """
