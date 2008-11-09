@@ -116,8 +116,8 @@ Future release:
    * Add dummy monitor (aka no op)
    * Fix initialisation and deinitialisation
  * Move AutoExit to Condition waiting
- - CacheDB:
-   - When user, synchronise db with master
+ * CacheDB:
+   * When user, synchronise db with master
    * Add --no-cache option for pypkg (the functionality)
  * env:
    * Set db dirs according to user (aka root->/var/db/pypkg)

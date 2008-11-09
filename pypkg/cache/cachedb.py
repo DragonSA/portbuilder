@@ -4,6 +4,7 @@ The cachedb module.  This modules has the cache database storage class.
 from __future__ import absolute_import, with_statement
 
 from contextlib import contextmanager
+from UserDict import DictMixin
 
 __all__ = ['CacheDB']
 
@@ -24,7 +25,9 @@ class CacheDB(object):
     from pypkg.env import dirs
 
     self._dbcache = {}
+    self._dbcache_root = {}
     self._env = DBEnv()
+    self._env_root = None
     self.__lock = Lock()
 
     self._env.set_flags(DB_AUTO_COMMIT, 1) # | DB_DIRECT_DB | DB_DIRECT_LOG, 1)
@@ -32,6 +35,15 @@ class CacheDB(object):
     self._env.set_lg_dir(dirs['db_log'])
     self._env.set_tmp_dir(dirs['db_tmp'])
     self._env.open(dirs['db'], DB_CREATE | DB_RECOVER | DB_THREAD |
+                      DB_INIT_LOCK | DB_INIT_LOG | DB_INIT_MPOOL | DB_INIT_TXN)
+
+    if dirs['db'] != dirs['db_root']:
+      self._env_root = DBEnv()
+      self._env_root.set_flags(DB_AUTO_COMMIT, 1)
+      self._env_root.set_data_dir(dirs['db_root'])
+      self._env_root.set_lg_dir(dirs['db_root_log'])
+      self._env_root.set_tmp_dir(dirs['db_root_tmp'])
+      self._env_root.open(dirs['db'], DB_CREATE | DB_RECOVER | DB_THREAD |
                       DB_INIT_LOCK | DB_INIT_LOG | DB_INIT_MPOOL | DB_INIT_TXN)
 
     self.__count = 0.
@@ -57,10 +69,14 @@ class CacheDB(object):
           if no_cache:
             new_db = DBProxyNone()
           else:
-            from bsddb.db import DB, DB_HASH, DB_CREATE
+            from bsddb.db import DB, DB_HASH, DB_CREATE, DB_RDONLY
             new_db = DB(self._env)
             new_db.open(key, dbtype=DB_HASH, flags=DB_CREATE)
-            self._dbcache[key] = DBProxy(new_db)
+            if self._env_root:
+              bases_db = DB(self._env_root)
+              bases_db.open(key, dbtype=DB_HASH, flags=DB_CREATE | DB_RDONLY)
+              self._dbcache_root[key] = DBProxy(bases_db)
+            self._dbcache[key] = DBProxy(new_db, self._dbcache_root.get(key))
       return self._dbcache[key]
 
   def close(self):
@@ -70,6 +86,11 @@ class CacheDB(object):
     for dbs in self._dbcache.itervalues():
       dbs.close()
     self._env.close()
+
+    for dbs in self._dbcache_root.itervalues():
+      dbs.close()
+    if self._env_root:
+      self._env_root.close()
 
   def get(self, key):
     """
@@ -83,20 +104,23 @@ class CacheDB(object):
     return self[key]
 
 
-class DBProxy(object):
+class DBProxy(DictMixin):
   """
      Provide a dictionary like interface to a BSD database.  Proper locking
      is implemented.
   """
 
-  def __init__(self, bsddb):
+  def __init__(self, bsddb, bases=None):
     """
        Initialise the database's proxy.
 
-       @param db: The database
-       @type db: C{DB}
+       @param bsddb: The database
+       @type bsddb: C{DB}
+       @param bases: The database that provides information if we dont have it
+       @type bases: C{dict}
     """
     self.__db = bsddb
+    self.__bases = bases
     self.__lock = RWLock()
 
   def __getitem__(self, key):
@@ -112,7 +136,10 @@ class DBProxy(object):
       with self.__lock.read_lock:
         return loads(self.__db.get(dumps(key, -1)))
     except BaseException:
-      raise KeyError, key
+      if self.__bases:
+        return self.__bases[key]
+      else:
+        raise KeyError, key
 
   def __setitem__(self, key, value):
     """
@@ -126,19 +153,16 @@ class DBProxy(object):
     with self.__lock.write_lock:
       self.__db.put(dumps(key, -1), dumps(value, -1))
 
-  def get(self, key, default=None):
+  def __delitem__(self, key):
     """
-       Retrieve the value refernced by the key and if it does not exist return
-       default.
+       Remove the value referenced by key (and key itself).
 
        @param key: The key
-       @param default: The return value if key does not exist
-       @return: The value or default
+       @param value: The value
     """
-    try:
-      return self[key]
-    except KeyError:
-      return default
+    from cPickle import dumps
+    with self.__lock.write_lock:
+      self.__db.delete(dumps(key, -1))
 
   def has_key(self, key):
     """
@@ -152,7 +176,10 @@ class DBProxy(object):
     with self.__lock.read_lock:
       if self.__db.get(dumps(key)):
         return True
-    return False
+    if self.__bases:
+      return self.__bases.has_key(key)
+    else:
+      return False
 
   def close(self):
     """
