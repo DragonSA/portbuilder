@@ -21,13 +21,25 @@ def init_dirs():
   dirs['home'] = join(getenv('HOME'), '.pypkg')  # ${HOME}/.pypkg
 
   # The database dirs
-  dirs['db']     = join(dirs['home'], 'cache') # ${PYPKG}/db
-  dirs['db_log'] = join(dirs['db'], 'log')     # ${PYPKG}/${DB}/log
-  dirs['db_tmp'] = '/tmp/pypkg'                # ${TMPDIR}/pypkg
+  root_dbdir = 'var/db/pypkg'
+  if getenv('USER') == 'root':
+    dirs['db']      = root_dbdir # {DB_ROOT}
+    dirs['db_root'] = dirs['db'] # ${DB}
+  else:
+    dirs['db']      = join(dirs['home'], 'cache') # ${PYPKG}/db
+    if isdir(root_dbdir):
+      dirs['db_root'] = root_dbdir # {DB_ROOT}
+    else:
+      dirs['db_root'] = dirs['db'] # ${DB}
+  dirs['db_log'] = join(dirs['db'], 'log') # ${PYPKG}/${DB}/log
+  dirs['db_tmp'] = '/tmp/pypkg'            # ${TMPDIR}/pypkg
+
+  dirs['db_root_log'] = join(dirs['db'], 'log') # ${ROOT_DB}/log
+  dirs['db_root_tmp'] = '/tmp/pypkg'            # ${TMPDIR}/pypkg
 
   # The log dir
   dirs['log']      = '/tmp/pypkg' #join(dirs['home'], 'log') # ${PYPKG}/log
-  dirs['log_port'] = '/tmp/pypkg'         # ${TMPDIR}/pypkg
+  dirs['log_port'] = '/tmp/pypkg' # ${TMPDIR}/pypkg
 
   # The config dir
   dirs['config'] = dirs['home']  # ${PYPKG}

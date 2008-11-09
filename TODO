@@ -20,6 +20,9 @@ Future release:
    - Try isolate system and ports dependant code
  - Port:
    - Handle common makefiles (make caching more effiecient
+ - DBProxy:
+   - Implement remainder of DictMixin
+   - Properly handle basis and bsddb (with above)
 
 0.0.8 - Milestone 8 (Finish command line controller):
  - Refine and condense code
@@ -116,8 +119,8 @@ Future release:
  - CacheDB:
    - When user, synchronise db with master
    * Add --no-cache option for pypkg (the functionality)
- - env:
-   - Set db dirs according to user (aka root->/var/db/pypkg)
+ * env:
+   * Set db dirs according to user (aka root->/var/db/pypkg)
  * PortCache:
    * Minimise duplicate job requests
  + Port:
