@@ -475,12 +475,33 @@ class Port(object):
       arg = ['install']
     else:
       arg = ['deinstall', 'reinstall']
-    make = make_target(self._origin, arg + (Port.package and ['package'] or []))
+    if Port.package:
+      args += ['package']
+      if self.attr('no_package'):
+        args += '-DFORCE_PACKAGE'
+    make = make_target(self._origin, args)
 
     status = Port.INSTALL, make.wait() is SUCCESS
     if status:
+      from os.path import isfile, join
+
       from pypkg.port.arch import status
       #  Don't need to lock to change this as it will already have been set
+      if Port.package:
+        if self.attr('no_package'):
+          self._log.info("Binary distribution of '%s' forbidden: ``%s''" %
+                         (self._origin, self.attr('no_package')))
+        elif self.attr('no_cdrom'):
+          self._log.info("Distribution on CDROM of '%s' restricted: ``%s''" %
+                         (self._origin, self.attr('no_cdrom')))
+        elif self.attr('restricted'):
+          self._log.info("Distribution of '%s' restricted: ``%s''" %
+                         (self._origin, self.attr('restricted')))
+      pkg_message = join(env['PORTSDIR'], self._origin, 'pkg-message')
+      if isfile(pkg_message):
+        self._log.info("Port '%s' has the following message:\n%s" %
+                       (self._origin, open(pkg_message).read()))
+
       install_status = self._install_status
       self._install_status = no_opt and Port.CURRENT or status(self._origin,
                                                                  self._attr_map)

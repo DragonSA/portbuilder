@@ -23,6 +23,8 @@ Future release:
  - DBProxy:
    - Implement remainder of DictMixin
    - Properly handle basis and bsddb (with above)
+ - CacheDB:
+   - Handle when cached data changes version...
 
 0.0.8 - Milestone 8 (Finish command line controller):
  - Refine and condense code
@@ -132,6 +134,7 @@ Future release:
      [and adjust locking appropriately]
    * Handles ports that do not exist
    - Add logging of port targets
+   * Handle pkg-message
    * Check need for status
    * Move prepare/finalise to a private method?
    * Move from flags to linear for stages
@@ -146,11 +149,14 @@ Future release:
    + Attributes:
      * Check for a need of PATCHFILES
      * ALWAYS_KEEP_DISTFILES
-     - Extend attributes for NO_*
+     * Extend attributes for NO_*
      - FORBIDDEN, BROKEN and IGNORE
      - ONLY_FOR_ARCHS and NOT_FOR_ARCHS
      - DEPRECIATION...
      - NO_BUILD option (and implement)
+     - CONFLICTS
+     - IS_INTERACTIVE
+     * Restrictions
      - etc
    * Handlers:
      * Provide output stream (as work in progress)
