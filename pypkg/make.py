@@ -122,6 +122,7 @@ def make_target(origin, args, pipe=None):
 
   return make
 
+
 class PopenNone(object):
   """
      An empty replacement for Popen

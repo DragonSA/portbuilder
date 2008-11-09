@@ -459,7 +459,12 @@ class Port(object):
 
     #make = make_target(self._origin, ['clean', 'extract', 'patch', 'configure',
                                       #'build'])
-    return make_target(self._origin, ['clean', 'all']).wait() is SUCCESS
+    if self.attr('interactive'):
+      pipe = False
+    else:
+      pipe = None
+
+    return make_target(self._origin, ['clean', 'all'], pipe).wait() is SUCCESS
 
   install = lambda self: self.build_stage(Port.INSTALL)
   def _install(self):
