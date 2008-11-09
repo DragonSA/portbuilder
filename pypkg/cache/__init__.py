@@ -32,6 +32,9 @@ def check_files(db_name, name):
   try:
     files = loads(files)
   except BaseException:
+    from logging import getLogger
+    getLogger('pypkg.cache').warn('Corrupt data detected (%s.%s)' %
+                                                               (db_name, name))
     return False
 
   f_list = []

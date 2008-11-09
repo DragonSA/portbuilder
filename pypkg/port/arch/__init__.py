@@ -17,16 +17,21 @@ def attr(origin):
      @return: A dictionary of attributes
      @rtype: C{\{str:str|(str)|\}}
   """
+  from cPickle import dumps, loads
+  
   from pypkg.cache import db, check_files, set_files
 
   files = check_files('port.makefiles', origin)
 
   if files:
-    from cPickle import loads
-    return loads(db['port.attr'].get(origin))
-  else:
-    from cPickle import dumps
-    attr = get_attr(origin)
-    db['port.attr'].put(origin, dumps(attr, -1))
-    set_files('port.makefiles', origin, attr['makefiles'])
-    return attr
+    try:
+      return loads(db['port.attr'].get(origin))
+    except BaseException:
+      from logging import getLogger
+      getLogger('pypkg.cache').warn('Corrupt data detected (port.attr.%s)' %
+                                                                        origin)
+  
+  att = get_attr(origin)
+  db['port.attr'].put(origin, dumps(att, -1))
+  set_files('port.makefiles', origin, att['makefiles'])
+  return att

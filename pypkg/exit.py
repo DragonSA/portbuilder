@@ -95,7 +95,7 @@ class AutoExit(object):
     else:
       from os import killpg
       from signal import SIGTERM
-      
+
       killpg(0, SIGTERM)
 
   def run(self):
@@ -126,7 +126,7 @@ class AutoExit(object):
             term = False
             break
 
-        if term:
+        if term and not self.__term:
           self._log.info("No queues active, terminating")
           self.__lock.release()
           self.terminate()
@@ -141,13 +141,16 @@ class AutoExit(object):
     signal(SIGTERM, SIG_IGN)
 
     # Terminating all queues
+    self._log.debug("(1/6) Informating all queues of the termination")
     for i in queues:
       i.terminate()
 
     # Killing all spawned processes
+    self._log.debug("(2/6) Killing all spawned processes")
     killpg(0, SIGTERM)
-    
+
     # Wait for everyone to finish
+    self._log.debug("(3/6) Waiting for all queues to finish the current jobs")
     for i in queues:
       i.join()
 
@@ -155,13 +158,17 @@ class AutoExit(object):
     signal(SIGINT, SIG_IGN)
 
     # Cleanup all ports that have built but not installed
+    self._log.debug("(4/6) Cleaning the built ports")
     for i in cache.itervalues():
       if i and not i.failed() and (i.stage() == Port.BUILD or \
           (i.stage() == Port.INSTALL and i.working())):
         i.clean()
 
+    self._log.debug("(5/6) Stopping the monitor")
     monitor.monitor.stop()
+    self._log.debug("(6/6) Closing all databases")
     db.close()
+    self._log.info("Finished terminate sequance")
     exit(0)
 
 

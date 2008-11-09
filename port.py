@@ -11,6 +11,8 @@ log = getLogger('pypkg')
 log.addHandler(handler)
 log.setLevel(INFO)
 
+getLogger('pypkg.AutoExit').setLevel(DEBUG)
+
 # TODO: Add pylint check for `R0401'
 
 def main():
