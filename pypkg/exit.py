@@ -99,7 +99,8 @@ class AutoExit(object):
     """
     from os import killpg
     from signal import signal, SIGINT, SIGTERM, SIG_IGN
-    
+
+    from pypkg.cache import db
     from pypkg.port import cache, Port
     from pypkg.queue import queues
     from pypkg import monitor
@@ -152,6 +153,7 @@ class AutoExit(object):
         i.clean()
 
     monitor.monitor.stop()
+    db.close()
     exit(0)
 
 

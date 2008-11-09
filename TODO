@@ -108,6 +108,10 @@ Future release:
    * Add dummy monitor (aka no op)
    * Fix initialisation and deinitialisation
  * Move AutoExit to Condition waiting
+ - CacheDB:
+   - When user, synchronise db with master
+ - env:
+   - Set db dirs according to user (aka root->/var/db/pypkg)
  * PortCache:
    * Minimise duplicate job requests
  + Port:
