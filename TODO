@@ -129,11 +129,12 @@ Future release:
    * Move from flags to linear for stages
    * Use only one lock and condition for the port (should not cause too much
      contention since only a few instances will use it at once)
-   - Offline cache of ports data
-     - Handle changes in port config
-     - Handle changes in port
-       - date stamps
-       - included Makefiles
+   * Offline cache of ports data
+     * Handle changes in port config
+     * Handle changes in port
+       * date stamps
+       * included Makefiles
+   - Efficient version of pkg_version
    - Attributes:
      - Check for a need of PATCHFILES
      - ALWAYS_KEEP_DISTFILES

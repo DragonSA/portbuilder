@@ -69,9 +69,10 @@ class AutoExit(object):
       kill(self.__pid, sig)
       kill(getpid(), sig)
     else:
-      self._log.info("Sig Handler initiated, most of the following (and some " \
-                "previous) messages are a result of this and can be safely " \
-                "ignored")
+      if not self.__term:
+        self._log.info("Sig Handler initiated, most of the following (and " \
+                       "some previous) messages are a result of this and can " \
+                       "be safely ignored")
       terminate()
 
   def start(self):
@@ -91,6 +92,11 @@ class AutoExit(object):
       self.__term = True
       with self.__lock:
         self.__wait.notify()
+    else:
+      from os import killpg
+      from signal import SIGTERM
+      
+      killpg(0, SIGTERM)
 
   def run(self):
     """
@@ -131,8 +137,7 @@ class AutoExit(object):
 
     self._log.info("Initiating terminate sequance")
 
-    # Switching off sig handling.  This is the end
-    signal(SIGINT, SIG_IGN)
+    # Switching off sig handling.  This is the end.
     signal(SIGTERM, SIG_IGN)
 
     # Terminating all queues
@@ -145,6 +150,9 @@ class AutoExit(object):
     # Wait for everyone to finish
     for i in queues:
       i.join()
+
+    # We are in the final stage, ignore user
+    signal(SIGINT, SIG_IGN)
 
     # Cleanup all ports that have built but not installed
     for i in cache.itervalues():
