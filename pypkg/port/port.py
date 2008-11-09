@@ -131,7 +131,7 @@ class Port(object):
   STAGE_NAME = {CONFIG : "configure", FETCH : "fetch", BUILD : "build",
                 INSTALL : "install"}
 
-  force_noconf = False  #: If the port should not configure itself
+  force_noconfig = False  #: If the port should not configure itself
   force_config = False  #: Force issueing a `make config'
   fetch_only = False  #: Only fetch the port, skip all other stages
   package = False  #: If newly installed ports should be packaged
@@ -388,7 +388,7 @@ class Port(object):
     from pypkg.port import cache
     from pypkg.make import make_target, SUCCESS
 
-    if len(self._attr_map['options']) != 0  and not Port.force_config and \
+    if len(self._attr_map['options']) != 0  and not Port.force_noconfig and \
          check_config(self.attr('optionsfile'), self.attr('pkgname')) or \
          Port.force_config:
       make = make_target(self._origin, 'config', pipe=False)

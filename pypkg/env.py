@@ -30,7 +30,7 @@ def init_dirs():
   # The config dir
   dirs['config'] = dirs['home']  # ${PYPKG}
 
-  all_dirs = dirs.items()
+  all_dirs = dirs.values()
   all_dirs.sort()
   for i in all_dirs:
     if not isdir(i):
