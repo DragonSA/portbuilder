@@ -472,9 +472,9 @@ class Port(object):
     from pypkg.make import make_target, no_opt, SUCCESS
 
     if self.install_status() == Port.ABSENT:
-      arg = ['install']
+      args = ['install']
     else:
-      arg = ['deinstall', 'reinstall']
+      args = ['deinstall', 'reinstall']
     if Port.package:
       args += ['package']
       if self.attr('no_package'):
@@ -486,6 +486,7 @@ class Port(object):
       from os.path import isfile, join
 
       from pypkg.port.arch import status
+      from pypkg.make import env
       #  Don't need to lock to change this as it will already have been set
       if Port.package:
         if self.attr('no_package'):
