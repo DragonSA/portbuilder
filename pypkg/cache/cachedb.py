@@ -28,6 +28,8 @@ class CacheDB(object):
     self._env.set_tmp_dir(dirs['db_tmp'])
     self._env.open(dirs['db'], DB_CREATE | DB_INIT_CDB | DB_INIT_MPOOL)
 
+    self.__count = 0.
+
   def __getitem__(self, key):
     """
        Retrieve a database.

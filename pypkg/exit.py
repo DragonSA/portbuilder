@@ -169,6 +169,7 @@ class AutoExit(object):
     self._log.debug("(6/6) Closing all databases")
     db.close()
     self._log.info("Finished terminate sequance")
+    #print Proxy.count
     exit(0)
 
 
@@ -176,3 +177,39 @@ exit_handler = AutoExit(0.1)  #: Exit handler
 set_timeout = exit_handler.set_timeout
 start = exit_handler.start
 terminate = exit_handler.terminate
+
+#class Proxy(object):
+  #from threading import Lock
+
+  #count = 0.
+  #lock = Lock()
+
+  #def __init__(self, proxy, func):
+    #self.proxy = proxy
+    #self.func = func
+
+  #def __getattribute__(self, name):
+    #func = object.__getattribute__(self, 'func')
+    #if name == func:
+      #return object.__getattribute__(self, 'timer')
+    #else:
+      #return getattr(object.__getattribute__(self, 'proxy'), name)
+
+  #def timer(self, *args, **kwargs):
+    #from time import clock
+
+    #func = getattr(object.__getattribute__(self, 'proxy'),
+                                        #object.__getattribute__(self, 'func'))
+
+    #start = clock()
+    #value = func(*args, **kwargs)
+    #end = clock()
+
+    #with Proxy.lock:
+      #Proxy.count += end - start
+
+    #return value
+
+#import pypkg.port.arch
+#from sys import modules
+#modules['pypkg.port.arch'] = Proxy(modules['pypkg.port.arch'], 'status')

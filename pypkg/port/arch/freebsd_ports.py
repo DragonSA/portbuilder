@@ -65,7 +65,7 @@ ports_attr["makefiles"].append(lambda x: [i for i in x if i != '..'])
 
 del strip_depends
 
-def get_status(origin, attr):
+def get_status(origin, attr, cache=dict()):
   """
      Get the current status of a port.  A port is either ABSENT, OLDER, CURRENT
      or NEWER.
@@ -74,24 +74,30 @@ def get_status(origin, attr):
      @type origin: C{str}
      @param attr: The attributes of the port
      @type attr: C{\{str:str|(str)|\}}
+     @param cache: The cache of ports installed
+     @type cache: C{\{str:[str]|str|int\}}
      @return: The port's status
      @rtype: C{int}
   """
-  from os.path import isdir, isfile, join
+  from os import path
   from os import listdir
   from logging import getLogger
 
   from pypkg.port import Port
 
+  pkg = "/var/db/pkg"
+  if not cache.has_key('pkg_mtime') or path.getmtime(pkg) > cache['pkg_mtime']:
+    cache['pkg_mtime'] = path.getmtime(pkg)
+    cache['pkg_listdir'] = listdir(pkg)
+
   status = Port.ABSENT
   name = attr['pkgname'].rsplit('-', 1)[0]
 
-  for i in listdir("/var/db/pkg/"):
-    idir = join("/var/db/pkg/", i)
-    if isdir(idir) and i.rsplit('-', 1)[0] == name:
-      content = join(idir, '+CONTENTS')
+  for i in cache['pkg_listdir']:
+    if i.rsplit('-', 1)[0] == name:
+      content = path.join(pkg, i, '+CONTENTS')
       porigin = None
-      if isfile(content):
+      if path.isfile(content):
         for j in open(content, 'r'):
           if j.startswith('@comment ORIGIN:'):
             porigin = j[16:-1].strip()

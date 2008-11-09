@@ -22,7 +22,6 @@ def check_files(db_name, name):
      @rtype: C{bool}
   """
   from cPickle import loads
-  from os.path import exists, getmtime, getsize
 
   files = db[db_name].get(name)
 
@@ -39,10 +38,7 @@ def check_files(db_name, name):
 
   f_list = []
   for path, stats in files:
-    if exists(path):
-      if not stats or stats != (getmtime(path), getsize(path)):
-        return False
-    elif stats:
+    if stats != getstats(path):
       return False
     f_list.append(path)
     
@@ -60,13 +56,42 @@ def set_files(db_name, name, files):
      @type files: C{[str]}
   """
   from cPickle import dumps
-  from os.path import exists, getmtime, getsize
 
   data = []
   for i in files:
-    if exists(i):
-      data.append((i, (getmtime(i), getsize(i))))
-    else:
-      data.append((i, None))
+    data.append((i, getstats(i)))
 
   db[db_name].put(name, dumps(data, -1))
+
+def getstats(path, cache=dict()):
+  """
+     Get the statistics on a given file.  Uses cache when possible.
+
+     @param path: The file to get the stats on.
+     @type path: C{str}
+     @param cache: The cache of statistics
+     @type cache: C{\{str:[(float, int), int]\}}
+     @return: The files statistics
+     @rtype: C{(float, int)
+  """
+  from os.path import exists, getmtime, getsize
+
+  if cache.has_key(path) and cache[path][1] > 2:
+    return cache[path][0]
+
+  if exists(path):
+    stats = (getmtime(path), getsize(path))
+  else:
+    stats = None
+
+  if cache.has_key(path):
+    cstats = cache[path]
+    if cstats[0] == stats:
+      cstats[1] += 1
+    else:
+      cstats[0] = stats
+      cstats[1] = 0
+  else:
+    cache[path] = [stats, 0]
+
+  return stats
