@@ -27,6 +27,6 @@ def attr(origin):
   else:
     from cPickle import dumps
     attr = get_attr(origin)
-    db['port.attr'].put(origin, dumps(attr))
+    db['port.attr'].put(origin, dumps(attr, -1))
     set_files('port.makefiles', origin, attr['makefiles'])
     return attr
