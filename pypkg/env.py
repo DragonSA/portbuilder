@@ -26,7 +26,8 @@ def init_dirs():
   dirs['db_tmp'] = '/tmp/pypkg'                # ${TMPDIR}/pypkg
 
   # The log dir
-  dirs['log'] = join(dirs['home'], 'log') # ${PYPKG}/log
+  dirs['log']      = '/tmp/pypkg' #join(dirs['home'], 'log') # ${PYPKG}/log
+  dirs['log_port'] = '/tmp/pypkg'         # ${TMPDIR}/pypkg
 
   # The config dir
   dirs['config'] = dirs['home']  # ${PYPKG}

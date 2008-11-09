@@ -3,9 +3,11 @@
 Controller for various ports operations
 """
 from logging import getLogger, FileHandler, DEBUG, INFO
+
+from pypkg.env import files
 from pypkg import run_main
 
-handler = FileHandler('/tmp/pypkg/log', 'w')
+handler = FileHandler(files['log'], 'w')
 handler.setLevel(DEBUG)
 log = getLogger('pypkg')
 log.addHandler(handler)

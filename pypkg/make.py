@@ -5,11 +5,9 @@ from __future__ import absolute_import
 
 from os import getenv
 
-__all__ = ['clean_log', 'env', 'log_dir', 'make_target', 'no_opt', 'pre_cmd',
-           'SUCCESS']
+__all__ = ['clean_log', 'env', 'make_target', 'no_opt', 'pre_cmd', 'SUCCESS']
 
 env = {}  #: The environment flags to pass to make, aka -D...
-log_dir = "/tmp/pypkg"  #: The directory in which to save logs
 no_opt = False  #: Indicate if we should not issue a command
 pre_cmd = []  #: Prepend to command
 SUCCESS = 0  #: The value returns by a program on success
@@ -28,12 +26,11 @@ def log_files(origin):
      @return: The stdout and stderr file handlers
      @rtype: C{(file, file)}
   """
-  from os import makedirs as mkdirs
-  from os.path import isdir, join
+  from os.path import join
 
-  if not isdir(log_dir):
-    mkdirs(log_dir)
-  log = open(join(log_dir, origin.replace('/', '_')), 'a')
+  from pypkg.env import dirs
+
+  log = open(join(dirs['log_port'], origin.replace('/', '_')), 'r')
   return log, log
 
 def clean_log(origin):
@@ -46,7 +43,9 @@ def clean_log(origin):
   from os import unlink
   from os.path import isfile, join
 
-  log_file = join(log_dir, origin.replace('/', '_'))
+  from pypkg.env import dirs
+
+  log_file = join(dirs['log_port'], origin.replace('/', '_'))
   if isfile(log_file):
     unlink(log_file)
 

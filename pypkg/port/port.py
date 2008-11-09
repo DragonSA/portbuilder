@@ -194,6 +194,19 @@ class Port(object):
     """
     return self._install_status
 
+  def log_file(self):
+    """
+       The log file of this port. (See also make.
+
+       @return: The path to the log file
+       @rtype: C{str}
+    """
+    from os.path import join
+
+    from pypkg.env import dirs
+
+    return join(dirs['log_port'], self._origin.replace('/', '_'))
+
   def lock(self):
     """
        The lock this port uses

@@ -95,6 +95,7 @@ Future release:
      having failed
    - Make thread safe
    - When doing individual checks, cache as they can be duplicated
+   - Allow switching for depends resolution (from complex to simple...)
 
 0.0.5 - Milestone 5 (Finish basic ports infrastructure):
  - Refine and condense code
@@ -123,11 +124,10 @@ Future release:
    * Only clean port (don't do recursive cleaning)
    * Investigate fine grain locking (memory vs speed)
      [and adjust locking appropriately]
-   - Allow switching for depends resolution (from complex to simple...)
-   - Handles ports that do not exist
+   * Handles ports that do not exist
    - Add logging of port targets
    * Check need for status
-   - Move prepare to a private method?
+   - Move prepare/finalise to a private method?
    * Move from flags to linear for stages
    * Use only one lock and condition for the port (should not cause too much
      contention since only a few instances will use it at once)
@@ -137,7 +137,7 @@ Future release:
        * date stamps
        * included Makefiles
    * Efficient version of pkg_version
-   - Attributes:
+   + Attributes:
      * Check for a need of PATCHFILES
      * ALWAYS_KEEP_DISTFILES
      - Extend attributes for NO_*
@@ -146,14 +146,14 @@ Future release:
      - DEPRECIATION...
      - NO_BUILD option (and implement)
      - etc
-   + Handlers:
-     - Provide output stream (as work in progress)
+   * Handlers:
+     * Provide output stream (as work in progress)
      * config:
        * Check for caching of options
        * Allow forcing of config options
-     + fetch:
+     * fetch:
        * Add a cache for fetching
-       - Check the *distfiles* and subdirs are correct
+       * Check the *distfiles* and subdirs are correct
      * install:
        * Update port install status properly
        * Handle when a port is already installed

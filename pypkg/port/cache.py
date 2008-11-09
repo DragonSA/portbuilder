@@ -157,7 +157,7 @@ class PortCache(dict):
         port = Port(key)
       else:
         port = False
-        self._log.error("Invalid port name '%s' passed" % key)
+        self._log.error("Invalid port name '%s' or port does not exist" % key)
       self._lock.acquire()
     except KeyboardInterrupt:
       raise
