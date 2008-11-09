@@ -6,7 +6,7 @@ from __future__ import absolute_import
 
 from pypkg.port.port import Port
 from pypkg.port.dependhandler import DependHandler
-from pypkg.port.portcache import PortCache
+from pypkg.port.cache import PortCache
 
 __all__ = ['cache', 'get', 'Port', 'DependHandler']
 
