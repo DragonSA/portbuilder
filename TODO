@@ -18,6 +18,8 @@ Future release:
  - Refactor:
    - Break ports into its own libraries
    - Try isolate system and ports dependant code
+ - Port:
+   - Handle common makefiles (make caching more effiecient
 
 0.0.8 - Milestone 8 (Finish command line controller):
  - Refine and condense code
@@ -136,8 +138,8 @@ Future release:
        * included Makefiles
    * Efficient version of pkg_version
    - Attributes:
-     - Check for a need of PATCHFILES
-     - ALWAYS_KEEP_DISTFILES
+     * Check for a need of PATCHFILES
+     * ALWAYS_KEEP_DISTFILES
      - Extend attributes for NO_*
      - FORBIDDEN, BROKEN and IGNORE
      - ONLY_FOR_ARCHS and NOT_FOR_ARCHS

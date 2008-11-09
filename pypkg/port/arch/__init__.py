@@ -17,7 +17,7 @@ def attr(origin):
      @return: A dictionary of attributes
      @rtype: C{\{str:str|(str)|\}}
   """
-  from cPickle import dumps, loads
+  from logging import getLogger
   
   from pypkg.cache import db, check_files, set_files
 
@@ -25,13 +25,12 @@ def attr(origin):
 
   if files:
     try:
-      return loads(db['port.attr'].get(origin))
-    except BaseException:
-      from logging import getLogger
+      return db['port.attr'][origin]
+    except KeyError:
       getLogger('pypkg.cache').warn('Corrupt data detected (port.attr.%s)' %
                                                                         origin)
   
   att = get_attr(origin)
-  db['port.attr'].put(origin, dumps(att, -1))
+  db['port.attr'][origin] = att
   set_files('port.makefiles', origin, att['makefiles'])
   return att

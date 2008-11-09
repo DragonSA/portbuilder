@@ -2,7 +2,9 @@
 The FreeBSD module.  This module contains all code specific to the FreeBSD Ports
 infrastructure.
 """
-from __future__ import absolute_import
+from __future__ import absolute_import, with_statement
+
+from threading import Lock
 
 from pypkg.make import env
 
@@ -65,7 +67,7 @@ ports_attr["makefiles"].append(lambda x: [i for i in x if i != '..'])
 
 del strip_depends
 
-def get_status(origin, attr, cache=dict()):
+def get_status(origin, attr, cache=dict(), lock=Lock()):
   """
      Get the current status of a port.  A port is either ABSENT, OLDER, CURRENT
      or NEWER.
@@ -76,6 +78,8 @@ def get_status(origin, attr, cache=dict()):
      @type attr: C{\{str:str|(str)|\}}
      @param cache: The cache of ports installed
      @type cache: C{\{str:[str]|str|int\}}
+     @param lock: The lock for the cache
+     @type lock: C{Lock}
      @return: The port's status
      @rtype: C{int}
   """
@@ -86,14 +90,15 @@ def get_status(origin, attr, cache=dict()):
   from pypkg.port import Port
 
   pkg = "/var/db/pkg"
-  if not cache.has_key('pkg_mtime') or path.getmtime(pkg) > cache['pkg_mtime']:
-    cache['pkg_mtime'] = path.getmtime(pkg)
-    cache['pkg_listdir'] = listdir(pkg)
+  with lock:
+    if not cache.has_key('mtime') or path.getmtime(pkg) > cache['mtime']:
+      cache['mtime'] = path.getmtime(pkg)
+      cache['listdir'] = listdir(pkg)
 
   status = Port.ABSENT
   name = attr['pkgname'].rsplit('-', 1)[0]
 
-  for i in cache['pkg_listdir']:
+  for i in cache['listdir']:
     if i.rsplit('-', 1)[0] == name:
       content = path.join(pkg, i, '+CONTENTS')
       porigin = None

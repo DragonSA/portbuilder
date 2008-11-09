@@ -1,7 +1,9 @@
 """
 The Cache module.  This module stores various items of information statically.
 """
-from __future__ import absolute_import
+from __future__ import absolute_import, with_statement
+
+from threading import Lock
 
 from pypkg.cache.cachedb import CacheDB
 
@@ -21,18 +23,12 @@ def check_files(db_name, name):
      @return: If the files have not changed
      @rtype: C{bool}
   """
-  from cPickle import loads
-
   files = db[db_name].get(name)
 
   if not files:
-    return False
-
-  try:
-    files = loads(files)
-  except BaseException:
-    from logging import getLogger
-    getLogger('pypkg.cache').warn('Corrupt data detected (%s.%s)' %
+    if db[db_name].has_key(name):
+      from logging import getLogger
+      getLogger('pypkg.cache').warn('Corrupt data detected (%s.%s)' %
                                                                (db_name, name))
     return False
 
@@ -55,15 +51,13 @@ def set_files(db_name, name, files):
      @param files: The set of files
      @type files: C{[str]}
   """
-  from cPickle import dumps
-
   data = []
   for i in files:
     data.append((i, getstats(i)))
 
-  db[db_name].put(name, dumps(data, -1))
+  db[db_name][name] = data
 
-def getstats(path, cache=dict()):
+def getstats(path, cache=dict(), lock=Lock()):
   """
      Get the statistics on a given file.  Uses cache when possible.
 
@@ -71,6 +65,8 @@ def getstats(path, cache=dict()):
      @type path: C{str}
      @param cache: The cache of statistics
      @type cache: C{\{str:[(float, int), int]\}}
+     @param lock: The lock for the cache
+     @type lock: C{Lock}
      @return: The files statistics
      @rtype: C{(float, int)
   """
@@ -84,14 +80,15 @@ def getstats(path, cache=dict()):
   else:
     stats = None
 
-  if cache.has_key(path):
-    cstats = cache[path]
-    if cstats[0] == stats:
-      cstats[1] += 1
+  with lock:
+    if cache.has_key(path):
+      cstats = cache[path]
+      if cstats[0] == stats:
+        cstats[1] += 1
+      else:
+        cstats[0] = stats
+        cstats[1] = 0
     else:
-      cstats[0] = stats
-      cstats[1] = 0
-  else:
-    cache[path] = [stats, 0]
+      cache[path] = [stats, 0]
 
   return stats
