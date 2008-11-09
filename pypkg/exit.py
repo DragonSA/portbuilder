@@ -169,7 +169,6 @@ class AutoExit(object):
     self._log.debug("(6/6) Closing all databases")
     db.close()
     self._log.info("Finished terminate sequance")
-    #print Proxy.count
     exit(0)
 
 
@@ -211,5 +210,7 @@ terminate = exit_handler.terminate
     #return value
 
 #import pypkg.port.arch
-#from sys import modules
+#from sys import modules, stdout
+#from atexit import register
+#register(lambda: stdout.write(str(Proxy.count) + '\n'))
 #modules['pypkg.port.arch'] = Proxy(modules['pypkg.port.arch'], 'status')

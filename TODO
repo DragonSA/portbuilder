@@ -134,7 +134,7 @@ Future release:
      * Handle changes in port
        * date stamps
        * included Makefiles
-   - Efficient version of pkg_version
+   * Efficient version of pkg_version
    - Attributes:
      - Check for a need of PATCHFILES
      - ALWAYS_KEEP_DISTFILES
