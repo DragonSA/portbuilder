@@ -44,10 +44,37 @@ def cmdtostr(args):
   """
   argstr = []
   for i in args:
-    argstr.append(i.replace('"', '\"').replace("'", "\'").replace('\n', '\\\n'))
+    argstr.append(i.replace("\\", "\\\\").replace('"', '\\"').\
+                    replace("'", "\\'").replace('\n', '\\\n'))
     if ' ' in i or '\t' in i or '\n' in i:
-      argstr[-1] = "'%s'" & argstr[-1]
+      argstr[-1] = '"%s"' & argstr[-1]
   return ' '.join(argstr)
+
+def get_pipe(pipe, origin):
+  """
+     Returns the appropriate pipes.  None is the default (pipe to logfile),
+     False is not piping, True is pipe stdout and stderr and file object is
+     pipe to the file (both stdout and stderr)/
+
+     @param pipe: The type of pipe requested.
+     @type pipe: C{bool|None|file}
+     @param origin: The for for which to run create logfiles for
+     @type origin: C{str}
+     @return: Tuple of pipes (stdin, stdout, stderr)
+     @rtype: C{(None|PIPE|file}
+  """
+  from subprocess import PIPE, STDOUT
+
+  if pipe is True:
+    return PIPE, PIPE, STDOUT
+  elif pipe:
+    return PIPE, pipe, STDOUT
+  elif pipe is False:
+    return None, None, None
+  else:
+    stdout, stderr = log_files(origin)
+    return PIPE, stdout, stderr
+
 
 def make_target(origin, args, pipe=None):
   """
@@ -62,7 +89,7 @@ def make_target(origin, args, pipe=None):
      @rtype: C{Popen}
   """
   from os.path import join
-  from subprocess import Popen, PIPE, STDOUT
+  from subprocess import Popen
 
   if isinstance(args, str):
     args = [args]
@@ -71,32 +98,27 @@ def make_target(origin, args, pipe=None):
                     (args[0], k) != ('config', "BATCH") and
                     (k != "NOCLEANDEPENDS" or 'clean' in args)]
 
-  if pipe is True:
-    stdin, stdout, stderr = PIPE, PIPE, STDOUT
-  elif pipe:
-    stdin, stdout, stderr = PIPE, pipe, STDOUT
-  elif pipe is False:
-    stdin, stdout, stderr = None, None, None
-  else:
-    stdin, (stdout, stderr) = PIPE, log_files(origin)
+  stdin, stdout, stderr = get_pipe(pipe, origin)
 
   if pipe is False and not no_opt:
     from pypkg.monitor import monitor
     monitor.pause()
 
   args = pre_cmd + ['make', '-C', join(env["PORTSDIR"], origin)] + args
-  if pipe or not no_opt:
-    make = Popen(args, stdin=stdin, stdout=stdout, stderr=stderr,
-                 close_fds=True)
-  else:
-    print cmdtostr(args)
-    make = PopenNone()
-
-  if stdin and (pipe or not no_opt):
-    make.stdin.close()
-  elif pipe is False and not no_opt:
-    make.wait()
-    monitor.resume()
+  try:
+    if pipe or not no_opt:
+      make = Popen(args, stdin=stdin, stdout=stdout, stderr=stderr,
+                  close_fds=True)
+      if stdin:
+        make.stdin.close()
+      elif pipe is False:
+        make.wait()
+    else:
+      print cmdtostr(args)
+      make = PopenNone()
+  finally:
+    if pipe is False and not no_opt:
+      monitor.resume()
 
   return make
 

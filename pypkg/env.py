@@ -36,7 +36,6 @@ def init_dirs():
   all_dirs.sort()
   for i in all_dirs:
     if not isdir(i):
-      # TODO: Error handling
       mkdir(i)
 
 def init_files():
@@ -44,7 +43,7 @@ def init_files():
      Initialise the local files.
   """
   from os.path import join
-  
+
   files['log'] = join(dirs['log'], 'pypkg.log')
 
 def init_names():

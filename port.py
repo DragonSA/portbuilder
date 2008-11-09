@@ -41,8 +41,6 @@ def main():
       monitor.set_monitor(monitor.Stat(options.stat_mode))
     else:
       monitor.set_monitor(monitor.Top())
-  else:
-    monitor.set_monitor(monitor.NoneMonitor())
 
   # Execute the primary build target
   if options.index:
@@ -73,7 +71,7 @@ def gen_parser():
   from optparse import OptionParser
 
   usage = "\t%prog [-bifnpu] [-w SEC] [-D variable] [variable=value] target ..."
-  
+
   parser = OptionParser(usage, version="%prog 0.0.4")
   parser.add_option("-b", "--batch", action="store_true", default=False,
                     help="Batch mode.  Skips the config stage.")

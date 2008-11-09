@@ -31,7 +31,7 @@ class Monitor(Thread):
        Initialise the monitor
     """
     from threading import Lock
-    
+
     Thread.__init__(self)
 
     self.__delay = 1  #: Delay between monitor iterations
@@ -152,7 +152,7 @@ class Stat(Monitor):
     from time import time
     Monitor.__init__(self)
     self.set_delay(delay)
-    
+
     self.__start = time()  #: The time we started
 
   def run(self):
@@ -236,7 +236,7 @@ class Stat(Monitor):
       @type start: C{int}
     """
     from time import time
-    
+
     from pypkg.port import cache
     from pypkg import queue
     from pypkg import target
@@ -315,7 +315,7 @@ class Top(Monitor):
     """
     from time import time
     Monitor.__init__(self)
-    
+
     self._offset = 0
     self.__start = time()
     self._stdscr = None
@@ -337,7 +337,7 @@ class Top(Monitor):
         self._update_rows(self._stdscr)
         self._stdscr.move(self._offset, 0)
         self._stdscr.refresh()
-        
+
         self._sleep()
       except KeyboardInterrupt:
         from pypkg.exit import terminate
@@ -348,7 +348,7 @@ class Top(Monitor):
        Initialise the curses library.
     """
     from curses import initscr, cbreak, noecho
-    
+
     self._stdscr = initscr()
     self._stdscr.keypad(1)
     self._stdscr.nodelay(1)
@@ -361,7 +361,7 @@ class Top(Monitor):
        Shutdown the curses library.
     """
     from curses import nocbreak, echo, endwin
-    
+
     self._stdscr.move(self._stdscr.getmaxyx()[0] - 1, 0)
     self._stdscr.clrtoeol()
     self._stdscr.refresh()
@@ -402,7 +402,7 @@ class Top(Monitor):
        @type scr: C{Window}
     """
     port_new = self._stats.ports()
-    
+
     msg = "port count: %i" % port_new[2]
     if port_new[0]:
       if port_new[1]:
@@ -424,7 +424,7 @@ class Top(Monitor):
 
     ports = sum(summary_new)
     if ports:
-      msg = "%i ports:" % ports
+      msg = "%i port(s):" % ports
       if summary_new[0]:
         msg += " %i active" % summary_new[0]
         if summary_new[1]:
@@ -502,7 +502,7 @@ class Top(Monitor):
       port = pending[i]
       scr.addnstr(offset + i, 0, '%5i %6s pending        %s' %
                   (0, get_stage(port, 1), get_name(port)), columns)
-      
+
 
 class Statistics(object):
   """
@@ -521,12 +521,18 @@ class Statistics(object):
 
     self.__time = time()
     self.__ports = Statistics.size(queue.ports_queue, cache)
-    self.__fetch = Statistics.size(queue.fetch_queue, target.fetch_builder)
     #self.__config = Statistics.size(queue.config_queue,target.config_builder)
+    self.__fetch = Statistics.size(queue.fetch_queue, target.fetch_builder)
     self.__build = Statistics.size(queue.build_queue, target.build_builder)
     self.__install = Statistics.size(queue.install_queue,
                                       target.install_builder)
     self.__queues = Statistics.get_queues()
+
+    # Correct sizes
+    self.__install = self.__install[0:2] + \
+                   (self.__install[2] - self.__build[2],) + (self.__install[3],)
+    self.__build = self.__build[0:2] + (self.__build[2] - self.__fetch[2],) + \
+                                                             (self.__fetch[3],)
 
   def ports(self):
     """
@@ -616,7 +622,7 @@ class Statistics(object):
     queued = install[1] + build[1] + fetch[1]
     pending = []
     for i in fetch[2] + build[2] + install[2]:
-      if i not in active and i not in queued:
+      if i not in active and i not in queued and i not in pending:
         pending.append(i)
     pending.reverse()
 

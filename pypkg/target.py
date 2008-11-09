@@ -1,6 +1,6 @@
 """
 The target module.  This module handles executing various stages for building
-ports.  
+ports.
 """
 from __future__ import absolute_import, with_statement
 
@@ -69,7 +69,7 @@ class StageBuilder(object):
 
     self.__building = {}  #: List of ports we are working on
     self.__queues = ([], [], [])  #: The location of the queues
-                                  # (active, queued, plending)
+                                  # (active, queued, pending)
 
   def put(self, port, callback=None):
     """
@@ -158,7 +158,7 @@ class StageBuilder(object):
       self.__queues[0].append(port)
     port.build_stage(self.__stage, False)
     self.__callbacks(port)
-    
+
   def queue(self, port):
     """
        Place a port on the queue (this is for delayed queueing).
@@ -185,6 +185,8 @@ class StageBuilder(object):
        The statistics about the ports in the queue.  If the ports are active
        (i.e. building), queued to be active or waiting for another port...
 
+       @param summary: If only the lengths of thwr queues are required
+       @type summary: C{bool}
        @return: The list of ports (active, queued, pending)
        @rtype: C{([Port], [Port], [Port])}
     """
@@ -341,12 +343,12 @@ def index_builder():
       getLogger('pypkg.builder.index').error("Unable to get subdirectory" \
       "list for ports under '%s'" % join(env['PORTSDIR'], i))
       continue
-    
+
     for j in smake.stdout.read().split():
       port = join(i, j)
       ports.append(port)
       cache.add(port)
-      
+
   index = open('/tmp/INDEX', 'w')
   for i in ports:
     try:

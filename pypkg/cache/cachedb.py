@@ -46,7 +46,7 @@ class CacheDB(object):
        @rtype: C{DB}
     """
     from pypkg.env import names
-    
+
     try:
       return self._dbcache[names.get(key, key)]
     except KeyError:
@@ -144,7 +144,7 @@ class DBProxy(object):
        @rtype: C{bool}
     """
     from cPickle import dumps
-    
+
     with self.__lock.read_lock:
       if self.__db.get(dumps(key)):
         return True
@@ -203,18 +203,17 @@ class RWLock(object):
       raise RuntimeError, "Cannot acquire read-lock when already held"
 
     with self.__lock:
-      if not self.__writer:
-        self.__readers.append(me)
-        return True
-      elif not blocking:
-        return False
-
-      self.__readers_queue += 1
-      self.__rcond.wait()
-      self.__readers_queue -= 1
-      #assert not self.__writer
-      self.__readers.append(me)
-      return True
+      while True:
+        if not self.__writer:
+          self.__readers.append(me)
+          return True
+        elif not blocking:
+          return False
+        else:
+          # TODO: Warn when waiting more than once!!!
+          self.__readers_queue += 1
+          self.__rcond.wait()
+          self.__readers_queue -= 1
 
   def release_read(self):
     """
@@ -227,8 +226,8 @@ class RWLock(object):
     if me not in self.__readers:
       raise RuntimeError, "Cannot release read-lock not held"
 
-    #assert not self.__writer or self.__writer is True
-      
+    assert not self.__writer or self.__writer is True
+
     with self.__lock:
       self.__readers.remove(me)
       if self.__writer is True and not len(self.__readers):
@@ -254,23 +253,23 @@ class RWLock(object):
       if len(self.__readers):
         if not blocking:
           return False
-        #assert not self.__writer or self.__writer is True
+        assert not self.__writer or self.__writer is True
         self.__writer = True
         self.__wcond.wait()
-        #assert self.__writer is True and not len(self.__readers)
+        assert self.__writer is True and not len(self.__readers)
 
       elif self.__writer and self.__writer is not True:
         if not blocking:
           return False
-        #assert not len(self.__readers)
+        assert not len(self.__readers)
         self.__writer_queue += 1
         self.__wcond.wait()
         self.__writer_queue -= 1
 
-        #assert self.__writer is True and not len(self.__readers)
+        assert self.__writer is True and not len(self.__readers)
 
-      #assert not len(self.__readers) and (not self.__writer or
-                                                        #self.__writer is True)
+      assert not len(self.__readers) and (not self.__writer or
+                                                        self.__writer is True)
       self.__writer = me
       return True
 
@@ -291,7 +290,8 @@ class RWLock(object):
         self.__wcond.notify()
       else:
         self.__writer = None
-        self.__rcond.notifyAll()
+        if self.__readers_queue:
+          self.__rcond.notifyAll()
 
   def release(self):
     """
@@ -336,7 +336,8 @@ class RWLock(object):
        @rtype: C{(int, int)}
     """
     pending =  (self.__readers_queue and RWLock.READ_PENDING or 0)
-    pending |= (self.__writer_queue and RWLock.WRITE_PENDING or 0)
+    pending |= ((self.__writer is True or self.__writer_queue) and
+                                                     RWLock.WRITE_PENDING or 0)
     if self.__writer and self.__writer is not True:
       return RWLock.WRITE_LOCK, pending
     elif len(self.__readers):

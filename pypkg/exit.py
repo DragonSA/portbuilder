@@ -165,7 +165,8 @@ class AutoExit(object):
         i.clean()
 
     self._log.debug("(5/6) Stopping the monitor")
-    monitor.monitor.stop()
+    if monitor.monitor:
+      monitor.monitor.stop()
     self._log.debug("(6/6) Closing all databases")
     db.close()
     self._log.info("Finished terminate sequance")
