@@ -14,7 +14,9 @@ class CacheDB(object):
     """
        Initialise the database environment.
     """
-    from bsddb.db import DBEnv, DB_CREATE, DB_INIT_CDB, DB_INIT_MPOOL
+    from bsddb.db import DBEnv, DB_CREATE, DB_RECOVER, DB_THREAD
+    from bsddb.db import DB_INIT_LOCK, DB_INIT_LOG, DB_INIT_MPOOL, DB_INIT_TXN
+    from bsddb.db import DB_AUTO_COMMIT #, DB_DIRECT_DB, DB_DIRECT_LOG
     from threading import Lock
 
     from pypkg.env import dirs
@@ -23,10 +25,12 @@ class CacheDB(object):
     self._env = DBEnv()
     self.__lock = Lock()
 
+    self._env.set_flags(DB_AUTO_COMMIT, 1) # | DB_DIRECT_DB | DB_DIRECT_LOG, 1)
     self._env.set_data_dir(dirs['db'])
     self._env.set_lg_dir(dirs['db_log'])
     self._env.set_tmp_dir(dirs['db_tmp'])
-    self._env.open(dirs['db'], DB_CREATE | DB_INIT_CDB | DB_INIT_MPOOL)
+    self._env.open(dirs['db'], DB_CREATE | DB_RECOVER | DB_THREAD |
+                      DB_INIT_LOCK | DB_INIT_LOG | DB_INIT_MPOOL | DB_INIT_TXN)
 
     self.__count = 0.
 

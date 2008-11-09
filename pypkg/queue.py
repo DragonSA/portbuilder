@@ -191,8 +191,7 @@ class WorkerQueue(Queue):
       from pypkg.exit import terminate
       terminate()
     except BaseException:
-      self._log.exception("Worker %d: Job %d threw an exception"
-                          % (wid, jid))
+      self._log.exception("Worker %d: Job %d threw an exception" % (wid, jid))
     finally:
       self._log.debug("Worker %d: Finished job %d" % (wid, jid))
 
