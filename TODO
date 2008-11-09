@@ -133,7 +133,7 @@ Future release:
    * Handles ports that do not exist
    - Add logging of port targets
    * Check need for status
-   - Move prepare/finalise to a private method?
+   * Move prepare/finalise to a private method?
    * Move from flags to linear for stages
    * Use only one lock and condition for the port (should not cause too much
      contention since only a few instances will use it at once)

@@ -386,13 +386,13 @@ class Port(object):
 
         return self._failed
     else:
-      proceed, status = self._prepare(stage)
+      proceed, status = self.__prepare(stage)
       if not proceed:
         return status
 
       status = stage_handler[stage]()
 
-      return self._finalise(stage, status)
+      return self.__finalise(stage, status)
 
   config = lambda self: self.build_stage(Port.CONFIG)
   def _config(self):
@@ -489,7 +489,7 @@ class Port(object):
 
     return status
 
-  def _prepare(self, stage):
+  def __prepare(self, stage):
     """
        Prepare the port to build the given stage.  All appropriate checks are
        done and the proceed status is returned.  If the stage can be built then
@@ -538,7 +538,7 @@ class Port(object):
 
       return True, True
 
-  def _finalise(self, stage, status):
+  def __finalise(self, stage, status):
     """
        Finalise the port.  All appropriate flags are set given the status of
        this stage.
