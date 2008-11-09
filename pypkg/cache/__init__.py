@@ -5,7 +5,7 @@ from __future__ import absolute_import
 
 from pypkg.cache.cachedb import CacheDB
 
-__all__ = ['db']
+__all__ = ['db', 'check_files', 'set_files']
 
 db = CacheDB()  #: The databases used for caching
 
@@ -32,14 +32,16 @@ def check_files(db_name, name):
     return False
 
   # TODO: handle corrupt data
+  f_list = []
   for path, stats in loads(files):
     if exists(path):
       if not stats or stats != (getmtime(path), getsize(path)):
         return False
     elif stats:
       return False
-
-  return True
+    f_list.append(path)
+    
+  return f_list
 
 def set_files(db_name, name, files):
   """
