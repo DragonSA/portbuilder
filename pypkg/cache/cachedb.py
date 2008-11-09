@@ -23,7 +23,9 @@ class CacheDB(object):
     self._env = DBEnv()
     self.__lock = Lock()
 
+    self._env.set_data_dir(dirs['db'])
     self._env.set_lg_dir(dirs['db_log'])
+    self._env.set_tmp_dir(dirs['db_tmp'])
     self._env.open(dirs['db'], DB_CREATE | DB_INIT_CDB | DB_INIT_MPOOL)
 
   def __getitem__(self, key):

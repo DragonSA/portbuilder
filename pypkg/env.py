@@ -23,6 +23,7 @@ def init_dirs():
   # The database dirs
   dirs['db']     = join(dirs['home'], 'cache') # ${PYPKG}/db
   dirs['db_log'] = join(dirs['db'], 'log')     # ${PYPKG}/${DB}/log
+  dirs['db_tmp'] = '/tmp/pypkg'                # ${TMPDIR}/pypkg
 
   # The log dir
   dirs['log'] = join(dirs['home'], 'log') # ${PYPKG}/log
@@ -41,14 +42,17 @@ def init_files():
   """
      Initialise the local files.
   """
-  pass
+  from os.path import join
+  
+  files['log'] = join(dirs['log'], 'pypkg.log')
 
 def init_names():
   """
      Initialise the names alias
   """
-  names['port.attr'] = 'port_attr.db'
-  names['distfiles'] = 'distfiles.db'
+  names['port.attr']      = 'port_attr.db'      # The port attributes
+  names['port.makefiles'] = 'port_makefiles.db' # Makefiles included by a port
+  names['distfiles']      = 'distfiles.db'      # The ports distribution files
 
 init_dirs()
 init_files()

@@ -6,7 +6,7 @@ from __future__ import absolute_import
 
 from pypkg.make import env
 
-__all__ = ['status', 'attr']
+__all__ = ['get_status', 'get_attr']
 
 ports_attr = {
 # Port naming
@@ -65,10 +65,10 @@ ports_attr["makefiles"].append(lambda x: [i for i in x if i != '..'])
 
 del strip_depends
 
-def status(origin):
+def get_status(origin):
   """
      Get the current status of a port.  A port is either ABSENT, OLDER, CURRENT
-     or NEWER
+     or NEWER.
 
      @param origin: The origin of the port queried
      @type origin: C{str}
@@ -102,9 +102,9 @@ def status(origin):
   else: #info == '=' or info == '?' or info =='*'
     return Port.CURRENT
 
-def attr(origin):
+def get_attr(origin):
   """
-     Retrieves the attributes for a given port
+     Retrieves the attributes for a given port.
 
      @param origin: The port identifier
      @type origin: C{str}
