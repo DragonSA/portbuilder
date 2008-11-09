@@ -38,6 +38,7 @@ def get_www(descr):
       @rtype: C{str}
   """
   from os.path import isfile
+  from logging import getLogger
 
   if isfile(descr):
     for i in open(descr, 'r'):
@@ -48,9 +49,7 @@ def get_www(descr):
           return www
         return 'http://' + www
   else:
-    # TODO
-    #self._log.warn("Invalid description file for '%s'" % self._origin)
-    pass
+    getLogger('pypkg.port').warn("Invalid description file for '%s'" % descr)
   return ''
 
 def recurse_depends(port, category, cache=dict()):
@@ -79,7 +78,10 @@ def recurse_depends(port, category, cache=dict()):
       @return: The sorted list of dependancies
       @rtype: C{(str)}
     """
+    from logging import getLogger
+
     from pypkg.port import cache as pcache
+
     depends = set()
     for i in set([j[1] for j in sum([port.attr(i) for i in categories], [])]):
       i_p = pcache.get(i)
@@ -87,10 +89,8 @@ def recurse_depends(port, category, cache=dict()):
         depends.add(i_p.attr('pkgname'))
         depends.update(cache.has_key(i) and cache[i] or retrieve(i_p, master))
       else:
-        # TODO
-        #self._log.warn("Port '%s' has a (indirect) stale dependancy " \
-                      #"on '%s'" % (port.origin(), i))
-        pass
+        getLogger('pypkg.port').warn("Port '%s' has a (indirect) stale " \
+                      "dependancy on '%s'" % (port.origin(), i))
 
     depends = list(depends)
     depends.sort()
