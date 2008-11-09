@@ -48,6 +48,7 @@ def init_names():
      Initialise the names alias
   """
   names['port.attr'] = 'port_attr.db'
+  names['distfiles'] = 'distfiles.db'
 
 init_dirs()
 init_files()

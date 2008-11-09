@@ -148,8 +148,9 @@ Future release:
      * config:
        * Check for caching of options
        * Allow forcing of config options
-     - fetch:
-       - Add a cache for fetching
+     + fetch:
+       * Add a cache for fetching
+       - Check the *distfiles* and subdirs are correct
      * install:
        * Update port install status properly
        * Handle when a port is already installed

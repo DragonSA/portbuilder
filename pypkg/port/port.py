@@ -413,9 +413,23 @@ class Port(object):
        @return: The success status
        @rtype: C{bool}
     """
-    from pypkg.make import make_target, SUCCESS
+    from os.path import join
+    
+    from pypkg.cache import check_files, set_files
+    from pypkg.make import make_target, no_opt, SUCCESS
 
-    return make_target(self._origin, ['checksum']).wait() is SUCCESS
+    files = check_files('distfiles', self._origin)
+    distdir = self.attr('distdir')
+    distfiles = [join(distdir, i) for i in self.attr('distfiles')]
+    
+    if files and set(files) == set(distfiles):
+      return True
+
+    status = make_target(self._origin, ['checksum']).wait() is SUCCESS
+
+    if status and not no_opt:
+      set_files('distfiles', self._origin, distfiles)
+    return status
 
   build = lambda self: self.build_stage(Port.BUILD)
   def _build(self):

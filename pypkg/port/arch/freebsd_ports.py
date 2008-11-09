@@ -39,8 +39,8 @@ ports_attr = {
 "prefix":     ["PREFIX",     str],   # The port's install prefix
 
 # Distribution information
-"distfiles": ["DISTFILES",   tuple], # The port's distfiles
-"subdir":    ["DIST_SUBDIR", str],   # The port's distfile's sub-directory
+"distfiles": ["_DISTFILES",   tuple], # The port's distfiles
+"distdir":   ["_DISTDIR", str],       # The port's distfile's sub-directory
 
 "depends":      ["_DEPEND_DIRS", tuple],   # The ports dependants
 "makefiles":    [".MAKEFILE_LIST", tuple], # The makefiles included
