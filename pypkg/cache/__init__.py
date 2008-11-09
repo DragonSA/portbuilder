@@ -7,9 +7,10 @@ from threading import Lock
 
 from pypkg.cache.cachedb import CacheDB
 
-__all__ = ['db', 'check_files', 'set_files']
+__all__ = ['db', 'no_cache', 'check_files', 'set_files']
 
 db = CacheDB()  #: The databases used for caching
+no_cache = False #: Indicate if caching should tage place
 
 def check_files(db_name, name):
   """
@@ -23,6 +24,9 @@ def check_files(db_name, name):
      @return: If the files have not changed
      @rtype: C{bool}
   """
+  if no_cache:
+    return False
+
   files = db[db_name].get(name)
 
   if not files:
@@ -37,7 +41,7 @@ def check_files(db_name, name):
     if stats != getstats(path):
       return False
     f_list.append(path)
-    
+
   return f_list
 
 def set_files(db_name, name, files):
@@ -51,11 +55,12 @@ def set_files(db_name, name, files):
      @param files: The set of files
      @type files: C{[str]}
   """
-  data = []
-  for i in files:
-    data.append((i, getstats(i)))
+  if not no_cache:
+    data = []
+    for i in files:
+      data.append((i, getstats(i)))
 
-  db[db_name][name] = data
+    db[db_name][name] = data
 
 def getstats(path, cache=dict(), lock=Lock()):
   """

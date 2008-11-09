@@ -59,6 +59,8 @@ Future release:
    - Add force config option
    - Allow fuzzy port specification
    - Implement most of portupgrade
+   - Do not use cache when make env is used (WITH* or NO* options passed only)
+   - Add --no-cache option
 
 0.0.7 - Milestone 7 (Finish Target Builders):
  - Refine and condense code
@@ -113,8 +115,7 @@ Future release:
  * Move AutoExit to Condition waiting
  - CacheDB:
    - When user, synchronise db with master
-   - Do not use cache when make env is used (WITH* or NO* options passed only)
-   - Add --no-cache option for pypkg (the functionality)
+   * Add --no-cache option for pypkg (the functionality)
  - env:
    - Set db dirs according to user (aka root->/var/db/pypkg)
  * PortCache:

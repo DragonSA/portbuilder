@@ -53,10 +53,14 @@ class CacheDB(object):
       key = names.get(key, key)
       with self.__lock:
         if not self._dbcache.has_key(key):
-          from bsddb.db import DB, DB_HASH, DB_CREATE
-          new_db = DB(self._env)
-          new_db.open(key, dbtype=DB_HASH, flags=DB_CREATE)
-          self._dbcache[key] = DBProxy(new_db)
+          from pypkg.cache import no_cache
+          if no_cache:
+            new_db = DBProxyNone()
+          else:
+            from bsddb.db import DB, DB_HASH, DB_CREATE
+            new_db = DB(self._env)
+            new_db.open(key, dbtype=DB_HASH, flags=DB_CREATE)
+            self._dbcache[key] = DBProxy(new_db)
       return self._dbcache[key]
 
   def close(self):
@@ -156,6 +160,62 @@ class DBProxy(object):
     """
     with self.__lock.write_lock:
       self.__db.close()
+
+
+class DBProxyNone(object):
+  """
+     Provide a dictionary like interface to a BSD database.  Proper locking
+     is implemented.  (This provides an empty version)
+  """
+
+  @staticmethod
+  def __getitem__(key):
+    """
+       Retrieve the value referenced by the key.
+
+       @param key: The key
+       @return: The value
+    """
+    raise KeyError, key
+
+  @staticmethod
+  def __setitem__(key, value):
+    """
+       Set the value referenced by key.
+
+       @param key: The key
+       @param value: The value
+    """
+    pass
+
+  @staticmethod
+  def get(key, default=None):
+    """
+       Retrieve the value refernced by the key and if it does not exist return
+       default.
+
+       @param key: The key
+       @param default: The return value if key does not exist
+       @return: The value or default
+    """
+    return default
+
+  @staticmethod
+  def has_key(key):
+    """
+       Indicates if the database has the key.
+
+       @return: If the database has the key
+       @rtype: C{bool}
+    """
+    return False
+
+  @staticmethod
+  def close():
+    """
+       Close the database.
+    """
+    pass
 
 
 class RWLock(object):
