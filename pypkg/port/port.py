@@ -1,6 +1,6 @@
 """
 The Port module.  This module contains all classes and utilities needed for
-managing port information.  
+managing port information.
 """
 from __future__ import absolute_import, with_statement
 
@@ -318,7 +318,7 @@ class Port(object):
            recurse_depends(self, extract_depends), # ${EXTRACT_DEPENDS}
            recurse_depends(self, patch_depends),   # ${PATCH_DEPENDS}
            recurse_depends(self, fetch_depends),   # ${FETCH_DEPENDS}
-           )) 
+           ))
 
   def clean(self):
     """
@@ -327,12 +327,17 @@ class Port(object):
        @return: The clean status
        @rtype: C{bool}
     """
-    from pypkg.make import clean_log, make_target, SUCCESS
+    from pypkg.make import make_target, SUCCESS
 
     status = make_target(self._origin, ['clean']).wait() is SUCCESS
 
     if not self._failed:
-      clean_log(self._origin)
+      from os.path import isfile
+      from os import unlink
+
+      log_file = self.log_file()
+      if isfile(log_file):
+        unlink(log_file)
 
     # Do some checks, to make sure we are in the correct state
     with self._lock:
@@ -424,14 +429,14 @@ class Port(object):
        @rtype: C{bool}
     """
     from os.path import join
-    
+
     from pypkg.cache import check_files, set_files
     from pypkg.make import make_target, no_opt, SUCCESS
 
     files = check_files('distfiles', self._origin)
     distdir = self.attr('distdir')
     distfiles = [join(distdir, i) for i in self.attr('distfiles')]
-    
+
     if files and set(files) == set(distfiles):
       return True
 

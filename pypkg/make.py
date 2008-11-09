@@ -30,24 +30,8 @@ def log_files(origin):
 
   from pypkg.env import dirs
 
-  log = open(join(dirs['log_port'], origin.replace('/', '_')), 'r')
+  log = open(join(dirs['log_port'], origin.replace('/', '_')), 'a')
   return log, log
-
-def clean_log(origin):
-  """
-     Cleans the log files for the given port.
-
-     @param origin: The ports origin
-     @type origin: C{str}
-  """
-  from os import unlink
-  from os.path import isfile, join
-
-  from pypkg.env import dirs
-
-  log_file = join(dirs['log_port'], origin.replace('/', '_'))
-  if isfile(log_file):
-    unlink(log_file)
 
 def cmdtostr(args):
   """
