@@ -148,15 +148,14 @@ class Port(object):
     """
     from pypkg.port import cache
     from pypkg.port.arch import attr, status
-    self._origin = origin  #: The origin of the port
-    self._install_status = status(origin) #: The install status of the port
-    self._stage = 0  #: The (build) stage progress of the port
-    self._attr_map = {}  #: The ports attributes
-    self._working = False  #: Working flag
-    self._failed = False  #: Failed flag
-    self._depends = None  #: The dependant handlers for various stages
-
     self._attr_map = attr(origin)
+    self._depends = None  #: The dependant handlers for various stages
+    self._failed = False  #: Failed flag
+    self._install_status = status(origin, self._attr_map) #: The install status
+    self._origin = origin  #: The origin of the port
+    self._stage = 0  #: The (build) stage progress of the port
+    self._working = False  #: Working flag
+
 
     for i in self._attr_map['depends']:
       cache.add(i)
@@ -386,7 +385,7 @@ class Port(object):
        @rtype: C{bool}
     """
     from pypkg.port import cache
-    from pypkg.make import make_target, SUCCESS
+    from pypkg.make import make_target, no_opt, SUCCESS
 
     if len(self._attr_map['options']) != 0  and not Port.force_noconfig and \
          check_config(self.attr('optionsfile'), self.attr('pkgname')) or \
@@ -394,13 +393,11 @@ class Port(object):
       make = make_target(self._origin, 'config', pipe=False)
       status = make.wait() is SUCCESS
 
-      if status:
+      if status and not no_opt:
         from pypkg.port.arch import attr
         self._attr_map = attr(self._origin)
         for i in self._attr_map['depends']:
           cache.add(i)
-      else:
-        open('/tmp/it', 'a').write(self._origin + '\n')
 
       return status
     return True
@@ -454,7 +451,7 @@ class Port(object):
         @return: The success status
         @rtype: C{bool}
     """
-    from pypkg.make import make_target, SUCCESS
+    from pypkg.make import make_target, no_opt, SUCCESS
 
     if self.install_status() == Port.ABSENT:
       arg = ['install']
@@ -467,7 +464,8 @@ class Port(object):
       from pypkg.port.arch import status
       #  Don't need to lock to change this as it will already have been set
       install_status = self._install_status
-      self._install_status = status(self._origin)
+      self._install_status = no_opt and Port.CURRENT or status(self._origin,
+                                                                 self._attr_map)
       if install_status != self._install_status:
         self._depends.status_changed()
 

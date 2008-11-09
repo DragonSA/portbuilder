@@ -65,42 +65,50 @@ ports_attr["makefiles"].append(lambda x: [i for i in x if i != '..'])
 
 del strip_depends
 
-def get_status(origin):
+def get_status(origin, attr):
   """
      Get the current status of a port.  A port is either ABSENT, OLDER, CURRENT
      or NEWER.
 
      @param origin: The origin of the port queried
      @type origin: C{str}
+     @param attr: The attributes of the port
+     @type attr: C{\{str:str|(str)|\}}
      @return: The port's status
      @rtype: C{int}
   """
-  from subprocess import Popen, PIPE, STDOUT
+  from os.path import isdir, isfile, join
+  from os import listdir
+  from logging import getLogger
 
-  from pypkg.port import Port  # TODO: Change to ``from .. import Port''
+  from pypkg.port import Port
 
-  pkg_version = Popen(['pkg_version', '-O', origin], close_fds=True,
-                      stdout=PIPE, stderr=STDOUT)
-  if pkg_version.wait() != 0:
-    return Port.ABSENT
+  status = Port.ABSENT
+  name = attr['pkgname'].rsplit('-', 1)[0]
 
-  info = []
-  for i in pkg_version.stdout.readlines():
-    if not i.startswith("pkg_version: "):
-      info.append(i[:-1])
-  
-  if len(info) > 1:
-    from logging import getLogger
-    getLogger('pypkg.port.arch.freebsd_port.port_status').warning(
+  for i in listdir("/var/db/pkg/"):
+    idir = join("/var/db/pkg/", i)
+    if isdir(idir) and i.rsplit('-', 1)[0] == name:
+      content = join(idir, '+CONTENTS')
+      pname = None
+      porigin = None
+      if isfile(content):
+        for j in open(content, 'r'):
+          if j.startswith('@name '):
+            pname = j[6:-1].strip()
+            if porigin:
+              break
+          elif j.startswith('@comment ORIGIN:'):
+            porigin = j[16:-1].strip()
+            if pname:
+              break
+
+      if porigin == origin:
+        if status > Port.ABSENT:
+          getLogger('pypkg.port.arch.freebsd_port.port_status').warning(
                                 "Multiple ports with same origin '%s'" % origin)
-
-  info = info[0].split()[1]
-  if info == '<':
-    return Port.OLDER
-  elif info == '>':
-    return Port.NEWER
-  else: #info == '=' or info == '?' or info =='*'
-    return Port.CURRENT
+        status = max(status, cmp_status(attr['pkgname'], pname))
+  return status
 
 def get_attr(origin):
   """
@@ -135,3 +143,74 @@ def get_attr(origin):
       attr_map[name] = i(attr_map[name])
 
   return attr_map
+
+def cmp_status(old, new):
+  """
+     Compare two package names and indicates the difference.
+
+     @param old: The 'old' package name
+     @type old: C{str}
+     @param new: The 'new' package name
+     @type new: C{str}
+     @return: Which package is newer
+     @rtype: C{int}
+  """
+  from pypkg.port import Port
+
+  oname, old = old.rsplit('-', 1)
+  nname, new = new.rsplit('-', 1)
+
+  if oname != nname:
+    # The packages are not comparable
+    return Port.ABSENT
+
+  if old == new:
+    # The packages are the same
+    return Port.CURRENT
+
+  # Check the ports apoch
+  old, new, status = cmp_attr(old, new, ',')
+  if status:
+    return Port.CURRENT + status
+
+  # Check the ports revision
+  old, new, status = cmp_attr(old, new, '_')
+  if status:
+    return Port.CURRENT + status
+
+  # Check the ports version from left to right
+  old = old.split('.')
+  new = new.split('.')
+  for i in range(min(len(old), len(new))):
+    try:
+      status = cmp(int(old[i]), int(new[i]))
+    except ValueError:
+      status = cmp(old[i], new[i])
+    if status:
+      return Port.CURRENT + status
+
+  return Port.CURRENT + cmp(len(old), len(new))
+
+def cmp_attr(old, new, attr):
+  """
+      Compare the two attributes of the port.
+
+      @param old: The 'old' package version
+      @type old: C{str}
+      @param new: The 'new' package version
+      @type new: C{str}
+      @param attr: The attr seperator:
+      @type attr: C{str}
+      @return: The stripped package versions and the status
+      @rtype: C{(str, str, int)}
+  """
+  old = old.rsplit(attr, 1)
+  new = old.rsplit(attr, 1)
+  if len(old) > len(new):
+    return (old[0], new[0], 1)
+  elif len(old) < len(new):
+    return (old[0], new[0], -1)
+  elif len(old) == len(new) == 1:
+    return (old[0], new[0], 0)
+  else: #if len(old) == 0 and len(new) == 0
+    return (old[0], new[0], cmp(int(old[0]), int(new[0])))
