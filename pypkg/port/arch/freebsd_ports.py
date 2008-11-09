@@ -90,24 +90,24 @@ def get_status(origin, attr):
     idir = join("/var/db/pkg/", i)
     if isdir(idir) and i.rsplit('-', 1)[0] == name:
       content = join(idir, '+CONTENTS')
-      pname = None
       porigin = None
       if isfile(content):
         for j in open(content, 'r'):
-          if j.startswith('@name '):
-            pname = j[6:-1].strip()
-            if porigin:
-              break
-          elif j.startswith('@comment ORIGIN:'):
+          if j.startswith('@comment ORIGIN:'):
             porigin = j[16:-1].strip()
-            if pname:
+            break
+          elif j.startswith('@name '):
+            if j[6:-1].strip() != i:
+              getLogger('pypkg.port.arch.freebsd_port.port_status').warning(
+                 "Package %s has a conflicting name %s" % (i, j[6:-1].strip()))
+              porigin = None
               break
 
       if porigin == origin:
         if status > Port.ABSENT:
           getLogger('pypkg.port.arch.freebsd_port.port_status').warning(
                                 "Multiple ports with same origin '%s'" % origin)
-        status = max(status, cmp_status(attr['pkgname'], pname))
+        status = max(status, cmp_status(attr['pkgname'], i))
   return status
 
 def get_attr(origin):

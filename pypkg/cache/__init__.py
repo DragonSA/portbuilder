@@ -21,7 +21,7 @@ def check_files(db_name, name):
      @return: If the files have not changed
      @rtype: C{bool}
   """
-  from cPickle import loads, UnpicklingError
+  from cPickle import loads
   from os.path import exists, getmtime, getsize
 
   files = db[db_name].get(name)
