@@ -21,7 +21,7 @@ def check_files(db_name, name):
      @return: If the files have not changed
      @rtype: C{bool}
   """
-  from cPickle import loads
+  from cPickle import loads, UnpicklingError
   from os.path import exists, getmtime, getsize
 
   files = db[db_name].get(name)
@@ -29,9 +29,13 @@ def check_files(db_name, name):
   if not files:
     return False
 
-  # TODO: handle corrupt data
+  try:
+    files = loads(files)
+  except BaseException:
+    return False
+
   f_list = []
-  for path, stats in loads(files):
+  for path, stats in files:
     if exists(path):
       if not stats or stats != (getmtime(path), getsize(path)):
         return False
@@ -62,4 +66,4 @@ def set_files(db_name, name, files):
     else:
       data.append((i, None))
 
-  db[db_name].put(name, dumps(data))
+  db[db_name].put(name, dumps(data, -1))
