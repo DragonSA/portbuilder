@@ -78,6 +78,7 @@ class CacheDB(object):
     """
     return self[key]
 
+
 class DBProxy(object):
   """
      Provide a dictionary like interface to a BSD database.  Proper locking
@@ -156,6 +157,7 @@ class DBProxy(object):
     with self.__lock.write_lock:
       self.__db.close()
 
+
 class RWLock(object):
   """
      A Read Write Lock.  This allows many readers to simultaniously hold the
@@ -210,6 +212,7 @@ class RWLock(object):
       self.__readers_queue += 1
       self.__rcond.wait()
       self.__readers_queue -= 1
+      #assert not self.__writer
       self.__readers.append(me)
       return True
 
@@ -223,6 +226,8 @@ class RWLock(object):
 
     if me not in self.__readers:
       raise RuntimeError, "Cannot release read-lock not held"
+
+    #assert not self.__writer or self.__writer is True
       
     with self.__lock:
       self.__readers.remove(me)
@@ -246,22 +251,26 @@ class RWLock(object):
       raise RuntimeError, "Cannot acquire write-lock when already held"
 
     with self.__lock:
-      if len(self.__readers) and not self.__writer:
+      if len(self.__readers):
         if not blocking:
           return False
+        #assert not self.__writer or self.__writer is True
         self.__writer = True
         self.__wcond.wait()
-        assert self.__writer is True and not len(self.__readers)
+        #assert self.__writer is True and not len(self.__readers)
 
       elif self.__writer and self.__writer is not True:
         if not blocking:
           return False
+        #assert not len(self.__readers)
         self.__writer_queue += 1
         self.__wcond.wait()
         self.__writer_queue -= 1
 
-        assert self.__writer is True and not len(self.__readers)
-        
+        #assert self.__writer is True and not len(self.__readers)
+
+      #assert not len(self.__readers) and (not self.__writer or
+                                                        #self.__writer is True)
       self.__writer = me
       return True
 
