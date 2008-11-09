@@ -100,15 +100,46 @@ def make_target(origin, args, pipe=None):
 
   return make
 
-# TODO: Implement some more psuedo-functions
 class PopenNone(object):
   """
      An empty replacement for Popen
   """
 
+  returncode = SUCCESS
+  pid = -1
+
+  stdin  = None
+  stdout = None
+  stderr = None
+
   @staticmethod
   def wait():
     """
        Return SUCCESS
+
+       @return: Success
+       @rtype: C{int}
     """
-    return SUCCESS
+    return PopenNone.returncode
+
+  @staticmethod
+  def poll():
+    """
+       Return SUCCESS
+
+       @return: Success
+       @rtype: C{int}
+    """
+    return PopenNone.returncode
+
+  @staticmethod
+  def communicate(input=None):
+    """
+       Communicate with the process
+
+       @param input: Input to the port
+       @type input: C{str}
+       @return: The processes output
+       @rtype: C{(None, None)}
+    """
+    return (PopenNone.stdout, PopenNone.stderr)
