@@ -174,6 +174,7 @@ class StageBuilder(object):
       if port.depends().check(self.__stage) == DependHandler.FAILURE:
         self.__callbacks(port, 1)
       else:
+        # TODO: Will fail when Port.fetch_only is set (and ports not installed)
         assert port.depends().check(self.__stage) > DependHandler.UNRESOLV
         assert port.stage() == self.__stage - 1 and not port.working()
         self.__queue.put(lambda: self.build(port))

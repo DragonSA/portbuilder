@@ -158,16 +158,16 @@ Future release:
      * IS_INTERACTIVE
      * Restrictions
      - etc
-   + Handlers:
+   * Handlers:
      * Provide output stream (as work in progress)
      * config:
        * Check for caching of options
        * Allow forcing of config options
-     + fetch:
+     * fetch:
        * Add a cache for fetching
        * Check the *distfiles* and subdirs are correct
        * Add cache across ports (on a per file basis)
-       - Handle fetching of the same source files (concurrency)
+       * Handle fetching of the same source files (concurrency)
      * install:
        * Update port install status properly
        * Handle when a port is already installed
