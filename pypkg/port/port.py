@@ -433,17 +433,24 @@ class Port(object):
     from pypkg.cache import check_files, set_files
     from pypkg.make import make_target, no_opt, SUCCESS
 
-    files = check_files('distfiles', self._origin)
     distdir = self.attr('distdir')
-    distfiles = [join(distdir, i) for i in self.attr('distfiles')]
+    distfiles = [(i, join(distdir, i)) for i in self.attr('distfiles')]
 
-    if files and set(files) == set(distfiles):
+    status = True
+    for i in distfiles:
+      files = check_files('distfiles', i[0])
+      if not files or files[0] != i[1]:
+        status = False
+        break
+
+    if status:
       return True
 
     status = make_target(self._origin, ['checksum']).wait() is SUCCESS
 
     if status and not no_opt:
-      set_files('distfiles', self._origin, distfiles)
+      for i in distfiles:
+        set_files('distfiles', i[0], i[1])
     return status
 
   build = lambda self: self.build_stage(Port.BUILD)

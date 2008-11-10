@@ -55,6 +55,9 @@ def set_files(db_name, name, files):
      @param files: The set of files
      @type files: C{[str]}
   """
+  if isinstance(files, str):
+    files = (files,)
+
   if not no_cache:
     data = []
     for i in files:

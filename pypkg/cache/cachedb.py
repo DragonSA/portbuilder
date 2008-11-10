@@ -342,7 +342,9 @@ class RWLock(object):
           return False
         assert not self.__writer or self.__writer is True
         self.__writer = True
+        self.__writer_queue += 1
         self.__wcond.wait()
+        self.__writer_queue -= 1
         assert self.__writer is True and not len(self.__readers)
 
       elif self.__writer and self.__writer is not True:
