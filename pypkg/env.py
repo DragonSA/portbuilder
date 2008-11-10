@@ -21,7 +21,7 @@ def init_dirs():
   dirs['home'] = join(getenv('HOME'), '.pypkg')  # ${HOME}/.pypkg
 
   # The database dirs
-  root_dbdir = 'var/db/pypkg'
+  root_dbdir = '/var/db/pypkg'
   if getenv('USER') == 'root':
     dirs['db']      = root_dbdir # {DB_ROOT}
     dirs['db_root'] = dirs['db'] # ${DB}
