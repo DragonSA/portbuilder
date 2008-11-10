@@ -224,12 +224,12 @@ def cmp_attr(old, new, attr):
       @rtype: C{(str, str, int)}
   """
   old = old.rsplit(attr, 1)
-  new = old.rsplit(attr, 1)
+  new = new.rsplit(attr, 1)
   if len(old) > len(new):
     return (old[0], new[0], 1)
   elif len(old) < len(new):
     return (old[0], new[0], -1)
   elif len(old) == len(new) == 1:
     return (old[0], new[0], 0)
-  else: #if len(old) == 0 and len(new) == 0
-    return (old[0], new[0], cmp(int(old[0]), int(new[0])))
+  else: #if len(old) == 2 and len(new) == 2
+    return (old[0], new[0], cmp(int(old[1]), int(new[1])))
