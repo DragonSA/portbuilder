@@ -4,6 +4,8 @@ managing port information.
 """
 from __future__ import absolute_import, with_statement
 
+from contextlib import contextmanager
+
 __all__ = ['Port']
 
 def check_config(optionfile, pkgname):
@@ -104,6 +106,74 @@ def recurse_depends(port, category, cache=dict()):
     return " ".join(cache[port.origin()])
   return " ".join(retrieve(port, category))
 
+class FetchLock(object):
+  """
+     A fetch lock, excludes fetching the same files from different ports.
+  """
+  def __init__(self):
+    """
+       Initialise the locks and database of files.
+    """
+    from threading import Condition, Lock
+
+    self.__lock = Condition(Lock())
+    self._files = []
+
+  def acquire(self, files, blocking=True):
+    """
+       Acquire a lock for the given files.
+
+       @param files: The files to lock on
+       @type files: C{[str]}
+       @param blocking: If we should wait to lock
+       @type blocking: C{bool}
+       @return: If the lock was acquired
+       @rtype: C{bool}
+    """
+    with self.__lock:
+      while True:
+        wait = False
+        for i in files:
+          if i in self._files:
+            wait = True
+            break
+        if wait:
+          if not blocking:
+            return False
+          else:
+            self.__lock.wait()
+        else:
+          self._files += files
+          return True
+
+  def release(self, files):
+    """
+       Release a lock fir the given files.
+
+       @param files: The files locked on
+       @type files: C{[str]}
+    """
+    for i in files:
+      assert i in self._files
+
+    with self.__lock:
+      for i in files:
+        self._files.remove(i)
+      self.__lock.notify()
+
+  @contextmanager
+  def lock(self, files):
+    """
+       Create a context manager for a lock of the given files.
+
+       @param files: The files to lock on
+       @type files: C{[str]}
+    """
+    self.acquire(files)
+    try:
+      yield
+    finally:
+      self.release(files)
 
 class Port(object):
   """
@@ -138,6 +208,7 @@ class Port(object):
 
   _log = getLogger("pypkg.port")
   _lock = Condition(Lock())  #: The notifier and locker for all ports
+  _lock_fetch = FetchLock()  #: Mutual exclusion lock for fetching file
 
   def __init__(self, origin):
     """
@@ -436,22 +507,23 @@ class Port(object):
     distdir = self.attr('distdir')
     distfiles = [(i, join(distdir, i)) for i in self.attr('distfiles')]
 
-    status = True
-    for i in distfiles:
-      files = check_files('distfiles', i[0])
-      if not files or files[0] != i[1]:
-        status = False
-        break
-
-    if status:
-      return True
-
-    status = make_target(self._origin, ['checksum']).wait() is SUCCESS
-
-    if status and not no_opt:
+    with self._lock_fetch.lock(self.attr('distfiles')):
+      status = True
       for i in distfiles:
-        set_files('distfiles', i[0], i[1])
-    return status
+        files = check_files('distfiles', i[0])
+        if not files or files[0] != i[1]:
+          status = False
+          break
+
+      if status:
+        return True
+
+      status = make_target(self._origin, ['checksum']).wait() is SUCCESS
+
+      if status and not no_opt:
+        for i in distfiles:
+          set_files('distfiles', i[0], i[1])
+      return status
 
   build = lambda self: self.build_stage(Port.BUILD)
   def _build(self):
