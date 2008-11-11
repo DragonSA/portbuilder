@@ -424,7 +424,7 @@ class Top(Monitor):
 
     ports = sum(summary_new)
     if ports:
-      msg = "%i port(s):" % ports
+      msg = "%i port(s) remaining:" % ports
       if summary_new[0]:
         msg += " %i active" % summary_new[0]
         if summary_new[1]:

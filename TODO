@@ -26,6 +26,11 @@ Future release:
  - CacheDB:
    - Handle when cached data changes version...
 
+0.0.9 - Milestone 9 (Sundry modules):
+ - Offline caching:
+   - Handle recovery on request
+   - Ensure user database co-operates with root
+
 0.0.8 - Milestone 8 (Finish command line controller):
  - Refine and condense code
  - Default to batch mode
@@ -59,6 +64,7 @@ Future release:
      - View output of port (via a window)
      - Mouse support
      - Improve output when rendering to small screens
+     - Remove /[workers] from output
  - pypkg:
    - Add -j option (fine tune concurrency)
    - Add force config option
@@ -158,6 +164,7 @@ Future release:
      * IS_INTERACTIVE
      * Restrictions
      - etc
+   - Fail port when fetch_only and stage > fetch
    * Handlers:
      * Provide output stream (as work in progress)
      * config:

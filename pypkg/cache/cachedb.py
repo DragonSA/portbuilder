@@ -290,17 +290,19 @@ class RWLock(object):
       raise RuntimeError, "Cannot acquire read-lock when already held"
 
     with self.__lock:
-      while True:
-        if not self.__writer:
-          self.__readers.append(me)
-          return True
-        elif not blocking:
+      assert not self.__writer_queue or self.__writer
+
+      if self.__writer or self.__writer_queue:
+        if not blocking:
           return False
-        else:
-          # TODO: Warn when waiting more than once!!!
-          self.__readers_queue += 1
-          self.__rcond.wait()
-          self.__readers_queue -= 1
+        self.__readers_queue += 1
+        self.__rcond.wait()
+        self.__readers_queue -= 1
+
+        assert not self.__writer and not self.__writer_queue
+
+      self.__readers.append(me)
+      return True
 
   def release_read(self):
     """
@@ -313,9 +315,9 @@ class RWLock(object):
     if me not in self.__readers:
       raise RuntimeError, "Cannot release read-lock not held"
 
-    assert not self.__writer or self.__writer is True
-
     with self.__lock:
+      assert not self.__writer or self.__writer is True
+
       self.__readers.remove(me)
       if self.__writer is True and not len(self.__readers):
         self.__wcond.notify()
@@ -336,7 +338,11 @@ class RWLock(object):
     if self.__writer is me:
       raise RuntimeError, "Cannot acquire write-lock when already held"
 
+    assert self.__writer_queue >= 0
+
     with self.__lock:
+      assert not self.__writer_queue or self.__writer
+
       if len(self.__readers):
         if not blocking:
           return False
@@ -347,7 +353,7 @@ class RWLock(object):
         self.__writer_queue -= 1
         assert self.__writer is True and not len(self.__readers)
 
-      elif self.__writer and self.__writer is not True:
+      elif self.__writer:
         if not blocking:
           return False
         assert not len(self.__readers)
