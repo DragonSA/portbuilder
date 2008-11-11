@@ -47,8 +47,6 @@ ports_attr = {
 # Various restrictions
 "conflict":   ["CONFLICTS",  str], # Ports this one conflicts with
 "no_package": ["NO_PACKAGE", str], # Packages are not allowed to be distributed
-"no_cdrom":   ["NO_CDROM",   str], # Packages/distfiles not allowed on cdrom
-"restricted": ["RESTRICTED", str], # Restricted port, implies above two
 
 # Sundry information
 "depends":     ["_DEPEND_DIRS",   tuple], # The ports dependants

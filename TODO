@@ -110,6 +110,7 @@ Future release:
    - Make thread safe
    - When doing individual checks, cache as they can be duplicated
    - Allow switching for depends resolution (from complex to simple...)
+   - Check for conflicts (and handle)
 
 0.0.5 - Milestone 5 (Finish basic ports infrastructure):
  - Refine and condense code
@@ -153,20 +154,19 @@ Future release:
        * date stamps
        * included Makefiles
    * Efficient version of pkg_version
-   - Handle port warning properly (instead of just logging) aka message system
-   + Attributes:
+   * Attributes:
      * Check for a need of PATCHFILES
      * ALWAYS_KEEP_DISTFILES
      * Extend attributes for NO_*
-     - FORBIDDEN, BROKEN and IGNORE
-     - ONLY_FOR_ARCHS and NOT_FOR_ARCHS
-     - DEPRECIATION...
+     * FORBIDDEN, BROKEN and IGNORE
+     * ONLY_FOR_ARCHS and NOT_FOR_ARCHS
+     * DEPRECIATION...
      * NO_BUILD option (and implement)
      - CONFLICTS
      * IS_INTERACTIVE
      * Restrictions
-     - etc
-   - Fail port when fetch_only and stage > fetch
+     * etc
+   * Fail port when fetch_only and stage > fetch
    * Handlers:
      * Provide output stream (as work in progress)
      * config:

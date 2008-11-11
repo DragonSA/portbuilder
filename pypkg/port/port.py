@@ -617,6 +617,8 @@ class Port(object):
       args += ['package']
       if self.attr('no_package'):
         args += '-DFORCE_PACKAGE'
+        self._log.warn("Forcing package build for ``%s''" % self._origin)
+
     make = make_target(self._origin, args, priv=True)
 
     status = Port.INSTALL, make.wait() is SUCCESS
@@ -625,17 +627,8 @@ class Port(object):
 
       from pypkg.port.arch import status
       from pypkg.make import env
+ 
       #  Don't need to lock to change this as it will already have been set
-      if Port.package:
-        if self.attr('no_package'):
-          self._log.info("Binary distribution of '%s' forbidden: ``%s''" %
-                         (self._origin, self.attr('no_package')))
-        elif self.attr('no_cdrom'):
-          self._log.info("Distribution on CDROM of '%s' restricted: ``%s''" %
-                         (self._origin, self.attr('no_cdrom')))
-        elif self.attr('restricted'):
-          self._log.info("Distribution of '%s' restricted: ``%s''" %
-                         (self._origin, self.attr('restricted')))
       pkg_message = join(env['PORTSDIR'], self._origin, 'pkg-message')
       if isfile(pkg_message):
         self._log.info("Port '%s' has the following message:\n%s" %
@@ -675,9 +668,16 @@ class Port(object):
       if self._failed:
         return False, False
 
-      if self._stage == stage or (Port.fetch_only and stage > Port.FETCH):
+      if Port.fetch_only and stage > Port.FETCH:
         self._stage = stage
-        return False, True
+        self._failed = True
+        try:
+          self._lock.release()
+          self._depends.status_changed()
+        finally:
+          self._lock.acquire()
+        self._lock.notifyAll()
+        return False, False
 
       assert self._stage == stage - 1 and not self._failed
 
