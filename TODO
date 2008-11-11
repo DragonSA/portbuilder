@@ -152,6 +152,7 @@ Future release:
        * date stamps
        * included Makefiles
    * Efficient version of pkg_version
+   - Handle port warning properly (instead of just logging) aka message system
    + Attributes:
      * Check for a need of PATCHFILES
      * ALWAYS_KEEP_DISTFILES
@@ -184,7 +185,8 @@ Future release:
  + make:
    - Have logging of build commands (with archival)
    * Add a command prefix (such as for socksify?)
-   - Add su/sudo support
+   + Add sudo support
+   - Make to class
    * Fix the use of prefexing...
    * Fix no opt command displaying
  * Split port into its subcomponents:

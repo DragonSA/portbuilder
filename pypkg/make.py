@@ -11,10 +11,43 @@ env = {}  #: The environment flags to pass to make, aka -D...
 no_opt = False  #: Indicate if we should not issue a command
 pre_cmd = []  #: Prepend to command
 SUCCESS = 0  #: The value returns by a program on success
+am_root = getenv('USER')  #: Indicate if we are root
+password = None  #: Password to access root status (via su or sudo)
 
 env["PORTSDIR"] = getenv("PORTSDIR", "/usr/ports/")  #: Location of ports
 env["BATCH"] = None  #: Default to use batch mode
 env["NOCLEANDEPENDS"] = None  #: Default to only clean ports
+
+def check_password(passwd):
+  """
+     Check the password to gain root status.  If the password is correct then
+     it is stored locally.
+
+     @param passwd: The password to use.
+     @type passwd: C{str}
+     @return: If the password gets us user privilage
+     @rtype: C{bool}
+  """
+  from subprocess import Popen, PIPE, STDOUT
+
+  global am_root, password
+
+  if am_root == 'root' or password is not None:
+    return True
+
+  try:
+    sudo = ['sudo', '-S', '--']
+    cmd = Popen(sudo + ['cat'], stdin=PIPE, stdout=PIPE, stderr=STDOUT,
+                                         close_fds=True)
+    cmd.stdin.write(passwd)
+    cmd.stdin.close()
+    if cmd.wait() is SUCCESS:
+      am_root = sudo
+      password = passwd
+      return True
+  except OSError:
+    # SUDO does not exist, try su
+    return False
 
 def log_files(origin):
   """
@@ -76,7 +109,7 @@ def get_pipe(pipe, origin):
     return PIPE, stdout, stderr
 
 
-def make_target(origin, args, pipe=None):
+def make_target(origin, args, pipe=None, priv=False):
   """
      Run make to build a target with the given arguments and the appropriate
      addition settings
@@ -85,6 +118,10 @@ def make_target(origin, args, pipe=None):
      @type origin: C{str}
      @param args: Targets and arguments for make
      @type args: C{(str)}
+     @param pipe: Indicate if the make argument output must be piped
+     @type pipe: C{bool|file}
+     @param priv: Indicate if the make command needs to be privilaged
+     @type priv: C{bool}
      @return: The make process interface
      @rtype: C{Popen}
   """
@@ -104,12 +141,16 @@ def make_target(origin, args, pipe=None):
     from pypkg.monitor import monitor
     monitor.pause()
 
-  args = pre_cmd + ['make', '-C', join(env["PORTSDIR"], origin)] + args
   try:
+    args = pre_cmd + ['make', '-C', join(env["PORTSDIR"], origin)] + args
     if pipe or not no_opt:
+      if priv and isinstance(am_root, (list, tuple)):
+        args = am_root + args
       make = Popen(args, stdin=stdin, stdout=stdout, stderr=stderr,
                   close_fds=True)
       if stdin:
+        if priv and isinstance(am_root, (list, tuple)):
+          make.stdin.write(password)
         make.stdin.close()
       elif pipe is False:
         make.wait()
