@@ -25,7 +25,9 @@ def iswritable(path):
   except OSError:
     return False
 
-  if st.st_mode & (1 << 1):
+  if not uid:
+    return True
+  elif st.st_mode & (1 << 1):
     return True
   elif st.st_mode & (1 << 4) and st.st_gid == getgid():
     return True
@@ -581,21 +583,21 @@ class Port(object):
         @return: The success status
         @rtype: C{bool}
     """
-    from pypkg.make import make_target, SUCCESS
+    from pypkg.make import mkdir, make_target, SUCCESS
 
     #make = make_target(self._origin, ['clean', 'extract', 'patch', 'configure',
                                       #'build'])
 
     if not isrecwritable(self.attr('wrkdir')):
-      # TODO: Make workdir (from make)
-      pass
-
-    if self.attr('interactive'):
-      pipe = False
+      priv = not mkdir(self.attr('wrkdir'))
     else:
-      pipe = None
+      priv = False
 
-    return make_target(self._origin, ['clean', 'all'], pipe).wait() is SUCCESS
+    pipe = self.attr('interactive') and False or None
+
+    make = make_target(self._origin, ['clean', 'all'], pipe, priv)
+
+    return make.wait() is SUCCESS
 
   install = lambda self: self.build_stage(Port.INSTALL)
   def _install(self):

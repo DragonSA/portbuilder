@@ -5,49 +5,8 @@ from __future__ import absolute_import
 
 from os import getenv
 
-__all__ = ['clean_log', 'env', 'make_target', 'no_opt', 'pre_cmd', 'SUCCESS']
-
-env = {}  #: The environment flags to pass to make, aka -D...
-no_opt = False  #: Indicate if we should not issue a command
-pre_cmd = []  #: Prepend to command
-SUCCESS = 0  #: The value returns by a program on success
-am_root = getenv('USER')  #: Indicate if we are root
-password = None  #: Password to access root status (via su or sudo)
-
-env["PORTSDIR"] = getenv("PORTSDIR", "/usr/ports/")  #: Location of ports
-env["BATCH"] = None  #: Default to use batch mode
-env["NOCLEANDEPENDS"] = None  #: Default to only clean ports
-
-def check_password(passwd):
-  """
-     Check the password to gain root status.  If the password is correct then
-     it is stored locally.
-
-     @param passwd: The password to use.
-     @type passwd: C{str}
-     @return: If the password gets us user privilage
-     @rtype: C{bool}
-  """
-  from subprocess import Popen, PIPE, STDOUT
-
-  global am_root, password
-
-  if am_root == 'root' or password is not None:
-    return True
-
-  try:
-    sudo = ['sudo', '-S', '--']
-    cmd = Popen(sudo + ['cat'], stdin=PIPE, stdout=PIPE, stderr=STDOUT,
-                                         close_fds=True)
-    cmd.stdin.write(passwd)
-    cmd.stdin.close()
-    if cmd.wait() is SUCCESS:
-      am_root = sudo
-      password = passwd
-      return True
-  except OSError:
-    # SUDO does not exist, try su
-    return False
+__all__ = ['clean_log', 'make', 'env', 'make_target', 'mkdir', 'set_password',
+           'SUCCESS']
 
 def log_files(origin):
   """
@@ -109,60 +68,141 @@ def get_pipe(pipe, origin):
     return PIPE, stdout, stderr
 
 
-def make_target(origin, args, pipe=None, priv=False):
+class Make(object):
   """
-     Run make to build a target with the given arguments and the appropriate
-     addition settings
-
-     @param origin: The port for which to run make
-     @type origin: C{str}
-     @param args: Targets and arguments for make
-     @type args: C{(str)}
-     @param pipe: Indicate if the make argument output must be piped
-     @type pipe: C{bool|file}
-     @param priv: Indicate if the make command needs to be privilaged
-     @type priv: C{bool}
-     @return: The make process interface
-     @rtype: C{Popen}
+     The make class.  This class handles executing make targets.
   """
-  from os.path import join
-  from subprocess import Popen
 
-  if isinstance(args, str):
-    args = [args]
-  args = args + [v and '%s="%s"' % (k, v) or "-D%s" % k for k, v in env.items()
-                  if (k, v) != ("PORTSDIR", "/usr/ports/") and
-                    (args[0], k) != ('config', "BATCH") and
-                    (k != "NOCLEANDEPENDS" or 'clean' in args)]
+  SUCCESS = 0     #: Return code apon success
+  no_opt = False  #: Indicate if we should not issue a command
 
-  stdin, stdout, stderr = get_pipe(pipe, origin)
+  def __init__(self):
+    """
+       Initialise the Make class.
+    """
+    self.env = {}  #: The environment flags to pass to make, aka -D...
+    self.pre_cmd = []  #: Prepend to command
+    self.__am_root = getenv('USER')  #: Indicate if we are root
+    self.__password = None  #: Password to access root status (via su or sudo)
 
-  if pipe is False and not no_opt:
-    from pypkg.monitor import monitor
-    monitor.pause()
+    self.env["PORTSDIR"] = getenv("PORTSDIR", "/usr/ports/") #: Location of port
+    self.env["BATCH"] = None  #: Default to use batch mode
+    self.env["NOCLEANDEPENDS"] = None  #: Default to only clean ports
 
-  try:
-    args = pre_cmd + ['make', '-C', join(env["PORTSDIR"], origin)] + args
-    if pipe or not no_opt:
-      if priv and isinstance(am_root, (list, tuple)):
-        args = am_root + args
-      make = Popen(args, stdin=stdin, stdout=stdout, stderr=stderr,
-                  close_fds=True)
-      if stdin:
-        if priv and isinstance(am_root, (list, tuple)):
-          make.stdin.write(password)
-        make.stdin.close()
-      elif pipe is False:
-        make.wait()
-    else:
-      print cmdtostr(args)
-      make = PopenNone()
-  finally:
-    if pipe is False and not no_opt:
-      monitor.resume()
+  def mkdir(self, path):
+    """
+       Create a directory writable by this process.
 
-  return make
+       @param path: The directory to create
+       @type path: C{str}
+       @return: If the creation was successful
+       @rtype: C{bool}
+    """
+    from os.path import exists
+    from os import getuid, getgid
+    from subprocess import Popen, PIPE, STDOUT
 
+    if not isinstance(self.__am_root, (list, tuple)) or exists(path):
+      return False
+    cmd = Popen(self.__am_root + ['install', '-d', '-g%i' % getgid(),
+                                  '-o%i' % getuid(), path], close_fds=True,
+                                  stdin=PIPE, stdout=PIPE, stderr=STDOUT)
+    cmd.stdin.write(self.__password)
+    cmd.stdin.close()
+
+    return cmd.wait() is Make.SUCCESS
+
+  def set_password(self, passwd):
+    """
+      Check the password to gain root status.  If the password is correct then
+      it is stored locally.
+
+      @param passwd: The password to use.
+      @type passwd: C{str}
+      @return: If the password gets us user privilage
+      @rtype: C{bool}
+    """
+    from subprocess import Popen, PIPE, STDOUT
+
+    if self.__am_root == 'root' or self.__password is not None:
+      return True
+
+    try:
+      sudo = ['sudo', '-S', '--']
+      cmd = Popen(sudo + ['cat'], stdin=PIPE, stdout=PIPE, stderr=STDOUT,
+                                          close_fds=True)
+      cmd.stdin.write(passwd)
+      cmd.stdin.close()
+      if cmd.wait() is Make.SUCCESS:
+        self.__am_root = sudo
+        self.__password = passwd
+        return True
+    except OSError:
+      # SUDO does not exist, try su
+      return False
+
+  def target(self, origin, args, pipe=None, priv=False):
+    """
+      Run make to build a target with the given arguments and the appropriate
+      addition settings
+
+      @param origin: The port for which to run make
+      @type origin: C{str}
+      @param args: Targets and arguments for make
+      @type args: C{(str)}
+      @param pipe: Indicate if the make argument output must be piped
+      @type pipe: C{bool|file}
+      @param priv: Indicate if the make command needs to be privilaged
+      @type priv: C{bool}
+      @return: The make process interface
+      @rtype: C{Popen}
+    """
+    from os.path import join
+    from subprocess import Popen
+
+    if isinstance(args, str):
+      args = [args]
+    args = args + [v and '%s="%s"' % (k, v) or "-D%s" % k for k, v in
+                  self.env.items() if (k, v) != ("PORTSDIR", "/usr/ports/") and
+                      (args[0], k) != ('config', "BATCH") and
+                      (k != "NOCLEANDEPENDS" or 'clean' in args)]
+
+    stdin, stdout, stderr = get_pipe(pipe, origin)
+
+    if pipe is False and not Make.no_opt:
+      from pypkg.monitor import monitor
+      monitor.pause()
+
+    try:
+      args = self.pre_cmd + ['make', '-C',
+                                     join(self.env["PORTSDIR"], origin)] + args
+      if pipe or not Make.no_opt:
+        if priv and isinstance(self.__am_root, (list, tuple)):
+          args = self.__am_root + args
+        pmake = Popen(args, stdin=stdin, stdout=stdout, stderr=stderr,
+                    close_fds=True)
+        if stdin:
+          if priv and isinstance(self.__am_root, (list, tuple)):
+            pmake.stdin.write(self.__password)
+          pmake.stdin.close()
+        elif pipe is False:
+          pmake.wait()
+      else:
+        print cmdtostr(args)
+        pmake = PopenNone()
+    finally:
+      if pipe is False and not no_opt:
+        monitor.resume()
+
+    return pmake
+
+make = Make()
+
+env = make.env
+make_target = make.target
+mkdir = make.mkdir
+set_password = make.set_password
+SUCCESS = Make.SUCCESS
 
 class PopenNone(object):
   """

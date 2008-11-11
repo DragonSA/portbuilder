@@ -23,15 +23,17 @@ def main():
      then exits.  Everything else just 'runs'
   """
   from pypkg.exit import terminate
+  from pypkg.make import set_password
   from pypkg.port import Port, get
-  from pypkg import monitor
-  from pypkg import target
+  from pypkg import monitor, target
 
   parser = gen_parser()
   options, args = parser.parse_args()
   options.args = args
 
   set_options(options)
+
+  set_password()
 
   # Set the monitor
   if not options.no_opt:

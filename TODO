@@ -72,6 +72,7 @@ Future release:
    - Implement most of portupgrade
    - Do not use cache when make env is used (WITH* or NO* options passed only)
    - Add --no-cache option
+   - Handle passwords properly
 
 0.0.7 - Milestone 7 (Finish Target Builders):
  - Refine and condense code
@@ -185,8 +186,8 @@ Future release:
  + make:
    - Have logging of build commands (with archival)
    * Add a command prefix (such as for socksify?)
-   + Add sudo support
-   - Make to class
+   * Add sudo support
+   * Make to class
    * Fix the use of prefexing...
    * Fix no opt command displaying
  * Split port into its subcomponents:
