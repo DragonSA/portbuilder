@@ -15,14 +15,14 @@ def init_dirs():
      Initialise the local directories.
   """
   from os.path import isdir, join
-  from os import getenv, mkdir
+  from os import getenv, getuid, mkdir
 
   # The home directory for pypkg
   dirs['home'] = join(getenv('HOME'), '.pypkg')  # ${HOME}/.pypkg
 
   # The database dirs
   root_dbdir = '/var/db/pypkg'
-  if getenv('USER') == 'root':
+  if not getuid():
     dirs['db']      = root_dbdir # {DB_ROOT}
     dirs['db_root'] = dirs['db'] # ${DB}
   else:

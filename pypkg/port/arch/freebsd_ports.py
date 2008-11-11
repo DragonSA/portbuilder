@@ -51,10 +51,11 @@ ports_attr = {
 "restricted": ["RESTRICTED", str], # Restricted port, implies above two
 
 # Sundry information
-"depends":     ["_DEPEND_DIRS", tuple],   # The ports dependants
+"depends":     ["_DEPEND_DIRS",   tuple], # The ports dependants
 "makefiles":   [".MAKEFILE_LIST", tuple], # The makefiles included
-"optionsfile": ["OPTIONSFILE", str],      # The options file
-"interactive": ["IS_INTERACTIVE", str]    # The port is interactive
+"optionsfile": ["OPTIONSFILE",    str],   # The options file
+"interactive": ["IS_INTERACTIVE", str],   # The port is interactive
+"wrkdir":      ["WRKDIR",         str],   # The ports working directory
 } #: The attributes of the given port
 
 # The following are 'fixes' for various attributes

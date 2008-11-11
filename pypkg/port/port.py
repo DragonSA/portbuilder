@@ -5,8 +5,48 @@ managing port information.
 from __future__ import absolute_import, with_statement
 
 from contextlib import contextmanager
+from os import getuid, getgid
 
 __all__ = ['Port']
+
+uid = getuid()
+gid = getgid()
+
+def iswritable(path):
+  """
+     Indicates if path is writable (by this process).
+
+     @return: If path is writable
+     @rtype: C{bool}
+  """
+  from os import stat
+  try:
+    st = stat(path)
+  except OSError:
+    return False
+
+  if st.st_mode & (1 << 1):
+    return True
+  elif st.st_mode & (1 << 4) and st.st_gid == getgid():
+    return True
+  elif st.st_mode & (1 << 7) and st.st_uid == getuid():
+    return True
+  else:
+    return False
+
+def isrecwritable(path):
+  """
+     Indicates if path is writable, or atleast creatable (by this process).
+
+     @return: If path is writable or creatable
+     @rtype: C{bool}
+  """
+  from os.path import dirname, exists
+
+  while path and path != '/' and not exists(path):
+    path = dirname(path)
+
+  return iswritable(path)
 
 def check_config(optionfile, pkgname):
   """
@@ -479,7 +519,7 @@ class Port(object):
     if len(self._attr_map['options']) != 0  and not Port.force_noconfig and \
          check_config(self.attr('optionsfile'), self.attr('pkgname')) or \
          Port.force_config:
-      make = make_target(self._origin, 'config', pipe=False)
+      make = make_target(self._origin, 'config', pipe=False, priv=True)
       status = make.wait() is SUCCESS
 
       if status and not no_opt:
@@ -518,7 +558,14 @@ class Port(object):
       if status:
         return True
 
-      status = make_target(self._origin, ['checksum']).wait() is SUCCESS
+      priv = False
+      for i in distfiles:
+        if not isrecwritable(i[1]):
+          priv = True
+          break
+
+      make = make_target(self._origin, ['checksum'], priv=priv)
+      status = make.wait() is SUCCESS
 
       if status and not no_opt:
         for i in distfiles:
@@ -538,6 +585,11 @@ class Port(object):
 
     #make = make_target(self._origin, ['clean', 'extract', 'patch', 'configure',
                                       #'build'])
+
+    if not isrecwritable(self.attr('wrkdir')):
+      # TODO: Make workdir (from make)
+      pass
+
     if self.attr('interactive'):
       pipe = False
     else:
@@ -563,7 +615,7 @@ class Port(object):
       args += ['package']
       if self.attr('no_package'):
         args += '-DFORCE_PACKAGE'
-    make = make_target(self._origin, args)
+    make = make_target(self._origin, args, priv=True)
 
     status = Port.INSTALL, make.wait() is SUCCESS
     if status:
