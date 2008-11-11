@@ -5,7 +5,7 @@ from __future__ import absolute_import
 
 from os import getenv
 
-__all__ = ['clean_log', 'make', 'env', 'make_target', 'mkdir', 'set_password',
+__all__ = ['clean_log', 'Make', 'env', 'make_target', 'mkdir', 'set_password',
            'SUCCESS']
 
 def log_files(origin):
@@ -191,7 +191,7 @@ class Make(object):
         print cmdtostr(args)
         pmake = PopenNone()
     finally:
-      if pipe is False and not no_opt:
+      if pipe is False and not Make.no_opt:
         monitor.resume()
 
     return pmake

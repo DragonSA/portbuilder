@@ -121,6 +121,7 @@ Future release:
  - Add all assertions
  * Fix pkg_version (when some data has corrupted)
  * Fix sig_handler, should not be called under normal program termination
+ - Find proper $HOME
  * monitor:
    * Add pause and resume support
    * Add dummy monitor (aka no op)

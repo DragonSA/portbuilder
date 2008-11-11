@@ -33,7 +33,7 @@ def main():
 
   set_options(options)
 
-  set_password()
+  set_password('')
 
   # Set the monitor
   if not options.no_opt:
@@ -107,19 +107,19 @@ def set_options(options):
      @param options: The options
      @type options: C{object}
   """
+  from pypkg.make import env, Make
   from pypkg.port import Port
-  from pypkg import make
 
   # Add all -D options
   for i in options.make_env:
-    make.env[i] = None
+    env[i] = None
 
   # Add other make env options (aka variable=value)
   for i in options.args[:]:
     if i.find('=') != -1:
       # TODO:  Make sure var, val take the correct values
       var, val = i.split('=', 1)
-      make.env[var] = val
+      env[var] = val
       options.args.remove(i)
 
   # Batch mode, no configuring (-b)
@@ -130,7 +130,7 @@ def set_options(options):
 
   # No operations (-n)
   if options.no_opt:
-    make.no_opt = True
+    Make.no_opt = True
 
   # Package the ports after installing (-p)
   Port.package = options.package

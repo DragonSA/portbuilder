@@ -516,7 +516,7 @@ class Port(object):
        @rtype: C{bool}
     """
     from pypkg.port import cache
-    from pypkg.make import make_target, no_opt, SUCCESS
+    from pypkg.make import Make, make_target, SUCCESS
 
     if len(self._attr_map['options']) != 0  and not Port.force_noconfig and \
          check_config(self.attr('optionsfile'), self.attr('pkgname')) or \
@@ -524,7 +524,7 @@ class Port(object):
       make = make_target(self._origin, 'config', pipe=False, priv=True)
       status = make.wait() is SUCCESS
 
-      if status and not no_opt:
+      if status and not Make.no_opt:
         from pypkg.port.arch import attr
         self._attr_map = attr(self._origin)
         for i in self._attr_map['depends']:
@@ -544,7 +544,7 @@ class Port(object):
     from os.path import join
 
     from pypkg.cache import check_files, set_files
-    from pypkg.make import make_target, no_opt, SUCCESS
+    from pypkg.make import Make, make_target, SUCCESS
 
     distdir = self.attr('distdir')
     distfiles = [(i, join(distdir, i)) for i in self.attr('distfiles')]
@@ -569,7 +569,7 @@ class Port(object):
       make = make_target(self._origin, ['checksum'], priv=priv)
       status = make.wait() is SUCCESS
 
-      if status and not no_opt:
+      if status and not Make.no_opt:
         for i in distfiles:
           set_files('distfiles', i[0], i[1])
       return status
@@ -607,7 +607,7 @@ class Port(object):
         @return: The success status
         @rtype: C{bool}
     """
-    from pypkg.make import make_target, no_opt, SUCCESS
+    from pypkg.make import Make, make_target, SUCCESS
 
     if self.install_status() == Port.ABSENT:
       args = ['install']
@@ -635,8 +635,8 @@ class Port(object):
                        (self._origin, open(pkg_message).read()))
 
       install_status = self._install_status
-      self._install_status = no_opt and Port.CURRENT or status(self._origin,
-                                                                 self._attr_map)
+      self._install_status = Make.no_opt and Port.CURRENT or \
+                              status(self._origin, self._attr_map)
       if install_status != self._install_status:
         self._depends.status_changed()
 
