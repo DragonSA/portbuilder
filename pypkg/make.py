@@ -46,9 +46,9 @@ def get_pipe(pipe, origin):
   """
      Returns the appropriate pipes.  None is the default (pipe to logfile),
      False is not piping, True is pipe stdout and stderr and file object is
-     pipe to the file (both stdout and stderr)/
+     pipe to the file (both stdout and stderr)
 
-     @param pipe: The type of pipe requested.
+     @param pipe: The type of pipe requested
      @type pipe: C{bool|None|file}
      @param origin: The for for which to run create logfiles for
      @type origin: C{str}
@@ -80,9 +80,13 @@ class Make(object):
     """
        Initialise the Make class.
     """
+    from logging import getLogger
+
     self.env = {}  #: The environment flags to pass to make, aka -D...
     self.pre_cmd = []  #: Prepend to command
+
     self.__am_root = getenv('USER')  #: Indicate if we are root
+    self.__log = getLogger('pypkg.make')  #: Logger for this class
     self.__password = None  #: Password to access root status (via su or sudo)
 
     self.env["PORTSDIR"] = getenv("PORTSDIR", "/usr/ports/") #: Location of port
@@ -102,8 +106,12 @@ class Make(object):
     from os import getuid, getgid
     from subprocess import Popen, PIPE, STDOUT
 
+    # TODO: If dir exists and is writable return True
     if not isinstance(self.__am_root, (list, tuple)) or exists(path):
       return False
+
+    self.__log.debug("Creating directory ``%s'' for %i:%i" %
+                                                    (path, getuid(), getgid()))
     cmd = Popen(self.__am_root + ['install', '-d', '-g%i' % getgid(),
                                   '-o%i' % getuid(), path], close_fds=True,
                                   stdin=PIPE, stdout=PIPE, stderr=STDOUT)
@@ -136,15 +144,20 @@ class Make(object):
       if cmd.wait() is Make.SUCCESS:
         self.__am_root = sudo
         self.__password = passwd
+        self.__log.info("Sudo password approved: ``***''")
         return True
+      else:
+        self.__log.warn("Incorrect sudo password: ``%s''" % passwd)
+        return False
     except OSError:
-      # SUDO does not exist, try su
-      return False
+      # SUDO does not exist, try su?
+      self.__log.error("Unable to execute sudo (not installed?)")
+      return None
 
   def target(self, origin, args, pipe=None, priv=False):
     """
       Run make to build a target with the given arguments and the appropriate
-      addition settings
+      addition settings.
 
       @param origin: The port for which to run make
       @type origin: C{str}
@@ -179,6 +192,7 @@ class Make(object):
       if pipe or not Make.no_opt:
         if priv and isinstance(self.__am_root, (list, tuple)):
           args = self.__am_root + args
+        self.__log.debug("Executing: ``%s''" % cmdtostr(args))
         pmake = Popen(args, stdin=stdin, stdout=stdout, stderr=stderr,
                     close_fds=True)
         if stdin:
@@ -198,28 +212,28 @@ class Make(object):
 
 make = Make()
 
-env = make.env
-make_target = make.target
-mkdir = make.mkdir
-set_password = make.set_password
-SUCCESS = Make.SUCCESS
+env = make.env                   #: Environment variables for make
+make_target = make.target        #: Execute the given target
+mkdir = make.mkdir               #: Create a directory writable by this process
+set_password = make.set_password #: Set the password to execute privileged cmds
+SUCCESS = Make.SUCCESS           #: Returns by a process apon success.
 
 class PopenNone(object):
   """
-     An empty replacement for Popen
+     An empty replacement for Popen.
   """
 
-  returncode = SUCCESS
-  pid = -1
+  returncode = SUCCESS  #: Return code for the dummy processes
+  pid = -1              #: PID of the dummy processes
 
-  stdin  = None
-  stdout = None
-  stderr = None
+  stdin  = None  #: Stdin stream
+  stdout = None  #: Stdout stream
+  stderr = None  #: Stderr stream
 
   @staticmethod
   def wait():
     """
-       Return SUCCESS
+       Return SUCCESS.
 
        @return: Success
        @rtype: C{int}
@@ -229,7 +243,7 @@ class PopenNone(object):
   @staticmethod
   def poll():
     """
-       Return SUCCESS
+       Return SUCCESS.
 
        @return: Success
        @rtype: C{int}
@@ -239,7 +253,7 @@ class PopenNone(object):
   @staticmethod
   def communicate(input=None):
     """
-       Communicate with the process
+       Communicate with the process.
 
        @param input: Input to the port
        @type input: C{str}
