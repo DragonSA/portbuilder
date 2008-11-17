@@ -290,6 +290,7 @@ class RWLock(object):
       raise RuntimeError, "Cannot acquire read-lock when already held"
 
     with self.__lock:
+      # self.__writer_queue -> self.__writer
       assert not self.__writer_queue or self.__writer
 
       if self.__writer or self.__writer_queue:
@@ -299,7 +300,12 @@ class RWLock(object):
         self.__rcond.wait()
         self.__readers_queue -= 1
 
-        assert not self.__writer and not self.__writer_queue
+        # It is possible (due to lock inter-play) to fail assert
+        #assert not self.__writer and not self.__writer_queue
+
+      # Writer lock should not be held when reader lock is held
+      # Writer lock could be pending due to lock inter-play
+      assert not self.__writer or self.__writer is True
 
       self.__readers.append(me)
       return True
@@ -316,6 +322,7 @@ class RWLock(object):
       raise RuntimeError, "Cannot release read-lock not held"
 
     with self.__lock:
+      # Writer lock should not be held when reader lock is held
       assert not self.__writer or self.__writer is True
 
       self.__readers.remove(me)
@@ -338,33 +345,35 @@ class RWLock(object):
     if self.__writer is me:
       raise RuntimeError, "Cannot acquire write-lock when already held"
 
-    assert self.__writer_queue >= 0
-
     with self.__lock:
+      # self.__writer_queue -> self.__writer
       assert not self.__writer_queue or self.__writer
 
       if len(self.__readers):
         if not blocking:
           return False
+
+        # Writer lock cannot be held if reader lock is
         assert not self.__writer or self.__writer is True
+
         self.__writer = True
         self.__writer_queue += 1
         self.__wcond.wait()
         self.__writer_queue -= 1
-        assert self.__writer is True and not len(self.__readers)
 
       elif self.__writer:
         if not blocking:
           return False
-        assert not len(self.__readers)
         self.__writer_queue += 1
         self.__wcond.wait()
         self.__writer_queue -= 1
 
-        assert self.__writer is True and not len(self.__readers)
+      else:
+        self.__writer = True
 
-      assert not len(self.__readers) and (not self.__writer or
-                                                        self.__writer is True)
+      # Writer lock is pending and no reader lock is held
+      assert self.__writer is True and not len(self.__readers)
+
       self.__writer = me
       return True
 
