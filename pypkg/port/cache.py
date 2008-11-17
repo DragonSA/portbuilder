@@ -22,8 +22,8 @@ class PortCache(dict):
 
     from threading import Condition, Lock
 
-    self._lock = Condition(Lock())  #: The lock for this cache
     self.__dead_cnt = 0  #: The number of 'bad' ports
+    self.__lock = Condition(Lock())  #: The lock for this cache
 
   def __len__(self):
     """
@@ -46,7 +46,7 @@ class PortCache(dict):
        @rtype: C{Port}
     """
     key = self._normalise(key)
-    with self._lock:
+    with self.__lock:
       try:
         value = dict.__getitem__(self, key)
         if value:
@@ -64,7 +64,7 @@ class PortCache(dict):
             return value
           else:
             raise KeyError, key
-        self._lock.wait()
+        self.__lock.wait()
 
   def __setitem__(self, key, value):
     """
@@ -76,7 +76,7 @@ class PortCache(dict):
        @type value: C{str}
     """
     key = self._normalise(key)
-    with self._lock:
+    with self.__lock:
       dict.__setitem__(self, key, value)
 
   def has_key(self, k):
@@ -106,7 +106,7 @@ class PortCache(dict):
        @rtype: C{int}
     """
     key = self._normalise(key)
-    with self._lock:
+    with self.__lock:
       self.__add(key)
 
   def __add(self, key):
@@ -158,18 +158,18 @@ class PortCache(dict):
       else:
         port = False
         self._log.error("Invalid port name '%s' or port does not exist" % key)
-      self._lock.acquire()
+      self.__lock.acquire()
     except KeyboardInterrupt:
       raise
     except BaseException:
-      self._lock.acquire()
+      self.__lock.acquire()
       port = False
       self._log.exception("Error while creating port '%s'" % key)
     dict.__setitem__(self, key, port)
     if port:
       self.__dead_cnt -= 1
-    self._lock.notifyAll()
-    self._lock.release()
+    self.__lock.notifyAll()
+    self.__lock.release()
 
   def _normalise(self, origin):
     """
