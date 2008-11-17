@@ -175,10 +175,10 @@ class DependHandler(object):
         for i in typ:
           depends.append(self._dependants[typ])
 
-      if fields:
-        return tuple(set([i[0] for i in sum(depends, [])]))
-      else:
-        return tuple(set([i[1] for i in sum(depends, [])]))
+    if fields:
+      return tuple(set([i[0] for i in sum(depends, [])]))
+    else:
+      return tuple(set([i[1] for i in sum(depends, [])]))
 
   def check(self, stage):
     """
