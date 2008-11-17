@@ -127,7 +127,7 @@ class Make(object):
 
       @param passwd: The password to use.
       @type passwd: C{str}
-      @return: If the password gets us user privilage
+      @return: If the password gets us user privilege
       @rtype: C{bool}
     """
     from subprocess import Popen, PIPE, STDOUT
@@ -165,7 +165,7 @@ class Make(object):
       @type args: C{(str)}
       @param pipe: Indicate if the make argument output must be piped
       @type pipe: C{bool|file}
-      @param priv: Indicate if the make command needs to be privilaged
+      @param priv: Indicate if the make command needs to be privileged
       @type priv: C{bool}
       @return: The make process interface
       @rtype: C{Popen}
@@ -216,7 +216,7 @@ env = make.env                   #: Environment variables for make
 make_target = make.target        #: Execute the given target
 mkdir = make.mkdir               #: Create a directory writable by this process
 set_password = make.set_password #: Set the password to execute privileged cmds
-SUCCESS = Make.SUCCESS           #: Returns by a process apon success.
+SUCCESS = Make.SUCCESS           #: Returns by a process upon success.
 
 class PopenNone(object):
   """
