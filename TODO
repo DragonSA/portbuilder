@@ -100,6 +100,7 @@ Future release:
  - Add all assertions
  - Ensure graceful handling of failed ports (does not appear to work)
  - Make config_builder API compatible with the other Builders?
+ - Catch exceptions from callback (all callbacks)
 
 0.0.6 - Milestone 6 (Finish Dependant Handling):
  - modules:

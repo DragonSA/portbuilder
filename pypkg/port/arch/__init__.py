@@ -31,13 +31,13 @@ def attr(origin):
       try:
         return db['port.attr'][origin]
       except KeyError:
-        getLogger('pypkg.cache').warn('Corrupt data detected (port.attr.%s)' %
+        getLogger('pypkg.cache').warn('Corrupt data detected: port.attr.%s' %
                                                                         origin)
 
     # Get the port attributes the hard way
     att = get_attr(origin)
 
-    log.info("Caching port attributes: ``%s''" % origin)
+    log.info("Caching port attributes: %s" % origin)
 
     # Save the attributes in the cache
     db['port.attr'][origin] = att

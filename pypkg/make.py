@@ -113,8 +113,8 @@ class Make(object):
     if not isinstance(self.__am_root, (list, tuple)) or exists(path):
       return False
 
-    self.__log.debug("Creating directory ``%s'' for %i:%i" %
-                                                    (path, getuid(), getgid()))
+    self.__log.debug("Creating directory (uid=%i:gid=%i): %s" %
+                                                    (getuid(), getgid(), path))
     cmd = Popen(self.__am_root + ['install', '-d', '-g%i' % getgid(),
                                   '-o%i' % getuid(), path], close_fds=True,
                                   stdin=PIPE, stdout=PIPE, stderr=STDOUT)

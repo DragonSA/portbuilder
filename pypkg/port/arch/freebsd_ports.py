@@ -4,11 +4,17 @@ infrastructure.
 """
 from __future__ import absolute_import, with_statement
 
+from logging import getLogger
 from threading import Lock
 
 from pypkg.make import env
 
 __all__ = ['get_status', 'get_attr']
+
+#: Logger for get_attr
+log_attr = getLogger('pypkg.port.arch.freebsd_port.get_attr')
+#: Logger for get_status
+log_status = getLogger('pypkg.port.arch.freebsd_port.port_status')
 
 ports_attr = {
 # Port naming
@@ -92,7 +98,6 @@ def get_status(origin, attr, cache=dict(), lock=Lock()):
   """
   from os import path
   from os import listdir
-  from logging import getLogger
 
   from pypkg.port import Port
 
@@ -118,23 +123,21 @@ def get_status(origin, attr, cache=dict(), lock=Lock()):
             break
           elif j.startswith('@name '):
             if j[6:-1].strip() != i:
-              getLogger('pypkg.port.arch.freebsd_port.port_status').warning(
-                "Package %s has a conflicting name %s" % (i, j[6:-1].strip()))
+              log_status.warn("Package %s has a conflicting name: %s" %
+                                                          (i, j[6:-1].strip()))
               porigin = None
               break
       except (IOError, OSError):
-        getLogger('pypkg.port.arch.freebsd_port.port_status').error(
-          "Package %s has corrupted" % i)
+        log_status.error("Package has corrupted: %s" % i)
 
       # If the pkg has the same origin get the maximum of the install status
       if porigin == origin:
         if status > Port.ABSENT:
-          getLogger('pypkg.port.arch.freebsd_port.port_status').warning(
-                                "Multiple ports with same origin '%s'" % origin)
+          log_status.warn("Multiple ports with same origin: %s" % origin)
         status = max(status, cmp_status(attr['pkgname'], i))
       else:
-        getLogger('pypkg.port.arch.freebsd_port.port_status').warning(
-          "Package has same name as %s but with different origin" % (origin, i))
+        log_status.warn("Package has same name as %s but with " \
+                        "different origin: %s" % (origin, i))
   return status
 
 def get_attr(origin):
@@ -146,8 +149,6 @@ def get_attr(origin):
      @return: A dictionary of attributes
      @rtype: C{\{str:str|(str)|\}}
   """
-  from logging import getLogger
-
   from pypkg.make import make_target, SUCCESS
 
   # Make sure ports ends in a trailing slash
@@ -162,9 +163,8 @@ def get_attr(origin):
 
   make = make_target(origin, args, pipe=True)
   if make.wait() is not SUCCESS:
-    getLogger('pypkg.port.arch.freebsd_port.get_attr').error(
-                       "Error in obtaining information for port '%s'" % origin)
-    raise RuntimeError, "Error in obtaining information for port '%s'" % origin
+    log_attr.error("Error in obtaining information for port: %s" % origin)
+    raise RuntimeError("Error in obtaining information for port: %s" % origin)
 
   attr_map = {}
   for name, value in ports_attr.iteritems():
@@ -179,8 +179,7 @@ def get_attr(origin):
       try:
         attr_map[name] = i(attr_map[name])
       except BaseException:
-        getLogger('pypkg.port.arch.freebsd_port.get_attr').exception(
-                 "Exception applying filter for attribute %s with value %s" %
+        log_attr.exception("Exception applying filter for attribute: %s(%s)" %
                                                         (name, attr_map[name]))
 
   return attr_map
