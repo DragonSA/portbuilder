@@ -1,50 +1,67 @@
+0.0.5 - 2008 November 17:
+ * Speedups in:
+   - pkg_version
+   * CacheDB:
+     - Caching of port data
+     - Caching of fetched files
+   - AutoExit (move to quick notification)
+   - PortCache (reduced duplicate jobs)
+ * Fix monitor when console access is required (config and interactive build)
+ * Port:
+   - Self cleaning and precleaning (with precision cleaning)
+   - Add logging of port targets
+   - Handle pkg-message
+   - config stage only calls config when needed
+   - fetch exclusion based on files fetching
+   - Proper handling of non privilaged building (via sudo)
+
 0.0.4 - 2008 October 29:
  * pypkg:
    * Add a stripped down version that can
-     * Install/upgrade ports
-     * Make packages
-     * Allow variables to be passed to make
-     * fetch only
-     * No op (just prints the commands)
+     - Install/upgrade ports
+     - Make packages
+     - Allow variables to be passed to make
+     - fetch only
+     - No op (just prints the commands)
    * Initial support for making INDEX (still too slow)
  * Port:
-   * Can clean ports
+   - Can clean ports
  * Rename TargetBuilder to StageBuilder
  * Create progress monitor for the build process (aka top mode)
  * Create progress monitor type 2 (aka stat mode)
- * Implement proper thread/system shutdown
-   * Create interrupt handlers
-   * Create exit handlers
-   * Provide easy interface for running main
+ * Implement proper thread/system shutdown:
+   - Create interrupt handlers
+   - Create exit handlers
+   - Provide easy interface for running main
  * Cleanup the use of tools
  * Create proper statistical handling of data (with easy collection methods)
  * Allow KeyboardInterrupt to terminate program:
-   * Get threads to terminate kindly
+   - Get threads to terminate kindly
  * PortCache:
-   * Normalise name (for getters)
+   - Normalise name (for getters)
  * WorkerQueue:
-   * Add terminate and kill functions (to clean off threads)
+   - Add terminate and kill functions (to clean off threads)
 
 
 0.0.3 - 2008 September 30:
  * Port:
-   * Make thread safe
-   * Use TargetBuilder to handle stages
-   * Make depends allocate late
-   * Stage resolution fixes
+   - Make thread safe
+   - Use TargetBuilder to handle stages
+   - Make depends allocate late
+   - Stage resolution fixes
  * DependHandler:
-   * Make thread safe
-   * Allow constructor to initialise dependencies
-   * Add getters for dependencies and dependants (ports and/or field)
+   - Make thread safe
+   - Allow constructor to initialise dependencies
+   - Add getters for dependencies and dependants (ports and/or field)
  * WorkerQueue:
-   * Have all threads terminate on exit()
+   - Have all threads terminate on exit()
  * queue:
-   * Add installer queue
+   - Add installer queue
  * make:
-   * Rename pre_target to pre_cmd
-   * Handle pipes properly
-   * Allow disabling of pre_cmd
-   * Condense functionality
+   - Rename pre_target to pre_cmd
+   - Handle pipes properly
+   - Allow disabling of pre_cmd
+   - Condense functionality
  * Create ordering logic for building (and resolving dependants)
  * Remove make_target from global import
 
