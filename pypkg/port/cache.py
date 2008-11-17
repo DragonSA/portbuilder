@@ -45,7 +45,7 @@ class PortCache(dict):
        @return: The port requested
        @rtype: C{Port}
     """
-    key = self._normalise(key)      # Make sure the port is named properly
+    key = self._normalise(key)  # Make sure the port is named properly
     with self.__lock:
       # Try get the port.  If we have it return, if it is known not to exist
       # then raise a KeyError.

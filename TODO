@@ -29,6 +29,8 @@ Future release:
    - Improve DictMixin implementation
  - PortCache:
    - Move to DictMixin
+ - Arch:
+   - Only require pkgname, not attr (get_status)
 
 0.0.9 - Milestone 9 (Sundry modules):
  - modules:
@@ -91,6 +93,7 @@ Future release:
    - Do not use cache when make env is used (WITH* or NO* options passed only)
    - Add --no-cache option
    - Handle passwords properly
+   - Allow option for no-interactive
 
 0.0.7 - Milestone 7 (Finish Target Builders):
  - modules:
@@ -137,17 +140,17 @@ Future release:
    - Check for conflicts (and handle)
 
 0.0.5 - Milestone 5 (Finish basic ports infrastructure):
- + modules:
+ * modules:
    * make
    * port/arch
    * port/arch/freebsd_ports
-   - port/cache
-   - port/port
- - Refine and condense code
- - Implement proper and complete logging (and comments)
+   * port/cache
+   * port/port
+ * Refine and condense code
+ * Implement proper and complete logging (and comments)
  - Ensure thread safety
  - Vet the thread locking for deadlocks
- - Move variables from protected to private (were appropriate)
+ * Move variables from protected to private (were appropriate)
  - Add all assertions
  * Fix pkg_version (when some data has corrupted)
  * Fix sig_handler, should not be called under normal program termination
@@ -164,7 +167,7 @@ Future release:
    * Set db dirs according to user (aka root->/var/db/pypkg)
  * PortCache:
    * Minimise duplicate job requests
- + Port:
+ * Port:
    * Add clean target (and have a failed port clean itself...)
    * Use batch mode for all stages except config
    * Precleaning
@@ -172,7 +175,7 @@ Future release:
    * Investigate fine grain locking (memory vs speed)
      [and adjust locking appropriately]
    * Handles ports that do not exist
-   - Add logging of port targets
+   * Add logging of port targets
    * Handle pkg-message
    * Check need for status
    * Move prepare/finalise to a private method?
@@ -214,8 +217,8 @@ Future release:
  * WorkerQueue:
    * Remove condition (not needed and overexposing internals)
    * Handle worker thread crashing
- + make:
-   - Have logging of build commands (with archival)
+ * make:
+   * Have logging of build commands (with archival)
    * Add a command prefix (such as for socksify?)
    * Add sudo support
    * Make to class

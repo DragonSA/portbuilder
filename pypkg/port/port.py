@@ -5,40 +5,47 @@ managing port information.
 from __future__ import absolute_import, with_statement
 
 from contextlib import contextmanager
-from os import getuid, getgid
+from os import getuid, getgroups
 
 __all__ = ['Port']
 
-uid = getuid()
-gid = getgid()
-
-def iswritable(path):
+def iswritable(path, uid=getuid(), gid=getgroups()):
   """
      Indicates if path is writable (by this process).
 
+     @param path: The path to check
+     @type path: C{str}
+     @param uid: The uid of the user to check for (default: current)
+     @type uid: C{int}
+     @param gid: The gids of the user to check for (default: current)
+     @type gid: C{[int]}
      @return: If path is writable
      @rtype: C{bool}
   """
   from os import stat
+
   try:
     st = stat(path)
   except OSError:
     return False
 
-  if not uid:
-    return True
+  if not uid:  # If we are the superuser then no need to uid and gid
+    return bool(st.st_mode & ((1 << 1) | (1 << 4) | (1 << 7)))
   elif st.st_mode & (1 << 1):
+    # If writable by world
     return True
-  elif st.st_mode & (1 << 4) and st.st_gid == getgid():
+  elif st.st_uid == uid and st.st_mode & (1 << 7):
+    # If writable by us
     return True
-  elif st.st_mode & (1 << 7) and st.st_uid == getuid():
+  elif st.st_gid in gid and st.st_mode & (1 << 4):
+    # If writable by one of our group
     return True
   else:
     return False
 
-def isrecwritable(path):
+def iscreatable(path):
   """
-     Indicates if path is writable, or atleast creatable (by this process).
+     Indicates if path is writable, or at-least creatable (by this process).
 
      @return: If path is writable or creatable
      @rtype: C{bool}
@@ -46,13 +53,14 @@ def isrecwritable(path):
   from os.path import dirname, exists
 
   while path and path != '/' and not exists(path):
+    # Path does not exist, try one further up the tree
     path = dirname(path)
 
   return iswritable(path)
 
 def check_config(optionfile, pkgname):
   """
-     Check the options file to see if it is upto date, if so return False
+     Check the options file to see if it is up-to-date, if so return False.
 
      @param optionfile: The file containing the options
      @type optionfile: C{str}
@@ -61,15 +69,19 @@ def check_config(optionfile, pkgname):
      @return: If the port needs to be configured
      @rtype: C{bool}
   """
+  from logging import getLogger
+
   from os.path import isfile
 
   if isfile(optionfile):
     for i in open(optionfile, 'r'):
       if i.startswith('_OPTIONS_READ='):
+        # The option set to the last pkgname this config file was set for
         if i[14:-1] == pkgname:
           return False
         else:
           return True
+    getLogger('pypkg.port').warn("Options file is corrupt: %s" % optionfile)
   return True
 
 def get_www(descr):
@@ -87,11 +99,14 @@ def get_www(descr):
   if isfile(descr):
     for i in open(descr, 'r'):
       i = i.strip()
-      if i.startswith('WWW:'):
+      if i.upper().startswith('WWW:'):
         www = i[4:].lstrip()
         if www.split('://', 1)[0] in ('http', 'https', 'ftp'):
           return www
-        return 'http://' + www
+        else:
+          return 'http://' + www
+    getLogger('pypkg.port').warn("Description file does not provide a WWW" \
+                                                       "address: %s" % descr)
   else:
     getLogger('pypkg.port').warn("Invalid description file for '%s'" % descr)
   return ''
@@ -101,9 +116,9 @@ def recurse_depends(port, category, cache=dict()):
     Returns a sorted list of dependancies pkgname.  Only the categories are
     evaluated.
 
-    @param port: The port the dependancies are for.
+    @param port: The port the dependancies are for
     @type port: C{Port}
-    @param category: The dependancies to retrieve.
+    @param category: The dependancies to retrieve
     @type category: C{(str)}
     @param cache: Use the given cache to increase speed
     @type cache: C{\{str:(str)\}}
@@ -115,9 +130,9 @@ def recurse_depends(port, category, cache=dict()):
     """
       Get the categories for the port
 
-      @param port: The port the dependancies are for.
+      @param port: The port the dependancies are for
       @type port: C{Port}
-      @param category: The dependancies to retrieve.
+      @param category: The dependancies to retrieve
       @type category: C{(str)}
       @return: The sorted list of dependancies
       @rtype: C{(str)}
@@ -127,18 +142,23 @@ def recurse_depends(port, category, cache=dict()):
     from pypkg.port import cache as pcache
 
     depends = set()
+    # Iterate over all dependancies in the given categories
     for i in set([j[1] for j in sum([port.attr(i) for i in categories], [])]):
       i_p = pcache.get(i)
       if i_p:
+        # Add the dependancy to our list
         depends.add(i_p.attr('pkgname'))
+        # Add all its dependancies to our list (either via cache or direct)
         depends.update(cache.has_key(i) and cache[i] or retrieve(i_p, master))
       else:
-        getLogger('pypkg.port').warn("Port '%s' has a (indirect) stale " \
-                      "dependancy on '%s'" % (port.origin(), i))
+        getLogger('pypkg.port').warn("Port %s has a stale dependancy: %s" %
+                                                            (port.origin(), i))
 
     depends = list(depends)
     depends.sort()
 
+    # Cache the dependancies if they are the master (otherwise cache will not
+    # be used)
     if set(category) == set(master):
       cache[port.origin()] = tuple(depends)
 
@@ -175,16 +195,19 @@ class FetchLock(object):
     with self.__lock:
       while True:
         wait = False
+        # Check if the files are already locked
         for i in files:
           if i in self._files:
             wait = True
             break
         if wait:
+          # Some of the files are locked, either wait or bail
           if not blocking:
             return False
           else:
             self.__lock.wait()
         else:
+          # Files are not locked, lock them
           self._files += files
           return True
 
@@ -199,6 +222,7 @@ class FetchLock(object):
       assert i in self._files
 
     with self.__lock:
+      # Remove the files from being locked
       for i in files:
         self._files.remove(i)
       self.__lock.notify()
@@ -220,7 +244,7 @@ class FetchLock(object):
 class Port(object):
   """
      The class that contains all information about a given port, such as status,
-     dependancies and dependants
+     dependancies and dependants.
   """
   from logging import getLogger
   from threading import Condition, Lock
@@ -249,33 +273,34 @@ class Port(object):
   package = False  #: If newly installed ports should be packaged
 
   _log = getLogger("pypkg.port")
-  _lock = Condition(Lock())  #: The notifier and locker for all ports
-  _lock_fetch = FetchLock()  #: Mutual exclusion lock for fetching file
+  __lock = Condition(Lock())  #: The notifier and locker for all ports
+  __lock_fetch = FetchLock()  #: Mutual exclusion lock for fetching file
 
   def __init__(self, origin):
     """
-       Initialise the port and all its information
+       Initialise the port and all its information.
 
        @param origin: The ports origin (within the ports tree)
        @type origin: C{str}
     """
     from pypkg.port import cache
     from pypkg.port.arch import attr, status
-    self._attr_map = attr(origin)
+
+    self._attr_map = attr(origin)  #: The ports attributes
     self._depends = None  #: The dependant handlers for various stages
-    self._failed = False  #: Failed flag
     self._install_status = status(origin, self._attr_map) #: The install status
     self._origin = origin  #: The origin of the port
-    self._stage = 0  #: The (build) stage progress of the port
-    self._working = False  #: Working flag
 
+    self.__failed = False  #: Failed flag
+    self.__stage = 0  #: The (build) stage progress of the port
+    self.__working = False  #: Working flag
 
     for i in self._attr_map['depends']:
       cache.add(i)
 
   def attr(self, attr):
     """
-       Returns the ports attributes, such as version, categories, etc
+       Returns the ports attributes, such as version, categories, etc.
 
        @param attr: The port attribute to retrieve
        @type attr: C{str}
@@ -296,7 +321,7 @@ class Port(object):
        @return: The failed stage
        @rtype: C{bool}
     """
-    return self._failed
+    return self.__failed
 
   def install_status(self):
     """
@@ -320,27 +345,18 @@ class Port(object):
 
     return join(dirs['log_port'], self._origin.replace('/', '_'))
 
-  def lock(self):
-    """
-       The lock this port uses
-
-       @return: The ports lock
-       @rtype: C{Lock}
-    """
-    return self._lock
-
   def stage(self):
     """
-       The currently (building or completed) stage
+       The currently (building or completed) stage.
 
        @return: The build status
        @rtype: C{int}
     """
-    return self._stage
+    return self.__stage
 
   def origin(self):
     """
-       The origin of this port
+       The origin of this port.
 
        @return: The ports origin
        @rtype: C{int}
@@ -354,13 +370,13 @@ class Port(object):
        @return: The build status
        @rtype: C{bool}
     """
-    return self._working
+    return self.__working
 
   def depends(self):
     """
-       Returns the dependant handler for this port
+       Returns the dependant handler for this port.
 
-       WARNING: Dead lock will occure if there is a cyclic port dependancy
+       WARNING: Dead lock will occure if there is a cyclic port dependancy.
 
        @return: The dependant handler
        @rtype: C{DependHandler}
@@ -370,29 +386,38 @@ class Port(object):
 
     from pypkg.port import DependHandler
 
-    with self._lock:
+    with self.__lock:
+      # Wait of another request of the depend handler is pending
       while self._depends is False:
-        self._lock.wait()
+        self.__lock.wait()
 
+      # If depend handler has not been created
       if not self._depends:
-        if not self._failed:
+        if not self.__failed:
+          # Reserve the depend handler, still creating it
           self._depends = False
         else:
+          # Port already failed, create empty depend handler
           self._depends = DependHandler(self)
 
+    # If the depend handler was created by another thread
     if self._depends:
       return self._depends
 
-    if self._stage < Port.CONFIG:
+    # We need to be configured before the depend handler can be created
+    if self.__stage < Port.CONFIG:
       self.config()
 
+    # Create the depend handler (for all our dependancies)
+    self._log.debug("Creating depend handler: %s" % self._origin)
     depends_obj = DependHandler(self, [self.attr(i) for i in
                   ('depend_build', 'depend_extract', 'depend_fetch',
                    'depend_lib',   'depend_run',     'depend_patch')])
 
-    with self._lock:
+    with self.__lock:
+      # Set the depend handler and notify any other threads
       self._depends = depends_obj
-      self._lock.notifyAll()
+      self.__lock.notifyAll()
 
     return self._depends
 
@@ -442,24 +467,28 @@ class Port(object):
     """
     from pypkg.make import make_target, SUCCESS
 
+    assert not self.__working
+
+    self._log.debug("Cleaning: %s" % self._origin)
+
+    # Clean the port itself
     status = make_target(self._origin, ['clean']).wait() is SUCCESS
 
-    if not self._failed:
+    if not self.__failed:
       from os.path import isfile
       from os import unlink
 
+      # If we have not failed then remove the log file
       log_file = self.log_file()
       if isfile(log_file):
         unlink(log_file)
 
-    # Do some checks, to make sure we are in the correct state
-    with self._lock:
-      if not self._failed and self._stage > Port.FETCH and \
-          (self._stage != Port.INSTALL or self._working):
-        self._stage = Port.FETCH
-        self._working = False
-      elif self._stage in (Port.CONFIG, Port.FETCH):
-        self._failed = True
+    with self.__lock:
+      # If we had completed building and run a clean then (obviously) we are
+      # back to a FETCH stage
+      if not self.__failed and self.__stage is Port.BUILD:
+        self.__stage = Port.FETCH
+        self.__working = False
 
     return status
 
@@ -467,7 +496,7 @@ class Port(object):
     """
        Generic handler for building a stage, this calls the correct method.
        This does not add the port to the construction queue and should only
-       be called by the correstonding _builder (Note: private but friendly C++)
+       be called by the correstonding _builder (Note: private but friendly C++).
 
        @param stage: The stage to build
        @type stage: C{int}
@@ -484,25 +513,29 @@ class Port(object):
            (not queue and stage_handler.has_key(stage))
 
     if queue:
-      with self._lock:
-        if self._failed:
+      # Some effieciency checks.
+      with self.__lock:
+        if self.__failed:
           return False
-        elif self._stage > stage:
+        elif self.__stage > stage:
           return True
 
+      # Place the port to be build by the proper stage builder
       stage_builder[stage](self)
 
-      with self._lock:
-        while (self._stage < stage or (self._working and self._stage == stage))\
-              and not self._failed:
-          self._lock.wait()
+      # Wait for the stage to be completed
+      with self.__lock:
+        while (self.__stage < stage or (self.__working and \
+               self.__stage == stage)) and not self.__failed:
+          self.__lock.wait()
 
-        return self._failed
+        return not self.__failed
     else:
       proceed, status = self.__prepare(stage)
       if not proceed:
         return status
 
+      # Actually do the stage
       status = stage_handler[stage]()
 
       return self.__finalise(stage, status)
@@ -518,20 +551,25 @@ class Port(object):
     from pypkg.port import cache
     from pypkg.make import Make, make_target, SUCCESS
 
+    # If the port has options and they are out of date or configuring is
+    # requested then configure the port
     if len(self._attr_map['options']) != 0  and not Port.force_noconfig and \
          check_config(self.attr('optionsfile'), self.attr('pkgname')) or \
          Port.force_config:
       make = make_target(self._origin, 'config', pipe=False, priv=True)
       status = make.wait() is SUCCESS
 
+      # If we actually configured the port then refetch the ports attr
       if status and not Make.no_opt:
         from pypkg.port.arch import attr
+
         self._attr_map = attr(self._origin)
         for i in self._attr_map['depends']:
           cache.add(i)
 
       return status
-    return True
+    else:
+      return True
 
   fetch = lambda self: self.build_stage(Port.FETCH)
   def _fetch(self):
@@ -549,20 +587,23 @@ class Port(object):
     distdir = self.attr('distdir')
     distfiles = [(i, join(distdir, i)) for i in self.attr('distfiles')]
 
-    with self._lock_fetch.lock(self.attr('distfiles')):
+    with self.__lock_fetch.lock(self.attr('distfiles')):
       status = True
       for i in distfiles:
+        # Check if the files exist and/or have changed
         files = check_files('distfiles', i[0])
         if not files or files[0] != i[1]:
           status = False
           break
 
+      # Files have not changed since last being fetched
       if status:
         return True
 
       priv = False
       for i in distfiles:
-        if not isrecwritable(i[1]):
+        # If the files can be created then no need for privilage
+        if not iscreatable(i[1]):
           priv = True
           break
 
@@ -571,6 +612,7 @@ class Port(object):
 
       if status and not Make.no_opt:
         for i in distfiles:
+          # Record the files (to prevent future fetching)
           set_files('distfiles', i[0], i[1])
       return status
 
@@ -588,11 +630,13 @@ class Port(object):
     #make = make_target(self._origin, ['clean', 'extract', 'patch', 'configure',
                                       #'build'])
 
-    if not isrecwritable(self.attr('wrkdir')):
+    # Try to create the workdir so that it is writable by this process
+    if not iscreatable(self.attr('wrkdir')):
       priv = not mkdir(self.attr('wrkdir'))
     else:
       priv = False
 
+    # If this port is interactive allow it to take over the console
     pipe = self.attr('interactive') and False or None
 
     make = make_target(self._origin, ['clean', 'all'], pipe, priv)
@@ -612,8 +656,10 @@ class Port(object):
     if self.install_status() == Port.ABSENT:
       args = ['install']
     else:
+      # Port already exists and needs to be reinstalled
       args = ['deinstall', 'reinstall']
     if Port.package:
+      # Package the port (regardless of restrictions)
       args += ['package']
       if self.attr('no_package'):
         args += '-DFORCE_PACKAGE'
@@ -631,9 +677,11 @@ class Port(object):
       #  Don't need to lock to change this as it will already have been set
       pkg_message = join(env['PORTSDIR'], self._origin, 'pkg-message')
       if isfile(pkg_message):
+        # Port has a message, record it
         self._log.info("Port '%s' has the following message:\n%s" %
                        (self._origin, open(pkg_message).read()))
 
+      # Update the install status (and notify depend handler of our change)
       install_status = self._install_status
       self._install_status = Make.no_opt and Port.CURRENT or \
                               status(self._origin, self._attr_map)
@@ -656,45 +704,56 @@ class Port(object):
     from pypkg.port import DependHandler
     from time import time
 
-    with self._lock:
-      if self._stage > stage:
+    with self.__lock:
+      # If this stage has already completed
+      if self.__stage > stage:
         return False, True
 
-      while self._working:
-        self._lock.wait()
-        if not self._working and not self._failed and self._stage >= stage:
-          return False, True
+      # This port is busy with a stage, wait for it to complete
+      while self.__working:
+        self.__lock.wait()
 
-      if self._failed:
+      # The port has fail
+      if self.__failed:
         return False, False
 
+      # This stage has already completed
+      if self.__stage >= stage:
+        return False, True
+
+      # We are only fetching, fail for any other stage
       if Port.fetch_only and stage > Port.FETCH:
-        self._stage = stage
-        self._failed = True
+        self.__stage = stage
+        self.__failed = True
         try:
-          self._lock.release()
+          self.__lock.release()
           self._depends.status_changed()
         finally:
-          self._lock.acquire()
-        self._lock.notifyAll()
+          self.__lock.acquire()
+        self.__lock.notifyAll()
         return False, False
 
-      assert self._stage == stage - 1 and not self._failed
+      assert self.__stage == stage - 1
 
-      self._stage = stage
+      self.__stage = stage
 
       status = stage > Port.CONFIG and self.depends().check(stage) or \
                DependHandler.RESOLV
       if status in (DependHandler.FAILURE, DependHandler.UNRESOLV):
-        self._failed = True
+        self._log.error("Failed to build stage %s due to dependancy failure: "\
+                        "%s" % (Port.STAGE_NAME[stage], self._origin))
+        self.__failed = True
         try:
-          self._lock.release()
+          self.__lock.release()
           self._depends.status_changed()
         finally:
-          self._lock.acquire()
+          self.__lock.acquire()
         return False, False
 
-      self._working = time()
+      self.__working = time()
+
+      self._log.debug("Starting stage %s: %s" % (Port.STAGE_NAME[stage],
+                                                                 self._origin))
 
       return True, True
 
@@ -710,23 +769,30 @@ class Port(object):
        @return: The status
        @rtype: C{bool}
     """
-    assert self._working and not self._failed
+    assert self.__working and not self.__failed
 
-    with self._lock:
-      self._working = False
-      if self._failed != (not status):
-        self._failed = not status
+    with self.__lock:
+      self.__working = False
+
+      # If we have failed notify our depend handler
+      if not status:
+        self.__failed = True
         try:
-          self._lock.release()
+          self.__lock.release()
           self._depends.status_changed()
         finally:
-          self._lock.acquire()
-      self._lock.notifyAll()
+          self.__lock.acquire()
+      self.__lock.notifyAll()
 
-    if self._failed and self._stage > Port.FETCH or self._stage == Port.INSTALL:
+    # Clean up after ourselves
+    if not status and stage > Port.FETCH or stage is Port.INSTALL:
       self.clean()
 
-    if self._failed:
-      self._log.error("Port '%s' has failed to complete stage '%s'"
-                      % (self._origin, Port.STAGE_NAME[stage]))
+    if self.__failed:
+      self._log.error("Port has failed to complete stage %s: %s"
+                      % (Port.STAGE_NAME[stage], self._origin))
+    else:
+      self._log.debug("Finished stage %s: %s" % (Port.STAGE_NAME[stage],
+                                                                 self._origin))
+
     return status

@@ -181,6 +181,8 @@ def get_attr(origin):
       except BaseException:
         log_attr.exception("Exception applying filter for attribute: %s(%s)" %
                                                         (name, attr_map[name]))
+        # Rather fail here than mysteriously later
+        raise
 
   return attr_map
 
