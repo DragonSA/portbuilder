@@ -3,9 +3,13 @@ The architecture module.  This module contains the architecture specific code.
 """
 from __future__ import absolute_import
 
-__all__ = ['attr', 'status']
+from logging import getLogger
 
 from pypkg.port.arch.freebsd_ports import get_attr, get_status as status
+
+__all__ = ['attr', 'status']
+
+log = getLogger('pypkg.port.arch')  #: Logger for this module
 
 def attr(origin):
   """
@@ -15,22 +19,31 @@ def attr(origin):
      @param origin: The port identifier
      @type origin: C{str}
      @return: A dictionary of attributes
-     @rtype: C{\{str:str|(str)|\}}
+     @rtype: C{\{str:str|(str)\}}
   """
-  from logging import getLogger
-  
   from pypkg.cache import db, check_files, set_files
+  from pypkg.make import env
 
-  files = check_files('port.makefiles', origin)
-
-  if files:
-    try:
-      return db['port.attr'][origin]
-    except KeyError:
-      getLogger('pypkg.cache').warn('Corrupt data detected (port.attr.%s)' %
+  # Only use cache if ports will not be modified (via WITH(OUT)_*)
+  if not len([i for i in env.iterkeys() if i.startswith('WITH')]):
+    # If the files have not been changes then use the cache
+    if check_files('port.makefiles', origin):
+      try:
+        return db['port.attr'][origin]
+      except KeyError:
+        getLogger('pypkg.cache').warn('Corrupt data detected (port.attr.%s)' %
                                                                         origin)
-  
-  att = get_attr(origin)
-  db['port.attr'][origin] = att
-  set_files('port.makefiles', origin, att['makefiles'])
-  return att
+
+    # Get the port attributes the hard way
+    att = get_attr(origin)
+
+    log.info("Caching port attributes: ``%s''" % origin)
+
+    # Save the attributes in the cache
+    db['port.attr'][origin] = att
+
+    # Record the dependening makefiles details
+    set_files('port.makefiles', origin, att['makefiles'])
+    return att
+  else:
+    return get_attr(origin)

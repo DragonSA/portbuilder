@@ -134,7 +134,7 @@ Future release:
 0.0.5 - Milestone 5 (Finish basic ports infrastructure):
  + modules:
    * make
-   - port/arch
+   * port/arch
    - port/arch/freebsd_ports
    - port/cache
    - port/port
