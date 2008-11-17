@@ -16,6 +16,7 @@ Future release:
  - Check if KeyboardInterrupt is appropriate
  - Move all package imports to relative
  - All BaseExceptions need to be preceeded by KeyboardInterrupt (and call term)
+ - Rename env to path?
  - Refactor:
    - Break ports into its own libraries
    - Try isolate system and ports dependant code
@@ -108,6 +109,8 @@ Future release:
  - Ensure graceful handling of failed ports (does not appear to work)
  - Make config_builder API compatible with the other Builders?
  - Catch exceptions from callback (all callbacks)
+ - Use port's stage_builder (than calling directly)
+ - Extend port's stage_builder for non_blocking version
 
 0.0.6 - Milestone 6 (Finish Dependant Handling):
  - modules:
@@ -148,10 +151,10 @@ Future release:
    * port/port
  * Refine and condense code
  * Implement proper and complete logging (and comments)
- - Ensure thread safety
- - Vet the thread locking for deadlocks
+ * Ensure thread safety
+ * Vet the thread locking for deadlocks
  * Move variables from protected to private (were appropriate)
- - Add all assertions
+ * Add all assertions
  * Fix pkg_version (when some data has corrupted)
  * Fix sig_handler, should not be called under normal program termination
  * Find proper $HOME

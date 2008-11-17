@@ -106,12 +106,15 @@ class Make(object):
        @return: If the creation was successful
        @rtype: C{bool}
     """
-    from os.path import exists
+    from os.path import exists, isdir
     from os import getuid, getgid
     from subprocess import Popen, PIPE, STDOUT
 
-    # TODO: If dir exists and is writable return True
-    if not isinstance(self.__am_root, (list, tuple)) or exists(path):
+    from pypkg.env import iswritable
+
+    if isdir(path) and iswritable(path):
+      return True
+    elif isinstance(self.__am_root, int) or exists(path):
       return False
 
     self._log.debug("Creating directory (uid=%i:gid=%i): %s" %

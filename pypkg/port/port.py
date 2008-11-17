@@ -5,58 +5,8 @@ managing port information.
 from __future__ import absolute_import, with_statement
 
 from contextlib import contextmanager
-from os import getuid, getgroups
 
 __all__ = ['Port']
-
-def iswritable(path, uid=getuid(), gid=getgroups()):
-  """
-     Indicates if path is writable (by this process).
-
-     @param path: The path to check
-     @type path: C{str}
-     @param uid: The uid of the user to check for (default: current)
-     @type uid: C{int}
-     @param gid: The gids of the user to check for (default: current)
-     @type gid: C{[int]}
-     @return: If path is writable
-     @rtype: C{bool}
-  """
-  from os import stat
-
-  try:
-    st = stat(path)
-  except OSError:
-    return False
-
-  if not uid:  # If we are the superuser then no need to uid and gid
-    return bool(st.st_mode & ((1 << 1) | (1 << 4) | (1 << 7)))
-  elif st.st_mode & (1 << 1):
-    # If writable by world
-    return True
-  elif st.st_uid == uid and st.st_mode & (1 << 7):
-    # If writable by us
-    return True
-  elif st.st_gid in gid and st.st_mode & (1 << 4):
-    # If writable by one of our group
-    return True
-  else:
-    return False
-
-def iscreatable(path):
-  """
-     Indicates if path is writable, or at-least creatable (by this process).
-
-     @return: If path is writable or creatable
-     @rtype: C{bool}
-  """
-  from os.path import dirname, exists
-
-  while path and path != '/' and not exists(path):
-    # Path does not exist, try one further up the tree
-    path = dirname(path)
-
-  return iswritable(path)
 
 def check_config(optionfile, pkgname):
   """
@@ -591,6 +541,7 @@ class Port(object):
     from os.path import join
 
     from pypkg.cache import check_files, set_files
+    from pypkg.env import iscreatable
     from pypkg.make import Make, make_target, SUCCESS
 
     distdir = self.attr('distdir')
@@ -634,6 +585,7 @@ class Port(object):
         @return: The success status
         @rtype: C{bool}
     """
+    from pypkg.env import iscreatable
     from pypkg.make import mkdir, make_target, SUCCESS
 
     #make = make_target(self._origin, ['clean', 'extract', 'patch', 'configure',
@@ -713,6 +665,10 @@ class Port(object):
     from pypkg.port import DependHandler
     from time import time
 
+    # Make sure we have a depend handler
+    if stage > Port.CONFIG:
+      self.depends()
+
     with self.__lock:
       # If this stage has already completed
       if self.__stage > stage:
@@ -734,11 +690,7 @@ class Port(object):
       if Port.fetch_only and stage > Port.FETCH:
         self.__stage = stage
         self.__failed = True
-        try:
-          self.__lock.release()
-          self._depends.status_changed()
-        finally:
-          self.__lock.acquire()
+        self._depends.status_changed()
         self.__lock.notifyAll()
         return False, False
 
@@ -748,15 +700,14 @@ class Port(object):
 
       status = stage > Port.CONFIG and self.depends().check(stage) or \
                DependHandler.RESOLV
+
+      # If the dependancies have failed then abort
       if status in (DependHandler.FAILURE, DependHandler.UNRESOLV):
         self._log.error("Failed to build stage %s due to dependancy failure: "\
                         "%s" % (Port.STAGE_NAME[stage], self._origin))
         self.__failed = True
-        try:
-          self.__lock.release()
-          self._depends.status_changed()
-        finally:
-          self.__lock.acquire()
+        self._depends.status_changed()
+        self.__lock.notifyAll()
         return False, False
 
       self.__working = time()
