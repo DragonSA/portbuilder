@@ -27,18 +27,31 @@ Future release:
    - Handle when cached data changes version...
 
 0.0.9 - Milestone 9 (Sundry modules):
- - Offline caching:
-   - Handle recovery on request
-   - Ensure user database co-operates with root
-
-0.0.8 - Milestone 8 (Finish command line controller):
+ - modules:
+   - cache
+   - cache/cachedb
+   - env
  - Refine and condense code
- - Default to batch mode
  - Implement proper and complete logging (and comments)
  - Ensure thread safety
  - Vet the thread locking for deadlocks
  - Move variables from protected to private (were appropriate)
  - Add all assertions
+ - Offline caching:
+   - Handle recovery on request
+   - Ensure user database co-operates with root
+
+0.0.8 - Milestone 8 (Finish command line controller):
+ - modules:
+   - exit
+   - monitor
+ - Refine and condense code
+ - Implement proper and complete logging (and comments)
+ - Ensure thread safety
+ - Vet the thread locking for deadlocks
+ - Move variables from protected to private (were appropriate)
+ - Add all assertions
+ - Default to batch mode
  - Get relative option parity with portupgrade
  - Improve logging settings (such as location, level)
  - index_builder:
@@ -75,6 +88,9 @@ Future release:
    - Handle passwords properly
 
 0.0.7 - Milestone 7 (Finish Target Builders):
+ - modules:
+   - queue
+   - target
  - Refine and condense code
  - Implement proper and complete logging (and comments)
  - Ensure thread safety
@@ -85,6 +101,8 @@ Future release:
  - Make config_builder API compatible with the other Builders?
 
 0.0.6 - Milestone 6 (Finish Dependant Handling):
+ - modules:
+   - port/dependhandler
  - Refine and condense code
  - Implement proper and complete logging (and comments)
  - Ensure thread safety
@@ -113,6 +131,12 @@ Future release:
    - Check for conflicts (and handle)
 
 0.0.5 - Milestone 5 (Finish basic ports infrastructure):
+ - modules:
+   - make
+   - port/arch
+   - port/arch/freebsd_ports
+   - port/cache
+   - port/port
  - Refine and condense code
  - Implement proper and complete logging (and comments)
  - Ensure thread safety
