@@ -3,8 +3,6 @@ The Make module.  This module provides an interface to `make'.
 """
 from __future__ import absolute_import
 
-from os import getenv
-
 __all__ = ['clean_log', 'Make', 'env', 'make_target', 'mkdir', 'set_password',
            'SUCCESS']
 
@@ -58,12 +56,16 @@ def get_pipe(pipe, origin):
   from subprocess import PIPE, STDOUT
 
   if pipe is True:
+    # Pipe is required
     return PIPE, PIPE, STDOUT
   elif pipe:
+    # Pipe to the requested stream
     return PIPE, pipe, STDOUT
   elif pipe is False:
+    # No piping allowed (requires user input/output)
     return None, None, None
   else:
+    # Default: Log the output of the process
     stdout, stderr = log_files(origin)
     return PIPE, stdout, stderr
 
@@ -81,11 +83,12 @@ class Make(object):
        Initialise the Make class.
     """
     from logging import getLogger
+    from os import getenv, getuid
 
     self.env = {}  #: The environment flags to pass to make, aka -D...
     self.pre_cmd = []  #: Prepend to command
 
-    self.__am_root = getenv('USER')  #: Indicate if we are root
+    self.__am_root = getuid()  #: Indicate if we are root
     self.__log = getLogger('pypkg.make')  #: Logger for this class
     self.__password = None  #: Password to access root status (via su or sudo)
 
@@ -115,6 +118,7 @@ class Make(object):
     cmd = Popen(self.__am_root + ['install', '-d', '-g%i' % getgid(),
                                   '-o%i' % getuid(), path], close_fds=True,
                                   stdin=PIPE, stdout=PIPE, stderr=STDOUT)
+    # Send the password to sudo and close the pipe
     cmd.stdin.write(self.__password)
     cmd.stdin.close()
 
@@ -132,15 +136,20 @@ class Make(object):
     """
     from subprocess import Popen, PIPE, STDOUT
 
-    if self.__am_root == 'root' or self.__password is not None:
+    # If we are the superuser or already have the password return
+    if self.__am_root == 0 or self.__password is not None:
       return True
 
     try:
+      # Try running sudo with a simple command (cat)
       sudo = ['sudo', '-S', '--']
       cmd = Popen(sudo + ['cat'], stdin=PIPE, stdout=PIPE, stderr=STDOUT,
                                           close_fds=True)
+      # Send the password to sudo and close the pipe
       cmd.stdin.write(passwd)
       cmd.stdin.close()
+
+      # Check if sudo succeeded
       if cmd.wait() is Make.SUCCESS:
         self.__am_root = sudo
         self.__password = passwd
@@ -175,13 +184,20 @@ class Make(object):
 
     if isinstance(args, str):
       args = [args]
+    # Add all the environment variables to the argument
+    # Include PORTSDIR if it is not the default
+    # Include BATCH if the target is not 'config'
+    # Include NOCLEANDEPENDS if the target includes 'clean'
     args = args + [v and '%s="%s"' % (k, v) or "-D%s" % k for k, v in
                   self.env.items() if (k, v) != ("PORTSDIR", "/usr/ports/") and
                       (args[0], k) != ('config', "BATCH") and
                       (k != "NOCLEANDEPENDS" or 'clean' in args)]
 
+    # Get the appropriate pipes
     stdin, stdout, stderr = get_pipe(pipe, origin)
 
+    # Pause the monitor if piping is prohibited and targets are operational
+    # This allows unrestricted access to the console (and acts as a lock)
     if pipe is False and not Make.no_opt:
       from pypkg.monitor import monitor
       monitor.pause()
@@ -190,18 +206,23 @@ class Make(object):
       args = self.pre_cmd + ['make', '-C',
                                      join(self.env["PORTSDIR"], origin)] + args
       if pipe or not Make.no_opt:
+        # If privilage is required and we have a pre_cmd to gain privilage
         if priv and isinstance(self.__am_root, (list, tuple)):
           args = self.__am_root + args
         self.__log.debug("Executing: ``%s''" % cmdtostr(args))
         pmake = Popen(args, stdin=stdin, stdout=stdout, stderr=stderr,
                     close_fds=True)
         if stdin:
+          # Send the password to sudo (if appropriate)
           if priv and isinstance(self.__am_root, (list, tuple)):
             pmake.stdin.write(self.__password)
+          # Close the input stream (not used)
           pmake.stdin.close()
         elif pipe is False:
+          # Wait for the process to finish, otherwise we get overlaps...
           pmake.wait()
       else:
+        # If we are not operating print the command and return the dummy process
         print cmdtostr(args)
         pmake = PopenNone()
     finally:
