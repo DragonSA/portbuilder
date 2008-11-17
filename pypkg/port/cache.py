@@ -8,7 +8,7 @@ __all__ = ['PortCache']
 class PortCache(dict):
   """
      The PortCache class.  This class keeps a cache of Port objects
-     (note: this is an inflight cache).
+     (note: this is an in-flight cache).
   """
   from logging import getLogger
 
@@ -102,7 +102,7 @@ class PortCache(dict):
 
   def add(self, key):
     """
-       Adds a port to be contructed if not already in the cache or queued for
+       Adds a port to be constructed if not already in the cache or queued for
        construction.
 
        @param key: The port for queueing
