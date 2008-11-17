@@ -88,8 +88,9 @@ class Make(object):
     self.env = {}  #: The environment flags to pass to make, aka -D...
     self.pre_cmd = []  #: Prepend to command
 
+    self._log = getLogger('pypkg.make')  #: Logger for this class
+
     self.__am_root = getuid()  #: Indicate if we are root
-    self.__log = getLogger('pypkg.make')  #: Logger for this class
     self.__password = None  #: Password to access root status (via su or sudo)
 
     self.env["PORTSDIR"] = getenv("PORTSDIR", "/usr/ports/") #: Location of port
@@ -113,7 +114,7 @@ class Make(object):
     if not isinstance(self.__am_root, (list, tuple)) or exists(path):
       return False
 
-    self.__log.debug("Creating directory (uid=%i:gid=%i): %s" %
+    self._log.debug("Creating directory (uid=%i:gid=%i): %s" %
                                                     (getuid(), getgid(), path))
     cmd = Popen(self.__am_root + ['install', '-d', '-g%i' % getgid(),
                                   '-o%i' % getuid(), path], close_fds=True,
@@ -153,14 +154,14 @@ class Make(object):
       if cmd.wait() is Make.SUCCESS:
         self.__am_root = sudo
         self.__password = passwd
-        self.__log.info("Sudo password approved: ``***''")
+        self._log.info("Sudo password approved: ``***''")
         return True
       else:
-        self.__log.warn("Incorrect sudo password: ``%s''" % passwd)
+        self._log.warn("Incorrect sudo password: ``%s''" % passwd)
         return False
     except OSError:
       # SUDO does not exist, try su?
-      self.__log.error("Unable to execute sudo (not installed?)")
+      self._log.error("Unable to execute sudo (not installed?)")
       return None
 
   def target(self, origin, args, pipe=None, priv=False):
@@ -209,7 +210,7 @@ class Make(object):
         # If privilage is required and we have a pre_cmd to gain privilage
         if priv and isinstance(self.__am_root, (list, tuple)):
           args = self.__am_root + args
-        self.__log.debug("Executing: ``%s''" % cmdtostr(args))
+        self._log.debug("Executing: ``%s''" % cmdtostr(args))
         pmake = Popen(args, stdin=stdin, stdout=stdout, stderr=stderr,
                     close_fds=True)
         if stdin:
