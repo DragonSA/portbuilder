@@ -51,8 +51,8 @@ ports_attr = {
 "distdir":   ["_DISTDIR", str],       # The port's distfile's sub-directory
 
 # Various restrictions
-"conflict":   ["CONFLICTS",  str], # Ports this one conflicts with
-"no_package": ["NO_PACKAGE", str], # Packages are not allowed to be distributed
+"conflict":   ["CONFLICTS",  tuple], # Ports this one conflicts with
+"no_package": ["NO_PACKAGE", str],   # Packages distribution restricted
 
 # Sundry information
 "depends":     ["_DEPEND_DIRS",   tuple], # The ports dependants

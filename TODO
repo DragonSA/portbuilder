@@ -196,7 +196,6 @@ Future release:
      * ONLY_FOR_ARCHS and NOT_FOR_ARCHS
      * DEPRECIATION...
      * NO_BUILD option (and implement)
-     - CONFLICTS
      * IS_INTERACTIVE
      * Restrictions
      * etc
