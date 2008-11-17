@@ -15,6 +15,7 @@ Future release:
  - Implement proper recording of ports installation (i.e. when they fail)
  - Check if KeyboardInterrupt is appropriate
  - Move all package imports to relative
+ - All BaseExceptions need to be preceeded by KeyboardInterrupt (and call term)
  - Refactor:
    - Break ports into its own libraries
    - Try isolate system and ports dependant code
@@ -25,6 +26,9 @@ Future release:
    - Properly handle basis and bsddb (with above)
  - CacheDB:
    - Handle when cached data changes version...
+   - Improve DictMixin implementation
+ - PortCache:
+   - Move to DictMixin
 
 0.0.9 - Milestone 9 (Sundry modules):
  - modules:
