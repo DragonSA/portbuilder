@@ -332,6 +332,15 @@ class Port(object):
     """
     return self._install_status
 
+  def lock(self):
+    """
+       The lock this port uses
+
+       @return: The ports lock
+       @rtype: C{Lock}
+    """
+    return self.__lock
+
   def log_file(self):
     """
        The log file of this port. (See also make.
