@@ -96,20 +96,22 @@ def get_status(origin, attr, cache=dict(), lock=Lock()):
 
   from pypkg.port import Port
 
-  pkg = "/var/db/pkg"
+  pkg = "/var/db/pkg"  #: The path to the pkg database
   with lock:
-    if not cache.has_key('mtime') or path.getmtime(pkg) > cache['mtime']:
+    # If the cached pkg list is old or non-existant update it
+    if not cache.has_key('mtime') or path.getmtime(pkg) != cache['mtime']:
       cache['mtime'] = path.getmtime(pkg)
       cache['listdir'] = listdir(pkg)
 
-  status = Port.ABSENT
-  name = attr['pkgname'].rsplit('-', 1)[0]
+  status = Port.ABSENT  #: Default status of the port
+  name = attr['pkgname'].rsplit('-', 1)[0]  #: The ports name
 
   for i in cache['listdir']:
+    # If the port's name matches that of a database
     if i.rsplit('-', 1)[0] == name:
-      content = path.join(pkg, i, '+CONTENTS')
-      porigin = None
-      if path.isfile(content):
+      content = path.join(pkg, i, '+CONTENTS') #: The pkg's content file
+      porigin = None  #: Origin of the package
+      try:
         for j in open(content, 'r'):
           if j.startswith('@comment ORIGIN:'):
             porigin = j[16:-1].strip()
@@ -117,15 +119,22 @@ def get_status(origin, attr, cache=dict(), lock=Lock()):
           elif j.startswith('@name '):
             if j[6:-1].strip() != i:
               getLogger('pypkg.port.arch.freebsd_port.port_status').warning(
-                 "Package %s has a conflicting name %s" % (i, j[6:-1].strip()))
+                "Package %s has a conflicting name %s" % (i, j[6:-1].strip()))
               porigin = None
               break
+      except (IOError, OSError):
+        getLogger('pypkg.port.arch.freebsd_port.port_status').error(
+          "Package %s has corrupted" % i)
 
+      # If the pkg has the same origin get the maximum of the install status
       if porigin == origin:
         if status > Port.ABSENT:
           getLogger('pypkg.port.arch.freebsd_port.port_status').warning(
                                 "Multiple ports with same origin '%s'" % origin)
         status = max(status, cmp_status(attr['pkgname'], i))
+      else:
+        getLogger('pypkg.port.arch.freebsd_port.port_status').warning(
+          "Package has same name as %s but with different origin" % (origin, i))
   return status
 
 def get_attr(origin):
@@ -137,28 +146,42 @@ def get_attr(origin):
      @return: A dictionary of attributes
      @rtype: C{\{str:str|(str)|\}}
   """
+  from logging import getLogger
+
   from pypkg.make import make_target, SUCCESS
 
+  # Make sure ports ends in a trailing slash
   if env['PORTSDIR'][-1] != '/':
-    env['PORTSDIR'].join('/')
+    env['PORTSDIR'] += '/'
 
-  args = []
+  args = []  #: Arguments to be passed to the make target
+  # Pass all the arguments from ports_attr table
   for i in ports_attr.itervalues():
     args.append('-V')
     args.append(i[0])
 
   make = make_target(origin, args, pipe=True)
   if make.wait() is not SUCCESS:
+    getLogger('pypkg.port.arch.freebsd_port.get_attr').error(
+                       "Error in obtaining information for port '%s'" % origin)
     raise RuntimeError, "Error in obtaining information for port '%s'" % origin
 
   attr_map = {}
   for name, value in ports_attr.iteritems():
     if value[1] is str:
+      # Get the string (stripped)
       attr_map[name] = make.stdout.readline().strip()
     else:
+      # Pass the string through a special processing (like list/tuple)
       attr_map[name] = value[1](make.stdout.readline().split())
+    # Apply all filters for the attribute
     for i in value[2:]:
-      attr_map[name] = i(attr_map[name])
+      try:
+        attr_map[name] = i(attr_map[name])
+      except BaseException:
+        getLogger('pypkg.port.arch.freebsd_port.get_attr').exception(
+                 "Exception applying filter for attribute %s with value %s" %
+                                                        (name, attr_map[name]))
 
   return attr_map
 
@@ -175,8 +198,8 @@ def cmp_status(old, new):
   """
   from pypkg.port import Port
 
-  oname, old = old.rsplit('-', 1)
-  nname, new = new.rsplit('-', 1)
+  oname, old = old.rsplit('-', 1)  # Name and version components of the old pkg
+  nname, new = new.rsplit('-', 1)  # Name and version components of the new pkg
 
   if oname != nname:
     # The packages are not comparable
@@ -200,13 +223,16 @@ def cmp_status(old, new):
   old = old.split('.')
   new = new.split('.')
   for i in range(min(len(old), len(new))):
+    # Try numirical comparison, otherwise use str
     try:
       status = cmp(int(old[i]), int(new[i]))
     except ValueError:
       status = cmp(old[i], new[i])
+    # If there is a difference is leveled version
     if status:
       return Port.CURRENT + status
 
+  # The difference between the number of leveled versioning
   return Port.CURRENT + cmp(len(old), len(new))
 
 def cmp_attr(old, new, attr):
@@ -217,18 +243,18 @@ def cmp_attr(old, new, attr):
       @type old: C{str}
       @param new: The 'new' package version
       @type new: C{str}
-      @param attr: The attr seperator:
+      @param attr: The attr separator:
       @type attr: C{str}
       @return: The stripped package versions and the status
       @rtype: C{(str, str, int)}
   """
-  old = old.rsplit(attr, 1)
-  new = new.rsplit(attr, 1)
-  if len(old) > len(new):
+  old = old.rsplit(attr, 1)  # The value of the old pkg
+  new = new.rsplit(attr, 1)  # The value of the new pkg
+  if len(old) > len(new):  # If old has versioning and new does not
     return (old[0], new[0], 1)
-  elif len(old) < len(new):
+  elif len(old) < len(new): # If new has versioning and old does not
     return (old[0], new[0], -1)
-  elif len(old) == len(new) == 1:
+  elif len(old) == len(new) == 1:  # If neither has versioning
     return (old[0], new[0], 0)
-  else: #if len(old) == 2 and len(new) == 2
+  else: #if len(old) == 2 and len(new) == 2 # Both have versioning
     return (old[0], new[0], cmp(int(old[1]), int(new[1])))

@@ -135,7 +135,7 @@ Future release:
  + modules:
    * make
    * port/arch
-   - port/arch/freebsd_ports
+   * port/arch/freebsd_ports
    - port/cache
    - port/port
  - Refine and condense code
