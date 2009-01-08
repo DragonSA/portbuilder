@@ -92,6 +92,10 @@ class StageBuilder(object):
     if port.stage() < Port.CONFIG:
       config_builder(port, lambda: self.put(port, callback))
       return
+
+    # NB: If done inside lock and depends locks then adaptive lock wont work
+    depends = port.depends()  # Needs to be done outside of port_lock
+
     # Make sure the ports dependant handler has been created:
     with self.__lock:
       if self.__building.has_key(port):
@@ -99,7 +103,6 @@ class StageBuilder(object):
           self.__building[port].append(callback)
         return
 
-      depends = port.depends()  # Needs to be done outside of port_lock
       port_lock.acquire()
       stage = port.stage()
       if port.failed() or stage >= self.__stage:
@@ -174,7 +177,6 @@ class StageBuilder(object):
       if port.depends().check(self.__stage) == DependHandler.FAILURE:
         self.__callbacks(port, 1)
       else:
-        # TODO: Will fail when Port.fetch_only is set (and ports not installed)
         assert port.depends().check(self.__stage) > DependHandler.UNRESOLV
         assert port.stage() == self.__stage - 1 and not port.working()
         self.__queue.put(lambda: self.build(port))
@@ -267,16 +269,17 @@ class Configer(object):
        configured.
     """
     from pypkg.port import get
+
     assert self.__port.stage() < Port.CONFIG and self.__count == 0
 
     if self.__port.build_stage(Port.CONFIG, False):
       self.__count = len(self.__port.attr('depends')) + 1
       for i in self.__port.attr('depends'):
         port = get(i)
-        if port.stage() < Port.CONFIG:
+        if port:
           config_builder(port, self.finish)
         else:
-          self.finish()
+          self.__count -= 1
     else:
       self.__count = 1
     self.finish()
@@ -285,40 +288,54 @@ class Configer(object):
     """
        Called when this port, or its dependancies, have been configured.  When
        all have been configured then call the callback (and remove ourselves
-       from the configuration cache)
+       from the configuration cache).
     """
     assert self.__count > 0
+
     self.__count -= 1
     if self.__count == 0:
-      with self.lock:
+      with Configer.lock:
         self.cache.pop(self.__port)
-    else:
-      return
-    for i in self.__callback:
-      i()
+      for i in self.__callback:
+        i()
 
 def config_builder(port, callback=None):
   """
      The builder for the config stage.  The port and all its dependancies are
-     configured and then the callback function is called
+     configured and then the callback function is called.
 
      @param port: The port to configure
      @type port: C{port}
      @param callback: The callback function
      @type callback: C{callable}
   """
-  if port.stage() < Port.CONFIG:
-    with Configer.lock:
-      if port.stage() < Port.CONFIG:
-        if Configer.cache.has_key(port):
-          Configer.cache[port].add_callback(callback)
-        else:
-          conf = Configer(port, callback)
-          Configer.cache[port] = conf
-          config_queue.put(conf.config)
-        return
+  with Configer.lock:
+    if Configer.cache.has_key(port):
+      if callable(callback):
+        Configer.cache[port].add_callback(callback)
+      return
+    elif port.stage() < Port.CONFIG:
+      conf = Configer(port, callback)
+      Configer.cache[port] = conf
+      config_queue.put(conf.config)
+      return
+    else:
+      pp_configured(port)
   if callable(callback):
     callback()
+
+def pp_configured(port):
+  if port.stage() < Port.CONFIG:
+    print '***', port.origin()
+    return False
+
+  from pypkg.port import get
+  for i in port.attr('depends'):
+    p = get(i)
+    if port and not pp_configured(p):
+      print '**', port.origin()
+      return False
+  return True
 
 def index_builder():
   """
