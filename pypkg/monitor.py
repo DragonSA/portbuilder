@@ -183,6 +183,9 @@ class Stat(Monitor):
       except KeyboardInterrupt:
         from pypkg.exit import terminate
         terminate()
+      except BaseException:
+        from logging import getLogger
+        getLogger('pypkg.monitor').exception("Exception in Stat monitor")
 
   @staticmethod
   def _print_header(options):
@@ -342,6 +345,9 @@ class Top(Monitor):
       except KeyboardInterrupt:
         from pypkg.exit import terminate
         terminate()
+      except BaseException:
+        from logging import getLogger
+        getLogger('pypkg.monitor').exception("Exception in Top monitor")
 
   def _init(self):
     """

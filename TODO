@@ -48,6 +48,7 @@ Future release:
    - Handle recovery on request
    - Ensure user database co-operates with root
  - Logging infrastructure (for messages for user)
+ - Rename logging files for ports based on their unique-name
 
 0.0.8 - Milestone 8 (Finish command line controller):
  - modules:
