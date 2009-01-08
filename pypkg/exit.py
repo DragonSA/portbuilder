@@ -25,7 +25,7 @@ class AutoExit(object):
     from atexit import register
     from logging import getLogger
     from os import getpid, setpgrp
-    from signal import signal, SIGINT, SIGTERM
+    from signal import signal, SIGINFO, SIGINT, SIGTERM
     from threading import Condition, Lock
 
     self._log = getLogger('pypkg.AutoExit')
@@ -41,6 +41,7 @@ class AutoExit(object):
     register(self.terminate)
     # Make pylint happier(otherwise sig_handler has an unused parameter 'frame')
     sig_handler = lambda x, y: self.sig_handler(x)
+    signal(SIGINFO, lambda x, y: self.sig_info())
     signal(SIGINT, sig_handler)
     signal(SIGTERM, sig_handler)
 
@@ -74,6 +75,31 @@ class AutoExit(object):
                        "some previous) messages are a result of this and can " \
                        "be safely ignored")
       terminate()
+
+  def sig_info(self):
+    """
+       Signal handler for information request.
+    """
+    from os import getpid
+
+    if self.__pid == getpid():
+      from sys import _current_frames as frames
+      from traceback import format_stack
+
+      from pypkg.queue import queues
+
+      self._log.info("Queues: %s" % str([len(i) for i in queues]))
+      print "Queues: %s" % str([len(i) for i in queues])
+
+      for tid, frame in frames().iteritems():
+        self._log.info("Traceback (thread %i)\n%s" % (tid,
+                                                 ''.join(format_stack(frame))))
+        print "Traceback (thread %i)\n%s" % (tid, ''.join(format_stack(frame)))
+    else:
+      from os import kill
+      from signal import SIGINFO
+
+      kill(self.__pid, SIGINFO)
 
   def start(self):
     """
