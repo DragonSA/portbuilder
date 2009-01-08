@@ -31,8 +31,8 @@ class DependHandler(object):
   RESOLV     = 2   #: Dependancy resolved
 
   STAGE2DEPENDS = {
-    Port.CONFIG:  (),                           # The config dependancies
-    Port.FETCH:   (FETCH),                      # The fetch dependancies
+    Port.CONFIG:  (),                          # The config dependancies
+    Port.FETCH:   (FETCH,),                     # The fetch dependancies
     Port.BUILD:   (EXTRACT, PATCH, LIB, BUILD), # The build dependancies
     Port.INSTALL: (LIB, RUN),                   # The install dependancies
   } #: The dependancies for a given stage
@@ -191,11 +191,13 @@ class DependHandler(object):
     """
     # DependHandler status might change without Port's changing
     with self._lock:
-      if self._status == DependHandler.FAILURE:
-        return self._status
-      if self._count == 0 or stage == Port.CONFIG:
+      if self._count == 0 or not sum([len(self._dependancies[i]) for i in
+          DependHandler.STAGE2DEPENDS[stage]]):
         return DependHandler.RESOLV
-      return self._check(DependHandler.STAGE2DEPENDS[stage])
+      elif Port.fetch_only and stage > Port.FETCH:
+        return DependHandler.FAILURE
+      else:
+        return self._check(DependHandler.STAGE2DEPENDS[stage])
 
   def port(self):
     """
@@ -273,11 +275,8 @@ class DependHandler(object):
        Check if a list of dependancies has been resolved.
 
        @param depends: List of dependancies
-       @type depends: C{int} or C{(int)}
+       @type depends: C{(int)}
     """
-    if isinstance(depends, int):
-      depends = [depends]
-
     for i in depends:
       for j in self._dependancies[i]:
         if j.status() != DependHandler.RESOLV:
