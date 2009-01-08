@@ -122,6 +122,9 @@ Future release:
  - Vet the thread locking for deadlocks
  - Move variables from protected to private (were appropriate)
  - Add all assertions
+ - Move to collections (from MixinDict)
+ - Handle bsddb not installed
+ - Increase callback hardiness
  - DependHandler:
    - Ensure _count is done properly
    - Have a dummy port for all stale ports

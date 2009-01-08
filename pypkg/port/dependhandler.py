@@ -191,11 +191,11 @@ class DependHandler(object):
     """
     # DependHandler status might change without Port's changing
     with self._lock:
-      if self._count == 0 or not sum([len(self._dependancies[i]) for i in
+      if Port.fetch_only and stage > Port.FETCH:
+        return DependHandler.FAILURE
+      elif self._count == 0 or not sum([len(self._dependancies[i]) for i in
           DependHandler.STAGE2DEPENDS[stage]]):
         return DependHandler.RESOLV
-      elif Port.fetch_only and stage > Port.FETCH:
-        return DependHandler.FAILURE
       else:
         return self._check(DependHandler.STAGE2DEPENDS[stage])
 
