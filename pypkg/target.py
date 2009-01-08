@@ -319,23 +319,8 @@ def config_builder(port, callback=None):
       Configer.cache[port] = conf
       config_queue.put(conf.config)
       return
-    else:
-      pp_configured(port)
   if callable(callback):
     callback()
-
-def pp_configured(port):
-  if port.stage() < Port.CONFIG:
-    print '***', port.origin()
-    return False
-
-  from pypkg.port import get
-  for i in port.attr('depends'):
-    p = get(i)
-    if port and not pp_configured(p):
-      print '**', port.origin()
-      return False
-  return True
 
 def index_builder():
   """
