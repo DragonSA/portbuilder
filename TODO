@@ -141,6 +141,8 @@ Future release:
    - When doing individual checks, cache as they can be duplicated
    - Allow switching for depends resolution (from complex to simple...)
    - Check for conflicts (and handle)
+ - Queues:
+   - Implement a deadlock resolver (with lock monitor)
 
 0.0.5 - Milestone 5 (Finish basic ports infrastructure):
  * modules:

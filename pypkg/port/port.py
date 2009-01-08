@@ -346,7 +346,7 @@ class Port(object):
     from pypkg.port import DependHandler
 
     with self.__lock:
-      # Wait of another request of the depend handler is pending
+      # Wait for another request of the depend handler is pending
       while self._depends is False:
         self.__lock.wait()
 

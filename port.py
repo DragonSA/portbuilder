@@ -90,7 +90,7 @@ def gen_parser():
                     "but do not actually execute them.")
   parser.add_option("-p", "--package", action="store_true", default=False,
                     help="When installing ports, also generate packages (i.e." \
-                    " do a ``make package''.")
+                    " do a ``make package'').")
   parser.add_option("-u", "--update", dest="install", action="store_false",
                     default=True, help="Update mode.  Updates the given port." \
                     "  The last -i or -u will be the determining one.")
