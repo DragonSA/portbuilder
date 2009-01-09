@@ -670,23 +670,20 @@ class Port(object):
       self.depends()
 
     with self.__lock:
-      # If this stage has already completed
-      if self.__stage > stage:
-        return False, True
-
       # This port is busy with a stage, wait for it to complete
       while self.__working:
         self.__lock.wait()
 
       # The port has fail
-      if self.__failed:
+      if self.__failed and stage >= self.__stage:
         return False, False
 
       # This stage has already completed
-      if self.__stage >= stage:
+      if stage <= self.__stage:
         return False, True
 
       # We are only fetching, fail for any other stage
+      # TODO: Remove, should be handled in target_builder
       if Port.fetch_only and stage > Port.FETCH:
         self.__stage = stage
         self.__failed = True
@@ -736,6 +733,8 @@ class Port(object):
 
       # If we have failed notify our depend handler
       if not status:
+        assert not self.__failed
+
         self.__failed = True
         try:
           self.__lock.release()
