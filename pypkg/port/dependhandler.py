@@ -191,12 +191,16 @@ class DependHandler(object):
     # DependHandler status might change without Port's changing
     with self._lock:
       if Port.fetch_only and stage > Port.FETCH:
-        return DependHandler.FAILURE
+        return False
       elif self._count == 0 or not sum([len(self._dependancies[i]) for i in
           DependHandler.STAGE2DEPENDS[stage]]):
-        return DependHandler.RESOLV
+        return True
       else:
-        return self._check(DependHandler.STAGE2DEPENDS[stage])
+        for i in DependHandler.STAGE2DEPENDS[stage]:
+          for j in self._dependancies[i]:
+            if j.status() != DependHandler.RESOLV:
+              return False
+        return True
 
   def port(self):
     """
@@ -226,7 +230,7 @@ class DependHandler(object):
           self._status = DependHandler.FAILURE
           self._notify_all()
 
-        # Add extra weight to count, ensure we always _check in check
+        # Add extra weight to count, must never be 0
         delta = -1
       elif status == DependHandler.RESOLV:
         delta = 1
@@ -257,6 +261,15 @@ class DependHandler(object):
     """
     return self._status
 
+  def failed(self):
+    """
+       Shorthand for self.status() == DependHandler.FAILURE
+
+       @return: The failed status
+       @rtype: C{bool}
+    """
+    return self._status == DependHandler.FAILURE
+
   def status_changed(self):
     """
        Indicates that our port's status has changed, this may mean either we
@@ -278,19 +291,6 @@ class DependHandler(object):
       if status != self._status:
         self._status = status
         self._notify_all()
-
-  def _check(self, depends):
-    """
-       Check if a list of dependancies has been resolved.
-
-       @param depends: List of dependancies
-       @type depends: C{(int)}
-    """
-    for i in depends:
-      for j in self._dependancies[i]:
-        if j.status() != DependHandler.RESOLV:
-          return j.status()
-    return DependHandler.RESOLV
 
   def _notify_all(self):
     """
