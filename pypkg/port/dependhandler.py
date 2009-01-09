@@ -244,8 +244,9 @@ class DependHandler(object):
         self._count = 0
       if not self._count:
         # Check that we do actually have all the dependancies met
+        # TODO: Remove, debug check
         report = False
-        for i in self.dependancies:
+        for i in self.dependancies():
           if i.status() != DependHandler.RESOLV:
             report = True
             self._count += 1
