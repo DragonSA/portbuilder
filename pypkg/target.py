@@ -105,7 +105,7 @@ class StageBuilder(object):
 
       port_lock.acquire()
       stage = port.stage()
-      if port.failed() or stage >= self.__stage:
+      if port.failed() or depends.failed() or stage >= self.__stage:
         port_lock.release()
         if callable(callback):
           try:
@@ -121,7 +121,7 @@ class StageBuilder(object):
            (port.working() and stage == self.__stage - 1):
         assert self.__prev_builder is not None
         resolv_depends = False
-      elif depends.check(self.__stage) > DependHandler.UNRESOLV:
+      elif depends.check(self.__stage):
         port_lock.release()
         try:
           self.__lock.release()
@@ -173,15 +173,12 @@ class StageBuilder(object):
     with self.__lock:
       self.__queues[2].remove(port)
       self.__queues[1].append(port)
-    if not port.failed():
-      if port.depends().check(self.__stage) == DependHandler.FAILURE:
-        self.__callbacks(port, 1)
-      else:
-        assert port.depends().check(self.__stage) > DependHandler.UNRESOLV
-        assert port.stage() == self.__stage - 1 and not port.working()
-        self.__queue.put(lambda: self.build(port))
-    else:
+    if port.failed() or port.depends().failed():
       self.__callbacks(port, 1)
+    else:
+      assert port.depends().check(self.__stage)
+      assert port.stage() == self.__stage - 1 and not port.working()
+      self.__queue.put(lambda: self.build(port))
 
   def stats(self):
     """

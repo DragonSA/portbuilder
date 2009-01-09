@@ -695,11 +695,10 @@ class Port(object):
 
       self.__stage = stage
 
-      status = stage > Port.CONFIG and self.depends().check(stage) or \
-               DependHandler.RESOLV
+      status = stage > Port.CONFIG and self.depends().check(stage) or True
 
       # If the dependancies have failed then abort
-      if status in (DependHandler.FAILURE, DependHandler.UNRESOLV):
+      if not status:
         self._log.error("Failed to build stage %s due to dependancy failure: "\
                         "%s" % (Port.STAGE_NAME[stage], self._origin))
         self.__failed = True
