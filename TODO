@@ -125,6 +125,7 @@ Future release:
  - Move to collections (from MixinDict)
  - Handle bsddb not installed
  - Increase callback hardiness
+ * Fix RWLock (unsure state handling)
  - DependHandler:
    - Ensure _count is done properly
    - Have a dummy port for all stale ports

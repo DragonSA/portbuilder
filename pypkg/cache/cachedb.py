@@ -192,7 +192,7 @@ class DBProxy(DictMixin):
 class DBProxyNone(object):
   """
      Provide a dictionary like interface to a BSD database.  Proper locking
-     is implemented.  (This provides an empty version)
+     is implemented.  (This provides an empty version).
   """
 
   @staticmethod
@@ -275,7 +275,8 @@ class RWLock(object):
 
   def acquire_read(self, blocking=True):
     """
-       Acquire a read lock.
+       Acquire a read lock.  Priority is given to write locking (and thus the
+       readers could be starved)
 
        @param blocking: If we should wait for the lock
        @type blocking: C{bool}
@@ -293,19 +294,16 @@ class RWLock(object):
       # self.__writer_queue -> self.__writer
       assert not self.__writer_queue or self.__writer
 
-      if self.__writer or self.__writer_queue:
+      while self.__writer or self.__writer_queue:
         if not blocking:
           return False
         self.__readers_queue += 1
         self.__rcond.wait()
         self.__readers_queue -= 1
 
-        # It is possible (due to lock inter-play) to fail assert
-        #assert not self.__writer and not self.__writer_queue
-
       # Writer lock should not be held when reader lock is held
       # Writer lock could be pending due to lock inter-play
-      assert not self.__writer or self.__writer is True
+      assert not self.__writer and not self.__writer_queue
 
       self.__readers.append(me)
       return True
