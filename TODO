@@ -131,6 +131,7 @@ Future release:
    - Have a dummy port for all stale ports
    * Handle depenancies with fetch_only
    - Should depends list be empty with fetch_only?
+   - Fix check (with ref to usage)
    - Do not do cyclic dependency allocation (or move to late)
    - DependHandler must handle the case when a dependency fails unresolved
    - Check for cyclic dependencies

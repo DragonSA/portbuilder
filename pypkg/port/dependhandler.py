@@ -242,18 +242,17 @@ class DependHandler(object):
 
   def status(self):
     """
-       Returns the status of this port
+       Returns the status of this port.
 
        @return: The status
        @rtype: C{int}
     """
-    with self._lock:
-      return self._status
+    return self._status
 
   def status_changed(self):
     """
        Indicates that our port's status has changed, this may mean either we
-       now satisfy our dependants or not
+       now satisfy our dependants or not.
     """
     if self._port.failed():
       status = DependHandler.FAILURE
@@ -261,6 +260,8 @@ class DependHandler(object):
     elif self._port.install_status() > Port.ABSENT:
       status = DependHandler.RESOLV
       if not self._verify():
+        # TODO: We may satisfy some dependants, but not others,
+        # If we still do not satisfy our dependants then haven't we failed?
         status = DependHandler.UNRESOLV
     else:
       status = DependHandler.UNRESOLV
@@ -280,12 +281,12 @@ class DependHandler(object):
     for i in depends:
       for j in self._dependancies[i]:
         if j.status() != DependHandler.RESOLV:
-          return DependHandler.UNRESOLV
-    return DependHandler.PARTRESOLV
+          return j.status()
+    return DependHandler.RESOLV
 
   def _notify_all(self):
     """
-       Notify all dependants that we have changed status
+       Notify all dependants that we have changed status.
     """
     for i in self._dependants:
       for j in i:
@@ -293,7 +294,7 @@ class DependHandler(object):
 
   def _update(self, data, typ):
     """
-       Check if a dependancy has been resolved
+       Check if a dependant has been resolved.
 
        @param data: The field data and the dependant handler
        @type data: C{(str, DependHandler)}
@@ -323,7 +324,7 @@ class DependHandler(object):
 
   def _verify(self):
     """
-       Check that we actually satisfy all dependants
+       Check that we actually satisfy all dependants.
     """
     for i in range(DependHandler.PATCH):
       for j in self._dependants[i]:
