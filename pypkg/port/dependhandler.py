@@ -186,7 +186,7 @@ class DependHandler(object):
        @param stage: The stage to check for
        @type stage: C{int}
        @return: The dependancy status
-       @rtype: C{int}
+       @rtype: C{bool}
     """
     # DependHandler status might change without Port's changing
     with self._lock:

@@ -662,7 +662,6 @@ class Port(object):
        @return: The proceed status (and succes status)
        @rtype: C{bool}
     """
-    from pypkg.port import DependHandler
     from time import time
 
     # Make sure we have a depend handler
@@ -735,11 +734,7 @@ class Port(object):
         assert not self.__failed
 
         self.__failed = True
-        try:
-          self.__lock.release()
-          self._depends.status_changed()
-        finally:
-          self.__lock.acquire()
+        self._depends.status_changed()
       self.__lock.notifyAll()
 
     # Clean up after ourselves

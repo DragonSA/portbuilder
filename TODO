@@ -112,6 +112,8 @@ Future release:
  - Catch exceptions from callback (all callbacks)
  - Use port's stage_builder (than calling directly)
  - Extend port's stage_builder for non_blocking version
+ - Add labels for queues (active, queued, pending, failed)
+ - Add failed queue
 
 0.0.6 - Milestone 6 (Finish Dependant Handling):
  - modules:
@@ -122,13 +124,12 @@ Future release:
  - Vet the thread locking for deadlocks
  - Move variables from protected to private (were appropriate)
  - Add all assertions
- - Move to collections (from MixinDict)
+ - Move to collections (from DictMixin)
  - Handle bsddb not installed
  - Increase callback hardiness
  * Fix RWLock (unsure state handling)
  - DependHandler:
    * Ensure _count is done properly
-   - Have a dummy port for all stale ports
    * Handle depenancies with fetch_only
    - Should depends list be empty with fetch_only?
    * Fix check (with ref to usage)
@@ -141,8 +142,6 @@ Future release:
    - Handle stale dependencies (with a dummy PortDepend)
    - Handle a port having failed and still satisfy its dependants
    - Add a concurrent implementation (and probably a cache of sorts)
-   - Allow a port to satisfy its dependants without state > Port.ABSENT or
-     having failed
    - When doing individual checks, cache as they can be duplicated
    - Allow switching for depends resolution (from complex to simple...)
    - Check for conflicts (and handle)
