@@ -25,10 +25,9 @@ class DependHandler(object):
   PATCH   = 5  #: Patch dependants
 
   # The dependancy status
-  FAILURE    = -1  #  The port failed and cannot resolve the dependancy
+  FAILURE    = -1  #: The port failed and/or cannot resolve dependancies
   UNRESOLV   = 0   #: Either port is not installed or completely out of date
-  PARTRESOLV = 1   #: Partly resolved, some dependancies not happy
-  RESOLV     = 2   #: Dependancy resolved
+  RESOLV     = 1   #: Dependancy resolved
 
   STAGE2DEPENDS = {
     Port.CONFIG:  (),                          # The config dependancies
@@ -217,21 +216,30 @@ class DependHandler(object):
     """
     status = depend.status()
     with self._lock:
+      if self._status == DependHandler.FAILURE:
+        # We have failed, no need to continue
+        return
+
       if status == DependHandler.FAILURE:
-        self._status = DependHandler.FAILURE
-        delta = 0
+        if self._status == DependHandler.UNRESOLV:
+          # We will never satisfy our dependants
+          self._status = DependHandler.FAILURE
+          self._notify_all()
+
+        # Add extra weight to count, ensure we always _check in check
+        delta = -1
       elif status == DependHandler.RESOLV:
         delta = 1
       else: # depend.status() == DependHandler.UNRESOLV
         delta = -1
 
-      if delta:
-        self._count += delta * \
+      self._count -= delta * \
                     len([i for i in sum(self._dependancies, []) if i == depend])
       if self._count < 0:
         self._log.error("Dependancy count with a negative number!!!")
         self._count = 0
       if not self._count:
+        # Check that we do actually have all the dependancies met
         report = False
         for i in self.dependancies:
           if i.status() != DependHandler.RESOLV:

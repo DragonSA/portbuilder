@@ -127,25 +127,22 @@ Future release:
  - Increase callback hardiness
  * Fix RWLock (unsure state handling)
  - DependHandler:
-   - Ensure _count is done properly
+   * Ensure _count is done properly
    - Have a dummy port for all stale ports
    * Handle depenancies with fetch_only
    - Should depends list be empty with fetch_only?
-   - Fix check (with ref to usage)
+   * Fix check (with ref to usage)
    - Do not do cyclic dependency allocation (or move to late)
-   - DependHandler must handle the case when a dependency fails unresolved
+   * DependHandler must handle the case when a dependency fails unresolved
    - Check for cyclic dependencies
    - _verify:
      - Add caching of dependencies (no need to check them multiple times)
    - Implement type specific checking (bin vs lib) [mimic ports]
-   - Add callback feature to Port (when resolved status has changed)
    - Handle stale dependencies (with a dummy PortDepend)
    - Handle a port having failed and still satisfy its dependants
-   - Add a handler to change our status (and notify all that is has)
    - Add a concurrent implementation (and probably a cache of sorts)
    - Allow a port to satisfy its dependants without state > Port.ABSENT or
      having failed
-   - Make thread safe
    - When doing individual checks, cache as they can be duplicated
    - Allow switching for depends resolution (from complex to simple...)
    - Check for conflicts (and handle)
