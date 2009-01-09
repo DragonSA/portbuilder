@@ -297,9 +297,8 @@ class DependHandler(object):
     """
        Notify all dependants that we have changed status.
     """
-    for i in self._dependants:
-      for j in i:
-        j[1].update(self)
+    for i in self.dependants():
+      i.update(self)
 
   def _update(self, data, typ):
     """
