@@ -40,6 +40,26 @@ class Caller(object):
     if callable(self.__callback):
       self.__callback()
 
+def protected_callback(callback):
+  """
+     Call an object.  Prevent exceptions from propogating.
+
+     @param callback: The object to call
+     @type callback: C{callable}
+     @return: The callback result, or None
+  """
+  try:
+    if callable(callback):
+      return callback()
+  except KeyboardInterrupt:
+    from pypkg.exit import terminate
+    terminate()
+  except BaseException:
+    from logging import getLogger
+    getLogger('pypkg.callback').exception("Callback object threw exception: " +
+                                          str(callback))
+  return None
+
 class StageBuilder(object):
   """
      The StageBuilder class.  This class handles building a particular stage
@@ -68,8 +88,8 @@ class StageBuilder(object):
     self.__prev_builder = prev_builder  #: The builder for the previous stage
 
     self.__building = {}  #: List of ports we are working on
-    self.__queues = ([], [], [])  #: The location of the queues
-                                  # (active, queued, pending)
+    self.__queues = ([], [], [],[])  #: The location of the queues
+                                     # (active, queued, pending, failed)
 
   def put(self, port, callback=None):
     """
@@ -85,8 +105,7 @@ class StageBuilder(object):
       from pypkg.port import get
       port = get(port)
       if not port:
-        if callable(callback):
-          callback()
+        protected_callback(callback)
         return
     port_lock = port.lock()
     if port.stage() < Port.CONFIG:
@@ -107,12 +126,9 @@ class StageBuilder(object):
       stage = port.stage()
       if port.failed() or depends.failed() or stage >= self.__stage:
         port_lock.release()
-        if callable(callback):
-          try:
-            self.__lock.release()
-            callback()
-          finally:
-            self.__lock.acquire()
+        self.__lock.release()
+        protected_callback(callback)
+        self.__lock.acquire()
         return
 
       self.__building[port] = callable(callback) and [callback] or []
@@ -159,7 +175,8 @@ class StageBuilder(object):
     with self.__lock:
       self.__queues[1].remove(port)
       self.__queues[0].append(port)
-    port.build_stage(self.__stage, False)
+    if not port.build_stage(self.__stage, False):
+      self.__queues[3].append(port)
     self.__callbacks(port)
 
   def queue(self, port):
@@ -170,14 +187,16 @@ class StageBuilder(object):
        @type port: C{Port}
     """
     assert self.__building.has_key(port)
-    with self.__lock:
-      self.__queues[2].remove(port)
-      self.__queues[1].append(port)
     if port.failed() or port.depends().failed():
-      self.__callbacks(port, 1)
+      self.__callbacks(port, 2)
+    elif not port.depends().check(self.__stage):
+      self.__callbacks(port, 2)
+      # TODO, complain, should not happen
     else:
-      assert port.depends().check(self.__stage)
       assert port.stage() == self.__stage - 1 and not port.working()
+      with self.__lock:
+        self.__queues[2].remove(port)
+        self.__queues[1].append(port)
       self.__queue.put(lambda: self.build(port))
 
   def stats(self):
@@ -187,13 +206,13 @@ class StageBuilder(object):
 
        @param summary: If only the lengths of thwr queues are required
        @type summary: C{bool}
-       @return: The list of ports (active, queued, pending)
-       @rtype: C{([Port], [Port], [Port])}
+       @return: The list of ports (active, queued, pending, failures)
+       @rtype: C{([Port], [Port], [Port], [Port])}
     """
     from copy import copy
     with self.__lock:
       return (copy(self.__queues[0]), copy(self.__queues[1]),
-              copy(self.__queues[2]))
+              copy(self.__queues[2]), copy(self.__queues[3]))
 
   def __call__(self, port, callback=None):
     """
@@ -223,7 +242,8 @@ class StageBuilder(object):
       callbacks = self.__building.pop(port)
       self.__queues[queue].remove(port)
     for i in callbacks:
-      i()
+      protected_callback(i)
+
 
 class Configer(object):
   """
@@ -294,7 +314,7 @@ class Configer(object):
       with Configer.lock:
         self.cache.pop(self.__port)
       for i in self.__callback:
-        i()
+        protected_callback(i)
 
 def config_builder(port, callback=None):
   """
@@ -317,7 +337,30 @@ def config_builder(port, callback=None):
       config_queue.put(conf.config)
       return
   if callable(callback):
-    callback()
+    protected_callback(callback)
+
+def recursive_fetch_builder(port, callback=None):
+  """
+     Recursively fetch all port's distfiles
+
+     @param port: The port which to fetch
+     @type port: C{port}
+     @param callback: The callback function
+     @type callback: C{callable}
+  """
+  depends = [port]
+
+  ind = 0
+  while ind < len(depends):
+    for i in depends[ind].depends().dependancies():
+      if i not in depends:
+        depends.append(i)
+    ind += 1
+  depends.reverse()
+
+  callback = Callable(len(depends), callback)
+  for i in depends:
+    fetch_builder.put(i, callback)
 
 def index_builder():
   """

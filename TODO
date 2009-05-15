@@ -107,13 +107,23 @@ Future release:
  - Vet the thread locking for deadlocks
  - Move variables from protected to private (were appropriate)
  - Add all assertions
- - Ensure graceful handling of failed ports (does not appear to work)
+ - Use relative imports
+ + Add recursive command:
+   - config
+   * fetch
+   - install
+   - package
+ - Make recursive commands generic
+ - Port:
+   - Separate package building
+   - No auto-cleaning?
+ + Ensure graceful handling of failed ports (does not appear to work)
  - Make config_builder API compatible with the other Builders?
- - Catch exceptions from callback (all callbacks)
+ * Catch exceptions from callback (all callbacks)
  - Use port's stage_builder (than calling directly)
  - Extend port's stage_builder for non_blocking version
  - Add labels for queues (active, queued, pending, failed)
- - Add failed queue
+ * Add failed queue
 
 0.0.6 - Milestone 6 (Finish Dependant Handling):
  - modules:
