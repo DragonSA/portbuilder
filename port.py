@@ -31,6 +31,10 @@ def main():
   options, args = parser.parse_args()
   options.args = args
 
+  if len(args) == 0:
+    print parser.get_usage()
+    return
+
   set_options(options)
 
   set_password('')
@@ -83,8 +87,9 @@ def gen_parser():
   parser.add_option("-i", "--install", action="store_true", default=True,
                     help="Install mode.  Installs the listed ports (and any " \
                     "dependancies required [default].")
-  parser.add_option("-f", dest="fetch", action="store_true", default=False,
-                    help="Only fetch the distribution files for the ports")
+  parser.add_option("-f", "--fetch-only", dest="fetch", action="store_true",
+                    default=False, help="Only fetch the distribution files for"\
+                    " the ports")
   parser.add_option("-n", dest="no_opt", action="store_true", default=False,
                     help="Display the commands that would have been executed, "\
                     "but do not actually execute them.")
