@@ -18,10 +18,11 @@ log_status = getLogger('pypkg.port.arch.freebsd_port.port_status')
 
 ports_attr = {
 # Port naming
-"name":     ["PORTNAME",     str], # The port's name
-"version":  ["PORTVERSION",  str], # The port's version
-"revision": ["PORTREVISION", str], # The port's revision
-"epoch":    ["PORTEPOCH",    str], # The port's epoch
+"name":       ["PORTNAME",     str], # The port's name
+"version":    ["PORTVERSION",  str], # The port's version
+"revision":   ["PORTREVISION", str], # The port's revision
+"epoch":      ["PORTEPOCH",    str], # The port's epoch
+"uniquename": ["UNIQUENAME", str], # The port's unique name
 
 # Port's package naming
 "pkgname": ["PKGNAME",       str], # The port's package name
