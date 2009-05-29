@@ -15,6 +15,9 @@ class WorkerQueue(Queue):
      running jobs.
   """
 
+  _WORKER = 0
+  _JOB    = 1
+
   def __init__(self, name, workers=1):
     """
        Initialise a worker thread pool
@@ -34,8 +37,7 @@ class WorkerQueue(Queue):
     #self._name = name  #: The name of this queue
     self._workers = workers  #: The (maximum) number of workers
 
-    self._worker_cnt = 0  #: The number of workers created
-    self._job_cnt = 0  #: The number of jobs executed
+    self._stats = [0, 0]  #: Various statists (e.g. worker and job count)
 
     self._pool = {}  #: The pool of workers
 
@@ -101,8 +103,8 @@ class WorkerQueue(Queue):
       # If there are no workers expected then we are not open for jobs
       if not self._workers:
         return -1
-      jid = self._job_cnt
-      self._job_cnt += 1
+      jid = self._stats[WorkerQueue._JOB]
+      self._stats[WorkerQueue._JOB] += 1
       Queue.put(self, (jid, func), block, timeout)
       if self.qsize() > 0 and len(self._pool) < self._workers:
         from threading import Thread
@@ -120,7 +122,7 @@ class WorkerQueue(Queue):
        @return: The tuple of information
        @rtype: C{(int, int, int)}
     """
-    return (len(self), self._worker_cnt, self._job_cnt)
+    return (len(self)) + tuple(self._stats)
 
   def terminate(self):
     """
@@ -148,8 +150,8 @@ class WorkerQueue(Queue):
     thread = currentThread()
 
     with self._lock:
-      wid = self._worker_cnt
-      self._worker_cnt += 1
+      wid = self._stats[WorkerQueue._WORKER]
+      self._stats[WorkerQueue._WORKER] += 1
     self._log.debug("Worker %d: Created" % wid)
 
     while True:
