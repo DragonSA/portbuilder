@@ -89,7 +89,7 @@ def recurse_depends(port, category, cache=dict()):
     """
     from logging import getLogger
 
-    from pypkg.port import cache as pcache
+    from ..port import cache as pcache
 
     depends = set()
     # Iterate over all dependancies in the given categories
@@ -233,8 +233,8 @@ class Port(object):
        @param origin: The ports origin (within the ports tree)
        @type origin: C{str}
     """
-    from pypkg.port import cache
-    from pypkg.port.arch import attr, status
+    from ..port import cache
+    from .arch import attr, status
 
     self._attr_map = attr(origin)  #: The ports attributes
     self._depends = None  #: The dependant handlers for various stages
@@ -300,7 +300,7 @@ class Port(object):
     """
     from os.path import join
 
-    from pypkg.env import dirs
+    from ..env import dirs
 
     return join(dirs['log_port'], self._origin.replace('/', '_'))
 
@@ -343,7 +343,7 @@ class Port(object):
     if self._depends:
       return self._depends
 
-    from pypkg.port import DependHandler
+    from .dependhandler import DependHandler
 
     with self.__lock:
       # Wait for another request of the depend handler is pending
@@ -393,7 +393,7 @@ class Port(object):
     """
     from os.path import join
 
-    from pypkg.make import env
+    from ..make import env
 
     build_depends = ('depend_build', 'depend_lib')
     extract_depends = ('depend_extract',)
@@ -424,7 +424,7 @@ class Port(object):
        @return: The clean status
        @rtype: C{bool}
     """
-    from pypkg.make import make_target, SUCCESS
+    from ..make import make_target, SUCCESS
 
     assert not self.__working
 
@@ -462,7 +462,7 @@ class Port(object):
        @return: The stage result
        @rtype: C{bool}
     """
-    from pypkg.target import config_builder, fetch_builder, build_builder, \
+    from ..target import config_builder, fetch_builder, build_builder, \
                              install_builder
     stage_handler = {Port.CONFIG: self._config, Port.FETCH: self._fetch,
                      Port.BUILD: self._build, Port.INSTALL: self._install}
@@ -507,8 +507,8 @@ class Port(object):
        @return: The success status
        @rtype: C{bool}
     """
-    from pypkg.port import cache
-    from pypkg.make import Make, make_target, SUCCESS
+    from ..port import cache
+    from ..make import Make, make_target, SUCCESS
 
     # If the port has options and they are out of date or configuring is
     # requested then configure the port
@@ -520,7 +520,7 @@ class Port(object):
 
       # If we actually configured the port then refetch the ports attr
       if status and not Make.no_opt:
-        from pypkg.port.arch import attr
+        from .arch import attr
 
         self._attr_map = attr(self._origin)
         for i in self._attr_map['depends']:
@@ -540,9 +540,9 @@ class Port(object):
     """
     from os.path import join
 
-    from pypkg.cache import check_files, set_files
-    from pypkg.env import iscreatable
-    from pypkg.make import Make, make_target, SUCCESS
+    from ..cache import check_files, set_files
+    from ..env import iscreatable
+    from ..make import Make, make_target, SUCCESS
 
     distdir = self.attr('distdir')
     distfiles = [(i, join(distdir, i)) for i in self.attr('distfiles')]
@@ -585,8 +585,8 @@ class Port(object):
         @return: The success status
         @rtype: C{bool}
     """
-    from pypkg.env import iscreatable
-    from pypkg.make import mkdir, make_target, SUCCESS
+    from ..env import iscreatable
+    from ..make import mkdir, make_target, SUCCESS
 
     #make = make_target(self._origin, ['clean', 'extract', 'patch', 'configure',
                                       #'build'])
@@ -612,7 +612,7 @@ class Port(object):
         @return: The success status
         @rtype: C{bool}
     """
-    from pypkg.make import Make, make_target, SUCCESS
+    from ..make import Make, make_target, SUCCESS
 
     if self.install_status() == Port.ABSENT:
       args = ['install']
@@ -632,8 +632,8 @@ class Port(object):
     if status:
       from os.path import isfile, join
 
-      from pypkg.port.arch import status
-      from pypkg.make import env
+      from .arch import status
+      from ..make import env
  
       #  Don't need to lock to change this as it will already have been set
       pkg_message = join(env['PORTSDIR'], self._origin, 'pkg-message')

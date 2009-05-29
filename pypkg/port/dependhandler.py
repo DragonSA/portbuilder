@@ -4,7 +4,7 @@ Port
 """
 from __future__ import absolute_import, with_statement
 
-from pypkg.port import Port
+from .port import Port
 
 __all__ = ['DependHandler']
 
@@ -80,7 +80,7 @@ class DependHandler(object):
        @param typ: The type of dependancy
        @type typ: C{int}
     """
-    from pypkg.port import cache
+    from ..port import cache
     try:
       depends = cache[port].depends()
     except KeyError:

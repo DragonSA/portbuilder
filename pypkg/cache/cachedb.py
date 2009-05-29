@@ -22,7 +22,7 @@ class CacheDB(object):
     from bsddb.db import DB_AUTO_COMMIT #, DB_DIRECT_DB, DB_DIRECT_LOG
     from threading import Lock
 
-    from pypkg.env import dirs
+    from ..env import dirs
 
     self._dbcache = {}
     self._dbcache_root = {}
@@ -57,7 +57,7 @@ class CacheDB(object):
        @return: The database
        @rtype: C{DB}
     """
-    from pypkg.env import names
+    from ..env import names
 
     try:
       return self._dbcache[names.get(key, key)]
@@ -65,7 +65,7 @@ class CacheDB(object):
       key = names.get(key, key)
       with self.__lock:
         if not self._dbcache.has_key(key):
-          from pypkg.cache import no_cache
+          from . import no_cache
           if no_cache:
             new_db = DBProxyNone()
           else:

@@ -128,7 +128,7 @@ class PortCache(dict):
 
     # We allow multiple calls to add and thus so must __add
     if not dict.has_key(self, key):
-      from pypkg.queue import ports_queue
+      from ..queue import ports_queue
 
       dict.__setitem__(self, key, None)
       self.__dead_cnt += 1  # Reference count to offset 'bad' ports
@@ -160,8 +160,8 @@ class PortCache(dict):
     """
     from os.path import isdir, join
 
-    from pypkg.make import env
-    from pypkg.port import Port
+    from ..make import env
+    from ..port import Port
 
     try: # Time consuming task, done outside lock
       # Check the port actually exists before doing heavy work

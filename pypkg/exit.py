@@ -86,7 +86,7 @@ class AutoExit(object):
       from sys import _current_frames as frames
       from traceback import format_stack
 
-      from pypkg.queue import queues
+      from .queue import queues
 
       self._log.info("Queues: %s" % str([len(i) for i in queues]))
       print "Queues: %s" % str([len(i) for i in queues])
@@ -132,10 +132,10 @@ class AutoExit(object):
     from os import killpg
     from signal import signal, SIGINT, SIGTERM, SIG_IGN
 
-    from pypkg.cache import db
-    from pypkg.port import cache, Port
-    from pypkg.queue import queues
-    from pypkg import monitor
+    from .cache import db
+    from .port import cache, Port
+    from .queue import queues
+    from . import monitor
 
     # Wait for the start signal (could be triggered via terminate or start)
     self.__wait.wait()
@@ -236,7 +236,7 @@ terminate = exit_handler.terminate
 
     #return value
 
-#import pypkg.port.arch
+#import .port.arch
 #from sys import modules, stdout
 #from atexit import register
 #register(lambda: stdout.write(str(Proxy.count) + '\n'))

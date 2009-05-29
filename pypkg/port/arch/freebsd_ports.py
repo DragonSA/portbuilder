@@ -7,7 +7,7 @@ from __future__ import absolute_import, with_statement
 from logging import getLogger
 from threading import Lock
 
-from pypkg.make import env
+from ...make import env
 
 __all__ = ['get_status', 'get_attr']
 
@@ -99,7 +99,7 @@ def get_status(origin, attr, cache=dict(), lock=Lock()):
   from os import path
   from os import listdir
 
-  from pypkg.port import Port
+  from ..port import Port
 
   pkg = "/var/db/pkg"  #: The path to the pkg database
   with lock:
@@ -149,7 +149,7 @@ def get_attr(origin):
      @return: A dictionary of attributes
      @rtype: C{\{str:str|(str)|\}}
   """
-  from pypkg.make import make_target, SUCCESS
+  from ...make import make_target, SUCCESS
 
   # Make sure ports ends in a trailing slash
   if env['PORTSDIR'][-1] != '/':
@@ -197,7 +197,7 @@ def cmp_status(old, new):
      @return: Which package is newer
      @rtype: C{int}
   """
-  from pypkg.port import Port
+  from ..port import Port
 
   oname, old = old.rsplit('-', 1)  # Name and version components of the old pkg
   nname, new = new.rsplit('-', 1)  # Name and version components of the new pkg

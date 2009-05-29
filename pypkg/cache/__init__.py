@@ -5,7 +5,7 @@ from __future__ import absolute_import, with_statement
 
 from threading import Lock
 
-from pypkg.cache.cachedb import CacheDB
+from .cachedb import CacheDB
 
 __all__ = ['db', 'no_cache', 'check_files', 'set_files']
 

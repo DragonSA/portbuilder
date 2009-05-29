@@ -18,7 +18,7 @@ def log_files(origin):
   """
   from os.path import join
 
-  from pypkg.env import dirs
+  from .env import dirs
 
   log = open(join(dirs['log_port'], origin.replace('/', '_')), 'a')
   return log, log
@@ -110,7 +110,7 @@ class Make(object):
     from os import getuid, getgid
     from subprocess import Popen, PIPE, STDOUT
 
-    from pypkg.env import iswritable
+    from .env import iswritable
 
     if isdir(path) and iswritable(path):
       return True
@@ -203,7 +203,7 @@ class Make(object):
     # Pause the monitor if piping is prohibited and targets are operational
     # This allows unrestricted access to the console (and acts as a lock)
     if pipe is False and not Make.no_opt:
-      from pypkg.monitor import monitor
+      from .monitor import monitor
       monitor.pause()
 
     try:

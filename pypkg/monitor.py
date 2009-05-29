@@ -159,9 +159,9 @@ class Stat(Monitor):
     """
        Run the monitor.
     """
-    from pypkg.port import Port
-    from pypkg import queue
-    from pypkg import target
+    from .port import Port
+    from . import queue
+    from . import target
 
     count = 20
     options = (False, False, False, False)
@@ -181,7 +181,7 @@ class Stat(Monitor):
 
         self._sleep()
       except KeyboardInterrupt:
-        from pypkg.exit import terminate
+        from .exit import terminate
         terminate()
       except BaseException:
         from logging import getLogger
@@ -240,9 +240,9 @@ class Stat(Monitor):
     """
     from time import time
 
-    from pypkg.port import cache
-    from pypkg import queue
-    from pypkg import target
+    from .port import cache
+    from . import queue
+    from . import target
 
     offset = time() - self.__start
     secs, mins, hour = offset % 60, offset / 60 % 60, offset / 60 / 60
@@ -287,7 +287,7 @@ def get_stage(port, offset=0):
     @return: The stage's name
     @rtype: C{str}
   """
-  from pypkg.port import Port
+  from .port import Port
 
   stage = Port.STAGE_NAME[port.stage() + offset]
   if stage[-1] == 'l':
@@ -343,7 +343,7 @@ class Top(Monitor):
 
         self._sleep()
       except KeyboardInterrupt:
-        from pypkg.exit import terminate
+        from .exit import terminate
         terminate()
       except BaseException:
         from logging import getLogger
@@ -521,9 +521,9 @@ class Statistics(object):
     """
     from time import time
 
-    from pypkg.port import cache
-    from pypkg import queue
-    from pypkg import target
+    from .port import cache
+    from . import queue
+    from . import target
 
     self.__time = time()
     self.__ports = Statistics.size(queue.ports_queue, cache)
@@ -618,7 +618,7 @@ class Statistics(object):
     """
         Collate ordered information about the ports in various queues.
     """
-    from pypkg.target import fetch_builder, build_builder, install_builder
+    from .target import fetch_builder, build_builder, install_builder
       # and config_builder
     fetch = fetch_builder.stats()
     build = build_builder.stats()

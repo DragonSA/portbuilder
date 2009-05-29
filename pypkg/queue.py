@@ -188,7 +188,7 @@ class WorkerQueue(Queue):
     try:
       func()
     except KeyboardInterrupt:
-      from pypkg.exit import terminate
+      from .exit import terminate
       terminate()
     except BaseException:
       self._log.exception("Worker %d: Job %d threw an exception" % (wid, jid))

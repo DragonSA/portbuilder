@@ -5,7 +5,7 @@ from __future__ import absolute_import
 
 from logging import getLogger
 
-from pypkg.port.arch.freebsd_ports import get_attr, get_status as status
+from .freebsd_ports import get_attr, get_status as status
 
 __all__ = ['attr', 'status']
 
@@ -21,8 +21,8 @@ def attr(origin):
      @return: A dictionary of attributes
      @rtype: C{\{str:str|(str)\}}
   """
-  from pypkg.cache import db, check_files, set_files
-  from pypkg.make import env
+  from ...cache import db, check_files, set_files
+  from ...make import env
 
   # Only use cache if ports will not be modified (via WITH(OUT)_*)
   if not len([i for i in env.iterkeys() if i.startswith('WITH')]):

@@ -1,6 +1,7 @@
 """
 The pypkg module.
 """
+
 from __future__ import absolute_import
 
 def run_main(main):
@@ -13,7 +14,7 @@ def run_main(main):
   """
   from threading import Thread
 
-  from pypkg.exit import exit_handler, start, terminate
+  from .exit import exit_handler, start, terminate
 
   assert callable(main)
 

@@ -14,7 +14,6 @@ Future release:
  - Move to the python 2.6 naming and styles (and make compatible with 3)
  - Implement proper recording of ports installation (i.e. when they fail)
  - Check if KeyboardInterrupt is appropriate
- - Move all package imports to relative
  - All BaseExceptions need to be preceeded by KeyboardInterrupt (and call term)
  - Rename env to path?
  - Refactor:
@@ -117,11 +116,13 @@ Future release:
  - Port:
    - Separate package building
    - No auto-cleaning?
+   - Remove state variables
  + Ensure graceful handling of failed ports (does not appear to work)
  - Make config_builder API compatible with the other Builders?
  * Catch exceptions from callback (all callbacks)
  - Use port's stage_builder (than calling directly)
  - Extend port's stage_builder for non_blocking version
+ - Add checks for already fetched files
  - Add labels for queues (active, queued, pending, failed)
  * Add failed queue
 
@@ -136,8 +137,9 @@ Future release:
  - Add all assertions
  - Move to collections (from DictMixin)
  - Handle bsddb not installed
- - Increase callback hardiness
+ * Increase callback hardiness
  * Fix RWLock (unsure state handling)
+ - Make sure ports configured before creating DependHandler
  - DependHandler:
    * Ensure _count is done properly
    * Handle depenancies with fetch_only
