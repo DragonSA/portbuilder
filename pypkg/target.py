@@ -4,8 +4,8 @@ ports.
 """
 from __future__ import absolute_import, with_statement
 
-from pypkg.port import DependHandler, Port
-from pypkg.queue import config_queue, fetch_queue, build_queue, install_queue
+from .port import DependHandler, Port
+from .queue import config_queue, fetch_queue, build_queue, install_queue
 
 class Caller(object):
   """
@@ -52,7 +52,7 @@ def protected_callback(callback):
     if callable(callback):
       return callback()
   except KeyboardInterrupt:
-    from pypkg.exit import terminate
+    from .exit import terminate
     terminate()
   except BaseException:
     from logging import getLogger
@@ -88,8 +88,8 @@ class StageBuilder(object):
     self.__prev_builder = prev_builder  #: The builder for the previous stage
 
     self.__building = {}  #: List of ports we are working on
-    self.__queues = ([], [], [],[])  #: The location of the queues
-                                     # (active, queued, pending, failed)
+    self.__queues = ([], [], [], [])  #: The location of the queues
+                                      # (active, queued, pending, failed)
 
   def put(self, port, callback=None):
     """
@@ -102,7 +102,7 @@ class StageBuilder(object):
        @type callback: C{callable}
     """
     if isinstance(port, str):
-      from pypkg.port import get
+      from .port import get
       port = get(port)
       if not port:
         protected_callback(callback)
@@ -244,101 +244,6 @@ class StageBuilder(object):
     for i in callbacks:
       protected_callback(i)
 
-
-class Configer(object):
-  """
-     The Configer class.  This class configures a port and all of its
-     dependancies.
-  """
-  from threading import Lock
-
-  lock  = Lock()  #: The global lock for this class
-  cache = {}  #: Cache of Ports that are currently being configured
-
-  def __init__(self, port, callback=None):
-    """
-       Create a configurer for a port.  Once the port (and all of its
-       dependancies) have been configured then call a callback.
-
-       @param port: The port to configure
-       @type port: C{Port}
-       @param callback: The callback function
-       @type callback: C{callable}
-    """
-    self.__port = port  #: The port being configured
-    self.__count = 0  #: The number of dependancies
-    #: The callback vector
-    self.__callback = callable(callback) and [callback] or []
-
-  def add_callback(self, callback):
-    """
-       Add another callback for when this port and all its dependancies have
-       been configured.
-
-       @param callback: The callback function
-       @type callback: C{callable}
-    """
-    self.__callback.append(callback)
-
-  def config(self):
-    """
-       Configure the port and add all its dependancies onto the queue to be
-       configured.
-    """
-    from pypkg.port import get
-
-    assert self.__port.stage() < Port.CONFIG and self.__count == 0
-
-    if self.__port.build_stage(Port.CONFIG, False):
-      self.__count = len(self.__port.attr('depends')) + 1
-      for i in self.__port.attr('depends'):
-        port = get(i)
-        if port:
-          config_builder(port, self.finish)
-        else:
-          self.__count -= 1
-    else:
-      self.__count = 1
-    self.finish()
-
-  def finish(self):
-    """
-       Called when this port, or its dependancies, have been configured.  When
-       all have been configured then call the callback (and remove ourselves
-       from the configuration cache).
-    """
-    assert self.__count > 0
-
-    self.__count -= 1
-    if self.__count == 0:
-      with Configer.lock:
-        self.cache.pop(self.__port)
-      for i in self.__callback:
-        protected_callback(i)
-
-def config_builder(port, callback=None):
-  """
-     The builder for the config stage.  The port and all its dependancies are
-     configured and then the callback function is called.
-
-     @param port: The port to configure
-     @type port: C{port}
-     @param callback: The callback function
-     @type callback: C{callable}
-  """
-  with Configer.lock:
-    if Configer.cache.has_key(port):
-      if callable(callback):
-        Configer.cache[port].add_callback(callback)
-      return
-    elif port.stage() < Port.CONFIG:
-      conf = Configer(port, callback)
-      Configer.cache[port] = conf
-      config_queue.put(conf.config)
-      return
-  if callable(callback):
-    protected_callback(callback)
-
 def recursive_fetch_builder(port, callback=None):
   """
      Recursively fetch all port's distfiles
@@ -369,8 +274,8 @@ def index_builder():
   from logging import getLogger
   from os.path import join
 
-  from pypkg.make import env, make_target, SUCCESS
-  from pypkg.port import cache
+  from .make import env, make_target, SUCCESS
+  from .port import cache
 
   make = make_target('', ['-V', 'SUBDIR'], pipe=True)
   if make.wait() is not SUCCESS:
@@ -402,6 +307,8 @@ def index_builder():
 
   index.close()
 
+#: The builder for the config stage
+config_builder  = StageBuilder(Port.CONFIG, config_queue)
 #: The builder for the fetch stage
 fetch_builder   = StageBuilder(Port.FETCH, fetch_queue)
 #: The builder for the build stage
