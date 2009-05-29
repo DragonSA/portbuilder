@@ -36,6 +36,7 @@ class WorkerQueue(Queue):
     self._log = getLogger("pypkg.queue." + name)  #: Logger of this queue
     #self._name = name  #: The name of this queue
     self._workers = workers  #: The (maximum) number of workers
+    self._stalled = 0  #: The number of stalled workers
 
     self._stats = [0, 0]  #: Various statists (e.g. worker and job count)
 
@@ -48,7 +49,7 @@ class WorkerQueue(Queue):
        @return: The worker pool size
        @rtype: C{str}
     """
-    return len(self._pool)
+    return len(self._pool) - self._stalled
 
   def job(self, jid):
     """
@@ -106,7 +107,7 @@ class WorkerQueue(Queue):
       jid = self._stats[WorkerQueue._JOB]
       self._stats[WorkerQueue._JOB] += 1
       Queue.put(self, (jid, func), block, timeout)
-      if self.qsize() > 0 and len(self._pool) < self._workers:
+      if self.qsize() > 0 and (len(self._pool) - self._stalled) < self._workers:
         from threading import Thread
         thread = Thread(target=self._worker)
         self._pool[thread] = -1
@@ -122,7 +123,7 @@ class WorkerQueue(Queue):
        @return: The tuple of information
        @rtype: C{(int, int, int)}
     """
-    return (len(self)) + tuple(self._stats)
+    return (len(self) - self._stalled) + tuple(self._stats)
 
   def terminate(self):
     """
@@ -157,7 +158,7 @@ class WorkerQueue(Queue):
     while True:
       with self._lock:
         try:
-          if self._workers < len(self._pool):
+          if self._workers < (len(self._pool) - self._stalled):
             raise Empty
           jid, func = self.get(False)
           self._pool[thread] = jid
