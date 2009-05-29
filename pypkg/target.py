@@ -108,7 +108,7 @@ class StageBuilder(object):
         protected_callback(callback)
         return
     port_lock = port.lock()
-    if port.stage() < Port.CONFIG:
+    if port.stage() < Port.CONFIG and self.__stage != Port.CONFIG:
       config_builder(port, lambda: self.put(port, callback))
       return
 
