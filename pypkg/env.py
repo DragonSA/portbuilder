@@ -2,7 +2,6 @@
 The directory module.  This module handles the directories to be used for
 various other modules.
 """
-from __future__ import absolute_import
 
 from os import getuid, getgroups
 
