@@ -29,16 +29,16 @@ class WorkerQueue(Queue):
     """
     Queue.__init__(self)
     from logging import getLogger
-    from threading import Lock
+    from threading import Condition, Lock
     # We have to use our own locks since we cannot access Queue's functions
     # without not holding the locks and doing this will cause a dead lock...
-    self._lock = Lock()  #: The notifier and locker of this queue
+    self._lock = Condition(Lock())  #: The notifier and locker of this queue
     self._log = getLogger("pypkg.queue." + name)  #: Logger of this queue
     #self._name = name  #: The name of this queue
     self._workers = workers  #: The (maximum) number of workers
     self._stalled = 0  #: The number of stalled workers
 
-    self._stats = [0, 0]  #: Various statists (e.g. worker and job count)
+    self._stats = [1, 1]  #: Various statists (e.g. worker and job count)
 
     self._pool = {}  #: The pool of workers
 
@@ -107,12 +107,7 @@ class WorkerQueue(Queue):
       jid = self._stats[WorkerQueue._JOB]
       self._stats[WorkerQueue._JOB] += 1
       Queue.put(self, (jid, func), block, timeout)
-      if self.qsize() > 0 and (len(self._pool) - self._stalled) < self._workers:
-        from threading import Thread
-        thread = Thread(target=self._worker)
-        self._pool[thread] = -1
-        #thread.setDaemon(True)
-        thread.start()
+      self._start()
       return jid
 
   def stats(self):
@@ -124,6 +119,29 @@ class WorkerQueue(Queue):
        @rtype: C{(int, int, int)}
     """
     return (len(self) - self._stalled) + tuple(self._stats)
+
+  def stalled(self):
+    """
+       Indicates if a worker has stalled.  This will result in a worker being
+       created to replace this worker.
+
+       NOTE: Can only be called from within a job
+    """
+    from threading import currentThread
+
+    thread = currentThread()
+    assert self._pool.has_key(thread)
+    wid, jid = self._pool[thread]
+
+    with self._lock:
+      self._log.debug("Worker %d: Job %d stalled")
+      self._stalled += 1
+      self._start()
+
+      # Wait for a worker to finish
+      self._lock.wait()
+      self._log.debug("Worker %d: Job %d resuming")
+      # `self._stalled -= 1` called by waker
 
   def terminate(self):
     """
@@ -139,6 +157,19 @@ class WorkerQueue(Queue):
         self.task_done()
     except Empty:
       return
+
+  def _start(self):
+    """
+       Starts a worker if there is a need.
+
+       NOTE: Must be called with lock held
+    """
+    if self.qsize() > 0 and (len(self._pool) - self._stalled) < self._workers:
+      from threading import Thread
+      thread = Thread(target=self._worker)
+      self._pool[thread] = (0, -1)
+      #thread.setDaemon(True)
+      thread.start()
 
   def _worker(self):
     """
@@ -161,7 +192,7 @@ class WorkerQueue(Queue):
           if self._workers < (len(self._pool) - self._stalled):
             raise Empty
           jid, func = self.get(False)
-          self._pool[thread] = jid
+          self._pool[thread] = (wid, jid)
         except Empty:
           self._pool.pop(thread)
           self._log.debug("Worker %d: Terminating" % wid)
@@ -173,7 +204,10 @@ class WorkerQueue(Queue):
 
       # Signal that a job has finished
       with self._lock:
-        self._pool[thread] = -1
+        self._pool[thread] = (wid, -1)
+        if self._stalled:
+          self._stalled -= 1
+          self._lock.notify()
 
   def _work(self, func, jid, wid):
     """
