@@ -51,6 +51,17 @@ class WorkerQueue(Queue):
     """
     return len(self._pool) - self._stalled
 
+  def jid(self):
+    """
+       Returns the current job ID.  Can only be called from a worker thread.
+
+       @return: The current workers JID
+       @rtype: C{int}
+    """
+    from threading import currentThread
+
+    return self._pool[currentThread()][1]
+
   def job(self, jid):
     """
        Returns if the specified job has finished or not
@@ -129,9 +140,7 @@ class WorkerQueue(Queue):
     """
     from threading import currentThread
 
-    thread = currentThread()
-    assert self._pool.has_key(thread)
-    wid, jid = self._pool[thread]
+    wid, jid = self._pool[currentThread()]
 
     with self._lock:
       self._log.debug("Worker %d: Job %d stalled")
