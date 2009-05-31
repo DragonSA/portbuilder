@@ -4,43 +4,41 @@ The Queue module.  This module handles the execution of time consuming tasks.
 from __future__ import absolute_import, with_statement
 
 from subprocess import Popen, PIPE
-from Queue import Queue
 
 #: The number of CPU's available on this system
 ncpu = int(Popen(['sysctl', '-n', 'hw.ncpu'], stdout=PIPE).communicate()[0])
 
-class WorkerQueue(Queue):
+class WorkerQueue(object):
   """
      The WorkerQueue class.  This class manages a pool of worker threads for
      running jobs.
   """
 
-  _WORKER = 0
-  _JOB    = 1
-
-  def __init__(self, name, workers=1):
+  def __init__(self, name, load=1):
     """
        Initialise a worker thread pool
 
        @param name: The name of this thread (used in logging)
        @type name: C{str}
-       @param number: The number of workers to allocate
-       @type number: C{int}
+       @param load: The maximum load allowed
+       @type load: C{int}
     """
-    Queue.__init__(self)
     from logging import getLogger
-    from threading import Condition, Lock
+    from threading import Lock
     # We have to use our own locks since we cannot access Queue's functions
     # without not holding the locks and doing this will cause a dead lock...
-    self._lock = Condition(Lock())  #: The notifier and locker of this queue
+    self._lock = Lock()  #: The locker of this queue
     self._log = getLogger("pypkg.queue." + name)  #: Logger of this queue
     #self._name = name  #: The name of this queue
-    self._workers = workers  #: The (maximum) number of workers
-    self._stalled = 0  #: The number of stalled workers
+    self._load = load  #: The requested load
+    self._curload = 0  #: The current load experianced
 
-    self._stats = [1, 1]  #: Various statists (e.g. worker and job count)
+    self._wid = 0  #: The number of workers created (and next WID)
+    self._jid = 0  #: The number of jobs created (and next JID)
 
     self._pool = {}  #: The pool of workers
+    self._queue = []  #: Queue of jobs
+    self._stalled = []  #: The stalled workers (with load and waker)
 
   def __len__(self):
     """
@@ -49,7 +47,7 @@ class WorkerQueue(Queue):
        @return: The worker pool size
        @rtype: C{int}
     """
-    return len(self._pool) - self._stalled
+    return len(self._pool) - len(self._stalled)
 
   def qsize(self):
     """
@@ -58,7 +56,7 @@ class WorkerQueue(Queue):
        @return: The queue size
        @rtype: C{int}
     """
-    return Queue.qsize(self) + self._stalled
+    return len(self._queue) + len(self._stalled)
 
   def jid(self):
     """
@@ -84,62 +82,70 @@ class WorkerQueue(Queue):
       for i in self._pool:
         if i[1] == jid:
           return False
-      for i in self.queue:
-        if i[0] == jid:
+      for i in self._queue:
+        if i[1] == jid:
           return False
 
       return True
 
-  def pool(self):
+  def load(self):
     """
-       The number of workers in the pool.  The actual number may vary but will
-       stabalise to this number under full load
+       The current load allowed.  The actual number may vary but will hover
+       around this figure.
 
        @return: Number of workers
        @rtype: C{int}
     """
     return self._workers
 
-  def set_pool(self, workers):
+  def set_load(self, load):
     """
-       Changes the number of workers in the pool.  If more workers are currently
-       running then some workers will be stopped after finishing their current
-       job.
+       Changes the current requested load.
 
-       @param workers: Number of workers
-       @type workers: C{int}
+       @param load: The load
+       @type load: C{int}
     """
     with self._lock:
-      self._workers = workers
+      self._load = load
 
-  def put(self, func, block=True, timeout=0):
+      if not load:
+        while len(self._stalled):
+          worker = self._stalled.pop()
+          self._curload += worker[1]
+          worker[0].release()
+
+  def put(self, func, load=1):
     """
        Places a job onto the queue, if insufficient workers are available one
        will be started.
 
        @param func: The job to execute
        @type func: C{callable}
+       @param load: The load the job
+       @type load: C{int}
     """
     assert callable(func)
     with self._lock:
-      # If there are no workers expected then we are not open for jobs
-      if not self._workers:
+      # If there is no load allowed then we are not open for jobs
+      if not self._load:
         return -1
-      jid = self._stats[WorkerQueue._JOB]
-      self._stats[WorkerQueue._JOB] += 1
-      Queue.put(self, (jid, func), block, timeout)
+
+      self._jid += 1
+
+      self._queue.append((func, self._jid, load))
       self._start()
+
       return jid
 
   def stats(self):
     """
        Returns a tuple about activity on the queue.
-       (Workers running, Workers created, Jobs run(ning))
+       (Workers running, Workers created, Jobs created)
 
        @return: The tuple of information
        @rtype: C{(int, int, int)}
     """
-    return (len(self) - self._stalled) + tuple(self._stats)
+    return (len(self), self._wid, self_jid)
 
   def stalled(self):
     """
@@ -147,20 +153,33 @@ class WorkerQueue(Queue):
        created to replace this worker.
 
        NOTE: Can only be called from within a job
+
+       @return: If stalling is possible
+       @rtype: C{bool}
     """
-    from threading import currentThread
+    from threading import currentThread, Lock
 
-    wid, jid = self._pool[currentThread()]
+    wid, jid, load = self._pool[currentThread()]
+    lock = Lock()
 
-    with self._lock:
-      self._log.debug("Worker %d: Job %d stalled")
-      self._stalled += 1
-      self._start()
+    with lock:
+      with self._lock:
+        if not self._load:
+          return False
+
+        self._log.debug("Worker %d: Job %d stalled")
+        self._stalled.append((lock, load))
+        self._stalled += 1
+        self._curload -= load
+        self._start()
 
       # Wait for a worker to finish
-      self._lock.wait()
+      lock.acquire()
       self._log.debug("Worker %d: Job %d resuming")
-      # `self._stalled -= 1` called by waker
+      # `self._curload += load` called by waker
+      # `self._stalled.remove((lock, load))` called by waker
+
+    return bool(self._load)
 
   def terminate(self):
     """
@@ -169,13 +188,8 @@ class WorkerQueue(Queue):
     """
     from Queue import Empty
 
-    self.set_pool(0)
-    try:
-      while True:
-        self.get(False)
-        self.task_done()
-    except Empty:
-      return
+    self.set_load(0)
+    self._queue = []
 
   def _start(self):
     """
@@ -183,51 +197,104 @@ class WorkerQueue(Queue):
 
        NOTE: Must be called with lock held
     """
-    if Queue.qsize(self) > 0 and \
-                             (len(self._pool) - self._stalled) < self._workers:
+    while len(self._queue) and self._curload < self._load:
       from threading import Thread
-      thread = Thread(target=self._worker)
-      self._pool[thread] = (0, -1)
-      #thread.setDaemon(True)
+
+      job = self._find_job()
+
+      self._wid += 1
+      thread = Thread(target=lambda: self._worker(self._wid, job))
+      self._pool[thread] = [self._wid] + job[1:]
+      self._curload += job[2]
+
       thread.start()
 
-  def _worker(self):
+  def _find_job(self):
+    """
+       Finds an appropriate job to run.
+
+       NOTE: Must be called with lock held (and len(self._queue) > 0)
+
+       @return: The job to run
+       @rtype: C{Callable, int, int}
+    """
+    assert self._curload < self._load and len(self._queue) > 0
+
+    load = self._load - self._curload
+
+    job = 0
+
+    for i in xrange(len(self._queue)):
+      if self._queue[i][2] <= load:
+        return self._queue.pop(i)
+      if self._queue[i][2] < self._queue[job][2]:
+        job = i
+
+    return self._queue.pop(job)
+
+  def _find_worker(self):
+    """
+       Finds an appropriate stalled worker to run.
+
+       NOTE: Must be called with lock held (and len(self._stalled) > 0)
+
+       @return: The worker to wake
+       @rtype: C{Lock, int}
+    """
+    assert self._curload < self._load and len(self._stalled) > 0
+
+    load = self._load - self._curload
+
+    worker = 0
+
+    for i in xrange(len(self._stalled)):
+      if self._stalled[i][1] <= load:
+        return self._stalled.pop(i)
+      if self._stalled[i][1] < self._stalled[worker][1]:
+        worker = i
+
+    return self._stalled.pop(worker)
+
+  def _worker(self, wid, job):
     """
        The worker.  It waits for a job from the queue and then executes the
        given command (with given parameters).
+
+       @param wid: The worker ID
+       @type wid: C{int}
+       @param job: The first job to run
+       @type job: C{int, int, Callable}
     """
     from threading import currentThread
     from Queue import Empty
 
     thread = currentThread()
 
-    with self._lock:
-      wid = self._stats[WorkerQueue._WORKER]
-      self._stats[WorkerQueue._WORKER] += 1
     self._log.debug("Worker %d: Created" % wid)
 
     while True:
-      with self._lock:
-        try:
-          if self._workers < (len(self._pool) - self._stalled):
-            raise Empty
-          jid, func = self.get(False)
-          self._pool[thread] = (wid, jid)
-        except Empty:
-          self._pool.pop(thread)
-          self._log.debug("Worker %d: Terminating" % wid)
-          return
+      func, jid, load = job
 
       self._work(func, jid, wid)
 
-      self.task_done()
-
       # Signal that a job has finished
       with self._lock:
-        self._pool[thread] = (wid, -1)
-        if self._stalled:
-          self._stalled -= 1
-          self._lock.notify()
+        self._curload -= load
+
+        while self._stalled and self._curload < self._load:
+          worker = self._find_worker()
+          self._curload += worker[1]
+          worker[0].release()
+
+        if self._curload >= self._load:
+          break
+
+        job = self._find_job()
+        self._curload += job[2]
+        _start()
+
+    self._pool.pop(thread)
+    self._log.debug("Worker %d: Terminating" % wid)
 
   def _work(self, func, jid, wid):
     """
