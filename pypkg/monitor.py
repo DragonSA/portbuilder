@@ -438,14 +438,15 @@ class Top(Monitor):
     ports = sum(summary_new) - summary_new[3]
     if ports:
       msg = "%i port(s) remaining:" % ports
-      if summary_new[0]:
-        msg += " %i active" % summary_new[0]
-        if summary_new[1]:
-          msg += ", %i queued" % summary_new[1]
-        if summary_new[2]:
-          msg += ", %i pending" % summary_new[2]
-        if summary_new[3]:
-          msg += ", %i failed" % summary_new[3]
+
+      msgv = []
+      stages = ["active", "queued", "pending", "failed"]
+      for i in range(len(stages)):
+        if summary_new[i]:
+          msgv.append("%i %s" % (summary_new[i], stages[i]))
+
+      msg += ", ".join(msgv)
+
       scr.addstr(self._offset, 0, msg)
 
       self._offset += 1
@@ -466,11 +467,13 @@ class Top(Monitor):
       msg = "%s: " % stage_name
       msgv = []
       stages = ["active", "queued", "pending", "failed"]
-      for i in range(msgv):
+      for i in range(len(stages)):
         if stats[i]:
           msgv.append("%i %s" % (stats[i], stages[i]))
 
       msg += ", ".join(msgv)
+      scr.addstr(self._offset, 0, msg)
+      self._offset += 1
 
   def _update_rows(self, scr):
     """
@@ -537,19 +540,21 @@ class Statistics(object):
     self.__time = time()
     self.__ports = [len(ports), ports.qsize(), len(cache)]
 
+    self.__config = target.config_builder.stats()
     self.__fetch = target.fetch_builder.stats()
     self.__build = target.build_builder.stats()
     self.__install = target.install_builder.stats()
     self.__queues = self.__get_queues()
 
+    self.__config = [len(i) for i in self.__config]
     self.__fetch = [len(i) for i in self.__fetch]
     self.__build = [len(i) for i in self.__build]
     self.__install = [len(i) for i in self.__install]
 
     # Correct sizes
-    # TODO: Fix
-    self.__install[2] -= self.__build[2]
-    self.__build[2] -= self.__fetch[2]
+    self.__install[2] -= sum(self.__build[:3])
+    self.__build[2] -= sum(self.__fetch[:3])
+    self.__fetch[2] -= sum(self.__config[:3])
 
   def ports(self):
     """
