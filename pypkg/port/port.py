@@ -340,13 +340,16 @@ class Port(object):
        @return: The dependant handler
        @rtype: C{DependHandler}
     """
+    assert not self.__failed and self.__stage >= Port.CONFIG
+    assert not self.__working and self.__stage > Port.CONFIG
+
     if self._depends:
       return self._depends
 
     from .dependhandler import DependHandler
 
     with self.__lock:
-      # Wait for another request of the depend handler is pending
+      # Wait for another request of the depend handler if it is pending
       while self._depends is False:
         self.__lock.wait()
 
@@ -363,19 +366,14 @@ class Port(object):
     if self._depends:
       return self._depends
 
-    # We need to be configured before the depend handler can be created
-    if self.__stage < Port.CONFIG:
-      self.config()
-
     # Create the depend handler (for all our dependancies)
     self._log.debug("Creating depend handler: %s" % self._origin)
-    depends_obj = DependHandler(self, [self.attr(i) for i in
-                  ('depend_build', 'depend_extract', 'depend_fetch',
-                   'depend_lib',   'depend_run',     'depend_patch')])
+    seld._depends = DependHandler(self, [self.attr(i) for i in
+                    ('depend_build', 'depend_extract', 'depend_fetch',
+                     'depend_lib',   'depend_run',     'depend_patch')])
 
     with self.__lock:
-      # Set the depend handler and notify any other threads
-      self._depends = depends_obj
+      # Notify other threads it has been created
       self.__lock.notifyAll()
 
     return self._depends
