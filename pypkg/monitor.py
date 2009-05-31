@@ -419,7 +419,7 @@ class Top(Monitor):
     msg = "port count: %i" % port_new[2]
     if port_new[0]:
       if port_new[1]:
-        msg += "; retrieving %i (of %i)" % port_new[:2]
+        msg += "; retrieving %i (of %i)" % tuple(port_new[:2])
       else:
         msg += "; retrieving %i" % port_new[0]
     scr.addstr(self._offset, 0, msg)
@@ -615,7 +615,7 @@ class Statistics(object):
     """
     return self.__time
 
-  def __get_queues():
+  def __get_queues(self):
     """
         Collate ordered information about the ports in various queues.
     """
