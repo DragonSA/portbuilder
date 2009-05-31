@@ -4,7 +4,7 @@ ports.
 """
 from __future__ import absolute_import, with_statement
 
-from .port import DependHandler, Port
+from .port import Dependancy, Dependant, Port
 from .queue import config_queue, fetch_queue, build_queue, install_queue
 
 class Caller(object):
@@ -27,6 +27,15 @@ class Caller(object):
     """
     self.__count = count
     self.__callback = callback
+
+  def __len__(self):
+    """
+       The number of callbacks required before actual call
+
+       @return: Number of calls left
+       @rtype: C{int}
+    """
+    return self.__count
 
   def __call__(self):
     """
@@ -106,19 +115,12 @@ class StageBuilder(object):
        @param callback: The callback function
        @type callback: C{callable}
     """
-    if isinstance(port, str):
-      from .port import get
-      port = get(port)
-      if not port:
-        protected_callback(callback)
-        return
-    port_lock = port.lock()
     if port.stage() < Port.CONFIG and self.__stage != Port.CONFIG:
       config_builder(port, lambda: self.put(port, callback))
       return
-
-    # NB: If done inside lock and depends locks then adaptive lock wont work
-    depends = port.depends()  # Needs to be done outside of port_lock
+    else:
+      # Make sure we have dependant object created
+      port.dependancy()
 
     # Make sure the ports dependant handler has been created:
     with self.__lock:
@@ -127,45 +129,36 @@ class StageBuilder(object):
           self.__building[port].append(callback)
         return
 
-      port_lock.acquire()
-      stage = port.stage()
-      if port.failed() or depends.failed() or stage >= self.__stage:
-        port_lock.release()
-        self.__lock.release()
-        protected_callback(callback)
-        self.__lock.acquire()
-        return
+      with port.lock():
+        stage = port.stage()
+        bail = self._port_check(port)
+        if not bail:
+          self.__building[port] = callable(callback) and [callback] or []
+          self.__queues[StageBuilder.PENDING].append(port)
 
-      self.__building[port] = callable(callback) and [callback] or []
-      self.__queues[StageBuilder.PENDING].append(port)
-      if stage < self.__stage - 1 or \
-           (port.working() and stage == self.__stage - 1):
-        assert self.__prev_builder is not None
-        resolv_depends = False
-      elif depends.check(self.__stage):
-        port_lock.release()
-        try:
-          self.__lock.release()
-          self.queue(port)
-        finally:
-          self.__lock.acquire()
-        return
-      else:
-        resolv_depends = True
+          depends = self._depends_check(port)
+          prev_stage = stage < self.__stage - 1 or \
+                      (port.working() and stage == self.__stage - 1)
+          assert self.__prev_builder is not None or not prev_stage
 
-      depends = depends.dependancies(DependHandler.STAGE2DEPENDS[self.__stage])
-      port_lock.release()
+    if bail:
+      self.__log.debug("Port cannot be built: ``%s''" % port.origin())
+      protected_callback(callback)
+      return
 
-    callback = Caller(len(depends) + (resolv_depends and 0 or 1),
+    if not len(depends) and not prev_stage:
+      self.queue(port)
+      return
+
+    callback = Caller(len(depends) + (prev_stage and 1 or 0),
                       lambda: self.queue(port))
+    self.__log.debug("Placing port onto queue after %i call(s): ``%s''" %
+                     (len(callback), port.origin()))
 
     for i in depends:
-      if i.status() == DependHandler.UNRESOLV:
-        install_builder(i.port(), callback)
-      else:
-        callback()
+      install_builder(i, callback)
 
-    if not resolv_depends:
+    if prev_stage:
       self.__prev_builder(port, callback)
 
   def build(self, port):
@@ -177,11 +170,15 @@ class StageBuilder(object):
        @type port: C{Port}
     """
     assert self.__building.has_key(port)
+
     with self.__lock:
       self.__queues[StageBuilder.QUEUED].remove(port)
       self.__queues[StageBuilder.ACTIVE].append(port)
+
     if not port.build_stage(self.__stage, False):
-      self.__queues[StageBuilder.FAILED].append(port)
+      with self.__lock:
+        self.__queues[StageBuilder.FAILED].append(port)
+
     self.__callbacks(port)
 
   def queue(self, port):
@@ -192,16 +189,19 @@ class StageBuilder(object):
        @type port: C{Port}
     """
     assert self.__building.has_key(port)
-    if port.failed() or port.depends().failed():
+
+    if self._port_check(port):
+      self.__log.debug("Port will not be built: ``%s''" % port.origin())
       self.__callbacks(port, 2)
-    elif not port.depends().check(self.__stage):
-      self.__callbacks(port, 2)
-      # TODO, complain, should not happen
     else:
+      assert self.__stage != Port.CONFIG or port.dependancy().check(self.__stage)
       assert port.stage() == self.__stage - 1 and not port.working()
+
       with self.__lock:
         self.__queues[StageBuilder.PENDING].remove(port)
         self.__queues[StageBuilder.QUEUED].append(port)
+
+      self.__log.debug("Placing port onto queue: ``%s''" % port.origin())
       self.__queue.put(lambda: self.build(port))
 
   def stats(self, summary=False):
@@ -242,6 +242,33 @@ class StageBuilder(object):
     #  self.__queues[StageBuilder.QUEUED].remove(port)
     #  self.__queues[StageBuilder.ACTIVE].append(port)
 
+  def _port_check(self, port):
+    """
+       Checks if the port can be built at this stage.
+
+       @param port: The port
+       @type port: C{Port}
+       @return: If the port can be built
+       @rtype: C{bool}
+    """
+    return port.failed() or port.dependant().failed() or \
+                                                   port.stage() >= self.__stage
+
+  def _depends_check(self, port):
+    """
+       Checks which dependancies need to be resolved.
+
+       @param port: The port
+       @type port: C{Port}
+       @return: The dependancies that need to be resolved
+       @rtype: C{[Port]}
+    """
+    depends = []
+    for i in port.dependancy().get(Dependancy.STAGE2DEPENDS[self.__stage]):
+      if i.dependant().status() == Dependant.UNRESOLV:
+        depends.append(i)
+    return depends
+
   def __call__(self, port, callback=None):
     """
        Alias for .put() [See TargetBuilder.put].
@@ -272,6 +299,37 @@ class StageBuilder(object):
     for i in callbacks:
       protected_callback(i)
 
+class ConfigBuilder(StageBuilder):
+  """
+     Configures a port.
+  """
+
+  def __init__(self, stage, queue, prev_builder=None):
+    """
+       Create a target builder for a given stage using a given queue.  Also, if
+       a previous stage is handled by a builder then use that builder to for the
+       previous stages.
+
+       @param stage: The stage this builder handles
+       @type stage: C{int}
+       @param queue: The queue to use for this stage
+       @type queue: C{WorkerQueue}
+       @param prev_builder: The builder for the previous stage
+       @type prev_builder: C{callable}
+    """
+    StageBuilder.__init__(self, stage, queue, prev_builder)
+
+  def _depends_check(self, port):
+    """
+       Checks which dependancies need to be resolved.
+
+       @param port: The port
+       @type port: C{Port}
+       @return: The dependancies that need to be resolved
+       @rtype: C{[Port]}
+    """
+    return []
+
 def recursive_fetch_builder(port, callback=None):
   """
      Recursively fetch all port's distfiles
@@ -285,7 +343,7 @@ def recursive_fetch_builder(port, callback=None):
 
   ind = 0
   while ind < len(depends):
-    for i in depends[ind].depends().dependancies():
+    for i in depends[ind].dependancy().get():
       if i not in depends:
         depends.append(i)
     ind += 1
@@ -338,7 +396,7 @@ def index_builder():
 #: The builder for the config stage
 config_builder  = StageBuilder(Port.CONFIG, config_queue)
 #: The builder for the fetch stage
-fetch_builder   = StageBuilder(Port.FETCH, fetch_queue)
+fetch_builder   = StageBuilder(Port.FETCH, fetch_queue, config_queue)
 #: The builder for the build stage
 build_builder   = StageBuilder(Port.BUILD, build_queue, fetch_builder)
 #: The builder for the install stage
