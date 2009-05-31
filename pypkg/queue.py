@@ -47,9 +47,18 @@ class WorkerQueue(Queue):
        The size of the worker pool
 
        @return: The worker pool size
-       @rtype: C{str}
+       @rtype: C{int}
     """
     return len(self._pool) - self._stalled
+
+  def qsize(self):
+    """
+       The size of the queued items
+
+       @return: The queue size
+       @rtype: C{int}
+    """
+    return Queue.qsize(self) + self._stalled
 
   def jid(self):
     """
@@ -174,7 +183,8 @@ class WorkerQueue(Queue):
 
        NOTE: Must be called with lock held
     """
-    if self.qsize() > 0 and (len(self._pool) - self._stalled) < self._workers:
+    if Queue.qsize(self) > 0 and \
+                             (len(self._pool) - self._stalled) < self._workers:
       from threading import Thread
       thread = Thread(target=self._worker)
       self._pool[thread] = (0, -1)
