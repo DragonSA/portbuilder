@@ -72,8 +72,9 @@ class WorkerQueue(Queue):
        @rtype: C{bool}
     """
     with self._lock:
-      if jid in self._pool:
-        return False
+      for i in self._pool:
+        if i[1] == jid:
+          return False
       for i in self.queue:
         if i[0] == jid:
           return False
