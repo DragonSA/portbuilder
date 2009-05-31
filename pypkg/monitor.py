@@ -484,7 +484,7 @@ class Top(Monitor):
     """
     active, queued, pending, failed = self._stats.queues()
 
-    scr.addstr(self._offset + 1, 2, '  STAGE   STATE   TIME PORT (VERSION)')
+    scr.addstr(self._offset + 1, 2, 'STAGE   STATE   TIME PORT (VERSION)')
 
     lines, columns = scr.getmaxyx()
     lines -= self._offset + 2
@@ -519,7 +519,7 @@ class Top(Monitor):
     for i in range(min(lines, len(failed))):
       port = failed[i]
       scr.addnstr(offset + i, 0, ' %6s  failed        %s' %
-                  (get_stage(port, 1), get_name(port)), columns)
+                  (get_stage(port), get_name(port)), columns)
 
 
 class Statistics(object):
