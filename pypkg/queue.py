@@ -24,10 +24,10 @@ class WorkerQueue(object):
        @type load: C{int}
     """
     from logging import getLogger
-    from threading import Lock
+    from threading import Condition, Lock
     # We have to use our own locks since we cannot access Queue's functions
     # without not holding the locks and doing this will cause a dead lock...
-    self._lock = Lock()  #: The locker of this queue
+    self._lock = Condition(Lock())  #: The locker of this queue
     self._log = getLogger("pypkg.queue." + name)  #: Logger of this queue
     #self._name = name  #: The name of this queue
     self._load = load  #: The requested load
@@ -87,6 +87,14 @@ class WorkerQueue(object):
           return False
 
       return True
+
+  def join(self):
+    """
+       Wait till all jobs have been consumed.
+    """
+    with self._lock:
+      if len(self._pool):
+        self._lock.wait()
 
   def load(self):
     """
@@ -183,7 +191,7 @@ class WorkerQueue(object):
 
   def terminate(self):
     """
-       Shutdown this WorkerQueue.  Unlike set_pool(0) all remaining queued
+       Shutdown this WorkerQueue.  Unlike set_load(0) all remaining queued
        items are also removed.
     """
     from Queue import Empty
@@ -295,6 +303,8 @@ class WorkerQueue(object):
 
     self._pool.pop(thread)
     self._log.debug("Worker %d: Terminating" % wid)
+    if not len(self._pool):
+      self._lock.notifyAll()
 
   def _work(self, func, jid, wid):
     """
