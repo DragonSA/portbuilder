@@ -550,7 +550,8 @@ class Port(object):
 
     lock_files = self.attr('distfiles')
     while not self.__lock_fetch.acquire(lock_files, False):
-      fetch_builder.stalled()
+      if not fetch_builder.stalled():
+        return False
 
     status = True
     for i in distfiles:

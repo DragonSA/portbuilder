@@ -106,7 +106,7 @@ Future release:
  - Vet the thread locking for deadlocks
  - Move variables from protected to private (were appropriate)
  - Add all assertions
- - Use relative imports
+ * Use relative imports
  + Add recursive command:
    - config
    * fetch
@@ -114,7 +114,7 @@ Future release:
    - package
  - Make recursive commands generic
  - Port:
-   - Separate package building
+   - Separate package building?
    - No auto-cleaning?
    - Remove state variables
  + StageBuilder:
@@ -124,15 +124,15 @@ Future release:
  + Queues:
    - Implement a deadlock resolver (with lock monitor)
    * Handle stalling of a worker
-   - Support loaded jobs
+   * Support loaded jobs
    * Add ability of jobs to find their JID
  + Ensure graceful handling of failed ports (does not appear to work)
- - Make config_builder API compatible with the other Builders?
+ * Make config_builder API compatible with the other Builders?
  * Catch exceptions from callback (all callbacks)
  - Use port's stage_builder (than calling directly)
  - Extend port's stage_builder for non_blocking version
  - Add checks for already fetched files
- - Add labels for queues (active, queued, pending, failed)
+ * Add labels for queues (active, queued, pending, failed)
  * Add failed queue
 
 0.0.6 - Milestone 6 (Finish Dependant Handling):
@@ -148,7 +148,7 @@ Future release:
  - Handle bsddb not installed
  * Increase callback hardiness
  * Fix RWLock (unsure state handling)
- - Make sure ports configured before creating DependHandler
+ * Make sure ports configured before creating DependHandler
  - DependHandler:
    * Ensure _count is done properly
    * Handle depenancies with fetch_only
