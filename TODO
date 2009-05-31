@@ -117,6 +117,15 @@ Future release:
    - Separate package building
    - No auto-cleaning?
    - Remove state variables
+ + StageBuilder:
+   + Handle stage stalls
+   - Support loaded jobs
+   - Identify working jobs by JID
+ + Queues:
+   - Implement a deadlock resolver (with lock monitor)
+   * Handle stalling of a worker
+   - Support loaded jobs
+   * Add ability of jobs to find their JID
  + Ensure graceful handling of failed ports (does not appear to work)
  - Make config_builder API compatible with the other Builders?
  * Catch exceptions from callback (all callbacks)
@@ -157,8 +166,6 @@ Future release:
    - When doing individual checks, cache as they can be duplicated
    - Allow switching for depends resolution (from complex to simple...)
    - Check for conflicts (and handle)
- - Queues:
-   - Implement a deadlock resolver (with lock monitor)
 
 0.0.5 - Milestone 5 (Finish basic ports infrastructure):
  * modules:

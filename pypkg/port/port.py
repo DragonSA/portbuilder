@@ -543,38 +543,44 @@ class Port(object):
     from ..cache import check_files, set_files
     from ..env import iscreatable
     from ..make import Make, make_target, SUCCESS
+    from ..target import fetch_builder
 
     distdir = self.attr('distdir')
     distfiles = [(i, join(distdir, i)) for i in self.attr('distfiles')]
 
-    with self.__lock_fetch.lock(self.attr('distfiles')):
-      status = True
+    lock_files = self.attr('distfiles')
+    while not self.__lock_fetch.acquire(lock_files, False):
+      fetch_builder.stalled()
+
+    status = True
+    for i in distfiles:
+      # Check if the files exist and/or have changed
+      files = check_files('distfiles', i[0])
+      if not files or files[0] != i[1]:
+        status = False
+        break
+
+    # Files have not changed since last being fetched
+    if status:
+      self.__lock_fetch.release(lock_files)
+      return True
+
+    priv = False
+    for i in distfiles:
+      # If the files can be created then no need for privilage
+      if not iscreatable(i[1]):
+        priv = True
+        break
+
+    make = make_target(self._origin, ['checksum'], priv=priv)
+    status = make.wait() is SUCCESS
+
+    if status and not Make.no_opt:
       for i in distfiles:
-        # Check if the files exist and/or have changed
-        files = check_files('distfiles', i[0])
-        if not files or files[0] != i[1]:
-          status = False
-          break
-
-      # Files have not changed since last being fetched
-      if status:
-        return True
-
-      priv = False
-      for i in distfiles:
-        # If the files can be created then no need for privilage
-        if not iscreatable(i[1]):
-          priv = True
-          break
-
-      make = make_target(self._origin, ['checksum'], priv=priv)
-      status = make.wait() is SUCCESS
-
-      if status and not Make.no_opt:
-        for i in distfiles:
-          # Record the files (to prevent future fetching)
-          set_files('distfiles', i[0], i[1])
-      return status
+        # Record the files (to prevent future fetching)
+        set_files('distfiles', i[0], i[1])
+    self.__lock_fetch.release(lock_files)
+    return status
 
   build = lambda self: self.build_stage(Port.BUILD)
   def _build(self):
