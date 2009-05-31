@@ -388,10 +388,9 @@ class Top(Monitor):
     self._offset = 0
     self._update_ports(scr)
     self._update_summary(scr)
-    self._update_stage(scr, "Fetch", Statistics.fetch)
-    #self._update_stage(src, "Config", Statistics.config)
-    self._update_stage(scr, "Build", Statistics.build)
-    self._update_stage(scr, "Install", Statistics.install)
+    self._update_stage(scr, "Fetch", self._stats.fetch())
+    self._update_stage(scr, "Build", self._stats.build())
+    self._update_stage(scr, "Install", self._stats.install())
 
     offset = self._stats.time() - self.__start
     secs, mins, hours = offset % 60, offset / 60 % 60, offset / 60 / 60 % 60
@@ -414,7 +413,7 @@ class Top(Monitor):
       if port_new[1]:
         msg += "; retrieving %i (of %i)" % port_new[:2]
       else:
-        msg += "; retrieving %i/%i" % (port_new[0], port_new[3])
+        msg += "; retrieving %i" % port_new[0]
     scr.addstr(self._offset, 0, msg)
 
     self._offset += 1
@@ -428,7 +427,7 @@ class Top(Monitor):
     """
     summary_new = self._stats.summary()
 
-    ports = sum(summary_new)
+    ports = sum(summary_new) - summary_new[3]
     if ports:
       msg = "%i port(s) remaining:" % ports
       if summary_new[0]:
@@ -437,6 +436,8 @@ class Top(Monitor):
           msg += ", %i queued" % summary_new[1]
         if summary_new[2]:
           msg += ", %i pending" % summary_new[2]
+        if summary_new[3]:
+          msg += ", %i failed" % summary_new[3]
       scr.addstr(self._offset, 0, msg)
 
       self._offset += 1
@@ -449,26 +450,19 @@ class Top(Monitor):
        @type scr: C{Window}
        @param stage_name: The stage's name
        @type stage_name: C{str}
-       @param stats: A method that returns the stages statistics
-       @type stats: C{method}
+       @param stats: The statistics about the stage
+       @type stats: C{[int, int, int, int]}
     """
-    stats = list(stats(self._stats))
-    stats[2] -= stats[0] + stats[1]
 
-    if stats[0] or stats[2]:
+    if sum(stats):
       msg = "%s: " % stage_name
-      if stats[0]:
-        if not stats[1]:
-          msg += "%i/%i active" % (stats[0], stats[3])
-        else:
-          msg += "%i active, %i queued" % tuple(stats[0:2])
-        if stats[2]:
-          msg += ", %i pending" % stats[2]
-      elif stats[2]:
-        msg += "%i pending" % stats[2]
-      scr.addstr(self._offset, 0, msg)
+      msgv = []
+      stages = ["active", "queued", "pending", "failed"]
+      for i in range(msgv):
+        if stats[i]:
+          msgv.append("%i %s" % (stats[i], stages[i]))
 
-      self._offset += 1
+      msg += ", ".join(msgv)
 
   def _update_rows(self, scr):
     """
@@ -477,9 +471,9 @@ class Top(Monitor):
        @param scr: The window to display the information on
        @type scr: C{Window}
     """
-    active, queued, pending = self._stats.queues()
+    active, queued, pending, failed = self._stats.queues()
 
-    scr.addstr(self._offset + 1, 2, 'PID  STAGE   STATE   TIME PORT (VERSION)')
+    scr.addstr(self._offset + 1, 2, '  STAGE   STATE   TIME PORT (VERSION)')
 
     lines, columns = scr.getmaxyx()
     lines -= self._offset + 2
@@ -492,22 +486,29 @@ class Top(Monitor):
         time = '%3i:%02i' % (offtime / 60, offtime % 60)
       else:
         time = ' ' * 6
-      scr.addnstr(offset + i, 0, '%5i %6s  active %s %s' %
-                  (0, get_stage(port), time, get_name(port)), columns)
+      scr.addnstr(offset + i, 0, ' %6s  active %s %s' %
+                  (get_stage(port), time, get_name(port)), columns)
 
     lines -= len(active)
     offset += len(active)
     for i in range(min(lines, len(queued))):
       port = queued[i]
-      scr.addnstr(offset + i, 0, '%5i %6s  queued        %s' %
-                  (0, get_stage(port, 1), get_name(port)), columns)
+      scr.addnstr(offset + i, 0, ' %6s  queued        %s' %
+                  (get_stage(port, 1), get_name(port)), columns)
 
     lines -= len(queued)
     offset += len(queued)
     for i in range(min(lines, len(pending))):
       port = pending[i]
-      scr.addnstr(offset + i, 0, '%5i %6s pending        %s' %
-                  (0, get_stage(port, 1), get_name(port)), columns)
+      scr.addnstr(offset + i, 0, ' %6s pending        %s' %
+                  (get_stage(port, 1), get_name(port)), columns)
+
+    lines -= len(pending)
+    offset += len(pending)
+    for i in range(min(lines, len(failed))):
+      port = failed[i]
+      scr.addnstr(offset + i, 0, ' %6s  failed        %s' %
+                  (get_stage(port, 1), get_name(port)), columns)
 
 
 class Statistics(object):
@@ -522,30 +523,32 @@ class Statistics(object):
     from time import time
 
     from .port import cache
-    from . import queue
+    from .queue import ports_queue as ports
     from . import target
 
     self.__time = time()
-    self.__ports = Statistics.size(queue.ports_queue, cache)
-    #self.__config = Statistics.size(queue.config_queue,target.config_builder)
-    self.__fetch = Statistics.size(queue.fetch_queue, target.fetch_builder)
-    self.__build = Statistics.size(queue.build_queue, target.build_builder)
-    self.__install = Statistics.size(queue.install_queue,
-                                      target.install_builder)
-    self.__queues = Statistics.get_queues()
+    self.__ports = [len(ports), ports.qsize(), len(cache)]
+
+    self.__fetch = target.fetch_builder.stats()
+    self.__build = target.build_builder.stats()
+    self.__install = target.install_builder.stats()
+    self.__queues = self.__get_queues()
+
+    self.__fetch = [len(i) for i in self.__fetch]
+    self.__build = [len(i) for i in self.__build]
+    self.__install = [len(i) for i in self.__install]
 
     # Correct sizes
-    self.__install = self.__install[0:2] + \
-                   (self.__install[2] - self.__build[2],) + (self.__install[3],)
-    self.__build = self.__build[0:2] + (self.__build[2] - self.__fetch[2],) + \
-                                                             (self.__fetch[3],)
+    # TODO: Fix
+    self.__install[2] -= self.__build[2]
+    self.__build[2] -= self.__fetch[2]
 
   def ports(self):
     """
         The size statistics on the ports.
 
-        @return: A tuple of the sizes (active, queued, total, workers)
-        @rtype: C{(int, int, int, int)}
+        @return: A tuple of the sizes (active, queued, total)
+        @rtype: C{(int, int, int)}
     """
     return self.__ports
 
@@ -553,25 +556,16 @@ class Statistics(object):
     """
         The size statistics on the fetch state.
 
-        @return: A tuple of the sizes (active, queued, total, workers)
+        @return: A tuple of the sizes (active, queued, pending, failed)
         @rtype: C{(int, int, int, int)}
     """
     return self.__fetch
-
-  #def config(self):
-    #"""
-        #The size statistics on the config state.
-
-        #@return: A tuple of the sizes (active, queued, total, workers)
-        #@rtype: C{(int, int, int, int)}
-    #"""
-    #return self.__config
 
   def build(self):
     """
         The size statistics on the build state.
 
-        @return: A tuple of the sizes (active, queued, total, workers)
+        @return: A tuple of the sizes (active, queued, pending, failed)
         @rtype: C{(int, int, int, int)}
     """
     return self.__build
@@ -580,14 +574,14 @@ class Statistics(object):
     """
         The size statistics on the install state.
 
-        @return: A tuple of the sizes (active, queued, total, workers)
+        @return: A tuple of the sizes (active, queued, pending, failed)
         @rtype: C{(int, int, int, int)}
     """
     return self.__install
 
   def queues(self):
     """
-        The collated active, queue, pending queus for fetch, (config), build
+        The collated active, queue, pending, failed queues for fetch, build
         and install.
 
         @return: A tuple of the ports in the queues
@@ -613,37 +607,21 @@ class Statistics(object):
     """
     return self.__time
 
-  @staticmethod
-  def get_queues():
+  def __get_queues():
     """
         Collate ordered information about the ports in various queues.
     """
-    from .target import fetch_builder, build_builder, install_builder
-      # and config_builder
-    fetch = fetch_builder.stats()
-    build = build_builder.stats()
-    install = install_builder.stats()
+    fetch = self.__fetch
+    build = self.__build
+    install = self.__install
 
     active = install[0] + build[0] + fetch[0]
     queued = install[1] + build[1] + fetch[1]
     pending = []
+    failed = install[3] + build[3] + fetch[3]
     for i in fetch[2] + build[2] + install[2]:
       if i not in active and i not in queued and i not in pending:
         pending.append(i)
     pending.reverse()
 
-    return (tuple(active), tuple(queued), tuple(pending))
-
-  @staticmethod
-  def size(queue, builder):
-    """
-        Collect size information about the given queue and builder.
-
-        @param queue: The queue for the stage
-        @type queue: C{WorkerQueue}
-        @param builder: The builder for the stage
-        @type builder: C{StageBuilder}
-        @return: The size statistics (active, queue, total, workers)
-        @rtype: C{(int, int, int, int)}
-    """
-    return (len(queue), queue.qsize(), len(builder), queue.pool())
+    return (tuple(active), tuple(queued), tuple(pending), tuple(failed))
