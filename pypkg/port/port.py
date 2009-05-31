@@ -235,15 +235,18 @@ class Port(object):
     """
     from ..port import cache
     from .arch import attr, status
+    from .dependhandler import Dependant
 
     self._attr_map = attr(origin)  #: The ports attributes
-    self._depends = None  #: The dependant handlers for various stages
     self._install_status = status(origin, self._attr_map) #: The install status
     self._origin = origin  #: The origin of the port
 
     self.__failed = False  #: Failed flag
     self.__stage = 0  #: The (build) stage progress of the port
     self.__working = False  #: Working flag
+
+    self._dependancy = None  #: The dependancy handlers for various stages
+    self._dependant = Dependant(self)  #: The dependant handler
 
     for i in self._attr_map['depends']:
       cache.add(i)
@@ -331,44 +334,52 @@ class Port(object):
     """
     return self.__working
 
-  def depends(self):
+  def dependant(self):
     """
        Returns the dependant handler for this port.
 
+       @return: The dependant handler
+       @rtype: C{Dependant}
+    """
+    return self._dependant
+
+  def dependancy(self):
+    """
+       Returns the dependancy handler for this port.
+
        WARNING: Dead lock will occure if there is a cyclic port dependancy.
 
-       @return: The dependant handler
-       @rtype: C{DependHandler}
+       @return: The dependancy handler
+       @rtype: C{Dependancy}
     """
-    assert not self.__failed and self.__stage >= Port.CONFIG
-    assert not self.__working and self.__stage > Port.CONFIG
+    assert not self.__failed or self.__stage >= Port.CONFIG
 
-    if self._depends:
-      return self._depends
+    if self._dependancy:
+      return self._dependancy
 
-    from .dependhandler import DependHandler
+    from .dependhandler import Dependancy
 
     with self.__lock:
       # Wait for another request of the depend handler if it is pending
-      while self._depends is False:
+      while self._dependancy is False:
         self.__lock.wait()
 
       # If depend handler has not been created
-      if not self._depends:
+      if not self._dependancy:
         if not self.__failed:
           # Reserve the depend handler, still creating it
-          self._depends = False
+          self._dependancy = False
         else:
           # Port already failed, create empty depend handler
-          self._depends = DependHandler(self)
+          self._dependancy = Dependancy(self)
 
     # If the depend handler was created by another thread
-    if self._depends:
-      return self._depends
+    if self._dependancy:
+      return self._dependancy
 
     # Create the depend handler (for all our dependancies)
     self._log.debug("Creating depend handler: %s" % self._origin)
-    seld._depends = DependHandler(self, [self.attr(i) for i in
+    self._dependancy = Dependancy(self, [self.attr(i) for i in
                     ('depend_build', 'depend_extract', 'depend_fetch',
                      'depend_lib',   'depend_run',     'depend_patch')])
 
@@ -376,7 +387,7 @@ class Port(object):
       # Notify other threads it has been created
       self.__lock.notifyAll()
 
-    return self._depends
+    return self._dependancy
 
   def describe(self):
     """
@@ -657,7 +668,7 @@ class Port(object):
       self._install_status = Make.no_opt and Port.CURRENT or \
                               status(self._origin, self._attr_map)
       if install_status != self._install_status:
-        self._depends.status_changed()
+        self._dependant.status_changed()
 
     return status
 
@@ -676,7 +687,7 @@ class Port(object):
 
     # Make sure we have a depend handler
     if stage > Port.CONFIG:
-      self.depends()
+      self.dependancy()
 
     with self.__lock:
       # This port is busy with a stage, wait for it to complete
@@ -696,7 +707,7 @@ class Port(object):
       if Port.fetch_only and stage > Port.FETCH:
         self.__stage = stage
         self.__failed = True
-        self._depends.status_changed()
+        self._dependant.status_changed()
         self.__lock.notifyAll()
         return False, False
 
@@ -704,14 +715,14 @@ class Port(object):
 
       self.__stage = stage
 
-      status = stage > Port.CONFIG and self.depends().check(stage) or True
+      status = stage > Port.CONFIG and self.dependancy().check(stage) or True
 
       # If the dependancies have failed then abort
       if not status:
         self._log.error("Failed to build stage %s due to dependancy failure: "\
                         "%s" % (Port.STAGE_NAME[stage], self._origin))
         self.__failed = True
-        self._depends.status_changed()
+        self._dependant.status_changed()
         self.__lock.notifyAll()
         return False, False
 
@@ -744,7 +755,7 @@ class Port(object):
         assert not self.__failed
 
         self.__failed = True
-        self._depends.status_changed()
+        self._dependant.status_changed()
       self.__lock.notifyAll()
 
     # Clean up after ourselves

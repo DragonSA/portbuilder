@@ -5,7 +5,7 @@ managing port information.
 from __future__ import absolute_import
 
 from .port import Port
-from .dependhandler import DependHandler
+from .dependhandler import Dependancy, Dependant
 from .cache import PortCache
 
 __all__ = ['cache', 'get', 'Port', 'DependHandler']
