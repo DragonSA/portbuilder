@@ -120,8 +120,6 @@ class PortCache(dict):
 
        @param key: The port for queueing
        @type key: C{str}
-       @return: The job ID of the queued port
-       @rtype: C{int}
     """
     # NOTE: Needs to be called with lock held and key normalised
     assert not self.__lock.acquire(False)
@@ -133,7 +131,7 @@ class PortCache(dict):
       dict.__setitem__(self, key, None)
       self.__dead_cnt += 1  # Reference count to offset 'bad' ports
 
-      return ports_queue.put_nowait(lambda: self.__get(key))
+      ports_queue.put(lambda: self.__get(key))
 
   def get(self, key, default=None):
     """
