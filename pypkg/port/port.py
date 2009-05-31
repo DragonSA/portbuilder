@@ -594,6 +594,7 @@ class Port(object):
     """
     from ..env import iscreatable
     from ..make import mkdir, make_target, SUCCESS
+    from ..target import build_builder
 
     #make = make_target(self._origin, ['clean', 'extract', 'patch', 'configure',
                                       #'build'])
@@ -607,9 +608,13 @@ class Port(object):
     # If this port is interactive allow it to take over the console
     pipe = self.attr('interactive') and False or None
 
-    make = make_target(self._origin, ['clean', 'all'], pipe, priv)
-
-    return make.wait() is SUCCESS
+    while True:
+      make = make_target(self._origin, ['clean', 'all'], pipe, priv, False)
+      if make is None:
+        if not build_builder.stalled():
+          return False
+      else:
+        return make.wait() is SUCCESS
 
   install = lambda self: self.build_stage(Port.INSTALL)
   def _install(self):
