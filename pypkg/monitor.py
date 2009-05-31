@@ -68,14 +68,22 @@ class Monitor(Thread):
     self.join()
     self._deinit()
 
-  def pause(self):
+  def pause(self, block=True):
     """
        Pause the monitor
+
+       @param block: If must block before pausing
+       @type block: C{bool}
     """
-    self.__lock.acquire()
+    if not self.__lock.acquire(block):
+      return False
+
     assert self.__paused is False
+
     self.__paused = True
     self._deinit()
+
+    return True
 
   def resume(self):
     """
