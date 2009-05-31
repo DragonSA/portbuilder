@@ -51,15 +51,21 @@ ports_attr = {
 "distfiles": ["_DISTFILES",   tuple], # The port's distfiles
 "distdir":   ["_DISTDIR", str],       # The port's distfile's sub-directory
 
+# MAKE_JOBS flags
+"jobs_safe":    ["MAKE_JOBS_SAFE",    bool], # Port supports make jobs
+"jobs_unsafe":  ["MAKE_JOBS_UNSAFE",  bool], # Port doesn't support make jobs
+"jobs_force":   ["FORCE_MAKE_JOBS",   bool], # Force make jobs
+"jobs_disable": ["DISABLE_MAKE_JOBS", bool], # Disable make jobs
+
 # Various restrictions
 "conflict":   ["CONFLICTS",  tuple], # Ports this one conflicts with
-"no_package": ["NO_PACKAGE", str],   # Packages distribution restricted
+"no_package": ["NO_PACKAGE", bool],   # Packages distribution restricted
 
 # Sundry information
 "depends":     ["_DEPEND_DIRS",   tuple], # The ports dependants
 "makefiles":   [".MAKEFILE_LIST", tuple], # The makefiles included
 "optionsfile": ["OPTIONSFILE",    str],   # The options file
-"interactive": ["IS_INTERACTIVE", str],   # The port is interactive
+"interactive": ["IS_INTERACTIVE", bool],   # The port is interactive
 "wrkdir":      ["WRKDIR",         str],   # The ports working directory
 } #: The attributes of the given port
 

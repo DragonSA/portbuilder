@@ -95,6 +95,7 @@ Future release:
    - Add --no-cache option
    - Handle passwords properly
    - Allow option for no-interactive
+   - Add no cache option
 
 0.0.7 - Milestone 7 (Finish Target Builders):
  - modules:
@@ -117,6 +118,8 @@ Future release:
    - Separate package building?
    - No auto-cleaning?
    - Remove state variables
+   * Add MAKE_JOBS flags
+   - Support stalling of build (interactive)
  + StageBuilder:
    + Handle stage stalls
    - Support loaded jobs
