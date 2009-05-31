@@ -204,12 +204,12 @@ class StageBuilder(object):
         self.__queues[StageBuilder.QUEUED].append(port)
       self.__queue.put(lambda: self.build(port))
 
-  def stats(self):
+  def stats(self, summary=False):
     """
        The statistics about the ports in the queue.  If the ports are active
        (i.e. building), queued to be active or waiting for another port...
 
-       @param summary: If only the lengths of thwr queues are required
+       @param summary: If only the lengths of the queues are required
        @type summary: C{bool}
        @return: The list of ports (active, queued, pending, failures)
        @rtype: C{([Port], [Port], [Port], [Port])}
@@ -218,7 +218,10 @@ class StageBuilder(object):
     with self.__lock:
       qcopy = ()
       for i in self.__queues:
-        qcopy += (copy(i),)
+        if summary:
+          qcopy += (len(i),)
+        else:
+          qcopy += (copy(i),)
       return qcopy
 
   def stalled(self):
