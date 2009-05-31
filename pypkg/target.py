@@ -43,9 +43,11 @@ class Caller(object):
     """
     with self.__lock:
       assert self.__count > 0
+
       self.__count -= 1
       if self.__count > 0:
         return
+
     if callable(self.__callback):
       self.__callback()
 
@@ -118,7 +120,7 @@ class StageBuilder(object):
     if port.stage() < Port.CONFIG and self.__stage != Port.CONFIG:
       config_builder(port, lambda: self.put(port, callback))
       return
-    else:
+    elif self.__stage != Port.CONFIG:
       # Make sure we have dependant object created
       port.dependancy()
 
@@ -194,7 +196,7 @@ class StageBuilder(object):
       self.__log.debug("Port will not be built: ``%s''" % port.origin())
       self.__callbacks(port, 2)
     else:
-      assert self.__stage != Port.CONFIG or port.dependancy().check(self.__stage)
+      assert self.__stage == Port.CONFIG or port.dependancy().check(self.__stage)
       assert port.stage() == self.__stage - 1 and not port.working()
 
       with self.__lock:
@@ -202,7 +204,7 @@ class StageBuilder(object):
         self.__queues[StageBuilder.QUEUED].append(port)
 
       self.__log.debug("Placing port onto queue: ``%s''" % port.origin())
-      self.__queue.put(lambda: self.build(port))
+      self._put_queue(port)
 
   def stats(self, summary=False):
     """
@@ -268,6 +270,15 @@ class StageBuilder(object):
       if i.dependant().status() == Dependant.UNRESOLV:
         depends.append(i)
     return depends
+
+  def _put_queue(self, port):
+    """
+       Place a port onto the queue
+
+       @param port: The port to place on the queue
+       @type port: C{Port}
+    """
+    self.__queue.put(lambda: self.build(port))
 
   def __call__(self, port, callback=None):
     """
@@ -394,7 +405,7 @@ def index_builder():
   index.close()
 
 #: The builder for the config stage
-config_builder  = StageBuilder(Port.CONFIG, config_queue)
+config_builder  = ConfigBuilder(Port.CONFIG, config_queue)
 #: The builder for the fetch stage
 fetch_builder   = StageBuilder(Port.FETCH, fetch_queue, config_queue)
 #: The builder for the build stage
