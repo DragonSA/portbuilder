@@ -93,7 +93,7 @@ class WorkerQueue(object):
        Wait till all jobs have been consumed.
     """
     with self._lock:
-      if len(self._pool):
+      if self._pool:
         self._lock.wait()
 
   def load(self):
@@ -117,7 +117,7 @@ class WorkerQueue(object):
       self._load = load
 
       if not load:
-        while len(self._stalled):
+        while self._stalled:
           worker = self._stalled.pop()
           self._curload += worker[1]
           worker[0].release()
@@ -143,7 +143,7 @@ class WorkerQueue(object):
       self._queue.append((func, self._jid, load))
       self._start()
 
-      return jid
+      return self._jid
 
   def stats(self):
     """
@@ -205,14 +205,16 @@ class WorkerQueue(object):
 
        NOTE: Must be called with lock held
     """
-    while len(self._queue) and self._curload < self._load:
+    assert not self._lock.acquire(False)
+
+    while self._queue and self._curload < self._load:
       from threading import Thread
 
       job = self._find_job()
 
       self._wid += 1
       thread = Thread(target=lambda: self._worker(self._wid, job))
-      self._pool[thread] = [self._wid] + job[1:]
+      self._pool[thread] = (self._wid,) + job[1:]
       self._curload += job[2]
 
       thread.start()
@@ -226,7 +228,8 @@ class WorkerQueue(object):
        @return: The job to run
        @rtype: C{Callable, int, int}
     """
-    assert self._curload < self._load and len(self._queue) > 0
+    assert not self._lock.acquire(False)
+    assert self._curload < self._load and self._queue
 
     load = self._load - self._curload
 
@@ -249,7 +252,8 @@ class WorkerQueue(object):
        @return: The worker to wake
        @rtype: C{Lock, int}
     """
-    assert self._curload < self._load and len(self._stalled) > 0
+    assert not self._lock.acquire(False)
+    assert self._curload < self._load and self._stalled
 
     load = self._load - self._curload
 
@@ -294,17 +298,18 @@ class WorkerQueue(object):
           self._curload += worker[1]
           worker[0].release()
 
-        if self._curload >= self._load:
+        if self._curload >= self._load or not self._queue:
           break
 
         job = self._find_job()
         self._curload += job[2]
-        _start()
+        self._start()
 
     self._pool.pop(thread)
     self._log.debug("Worker %d: Terminating" % wid)
-    if not len(self._pool):
-      self._lock.notifyAll()
+    if not self._pool:
+      with self._lock:
+        self._lock.notifyAll()
 
   def _work(self, func, jid, wid):
     """
