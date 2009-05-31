@@ -437,7 +437,7 @@ class Top(Monitor):
 
     ports = sum(summary_new) - summary_new[3]
     if ports:
-      msg = "%i port(s) remaining:" % ports
+      msg = "%i port(s) remaining: " % ports
 
       msgv = []
       stages = ["active", "queued", "pending", "failed"]
