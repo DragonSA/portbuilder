@@ -65,6 +65,11 @@ class StageBuilder(object):
      The StageBuilder class.  This class handles building a particular stage
   """
 
+  ACTIVE  = 0
+  QUEUED  = 1
+  PENDING = 2
+  FAILED  = 3
+
   def __init__(self, stage, queue, prev_builder=None):
     """
        Create a target builder for a given stage using a given queue.  Also, if
@@ -132,7 +137,7 @@ class StageBuilder(object):
         return
 
       self.__building[port] = callable(callback) and [callback] or []
-      self.__queues[2].append(port)
+      self.__queues[StageBuilder.PENDING].append(port)
       if stage < self.__stage - 1 or \
            (port.working() and stage == self.__stage - 1):
         assert self.__prev_builder is not None
@@ -173,10 +178,10 @@ class StageBuilder(object):
     """
     assert self.__building.has_key(port)
     with self.__lock:
-      self.__queues[1].remove(port)
-      self.__queues[0].append(port)
+      self.__queues[StageBuilder.QUEUED].remove(port)
+      self.__queues[StageBuilder.ACTIVE].append(port)
     if not port.build_stage(self.__stage, False):
-      self.__queues[3].append(port)
+      self.__queues[StageBuilder.FAILED].append(port)
     self.__callbacks(port)
 
   def queue(self, port):
@@ -195,8 +200,8 @@ class StageBuilder(object):
     else:
       assert port.stage() == self.__stage - 1 and not port.working()
       with self.__lock:
-        self.__queues[2].remove(port)
-        self.__queues[1].append(port)
+        self.__queues[StageBuilder.PENDING].remove(port)
+        self.__queues[StageBuilder.QUEUED].append(port)
       self.__queue.put(lambda: self.build(port))
 
   def stats(self):
@@ -211,8 +216,28 @@ class StageBuilder(object):
     """
     from copy import copy
     with self.__lock:
-      return (copy(self.__queues[0]), copy(self.__queues[1]),
-              copy(self.__queues[2]), copy(self.__queues[3]))
+      qcopy = ()
+      for i in self.__queues:
+        qcopy += (copy(i),)
+      return qcopy
+
+  def stalled(self):
+    """
+       Indicates if a port has stalled.  Places the port back onto the queue and
+       allows another port to work.
+    """
+    #jid = self.__queue.jid()
+    #port =
+
+    #with self.__lock:
+    #  self.__queues[StageBuilder.ACTIVE].remove(port)
+    #  self.__queues[StageBuilder.QUEUED].insert(0, port)
+
+    self.__queue.stalled()
+
+    #with self.__lock:
+    #  self.__queues[StageBuilder.QUEUED].remove(port)
+    #  self.__queues[StageBuilder.ACTIVE].append(port)
 
   def __call__(self, port, callback=None):
     """
