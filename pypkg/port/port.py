@@ -352,10 +352,11 @@ class Port(object):
        @return: The dependancy handler
        @rtype: C{Dependancy}
     """
-    assert not self.__failed or self.__stage >= Port.CONFIG
-
     if self._dependancy:
       return self._dependancy
+
+    assert (not self.__working and self.__stage == Port.CONFIG) or \
+                                                    self.__stage > Port.CONFIG
 
     from .dependhandler import Dependancy
 

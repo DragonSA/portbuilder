@@ -132,9 +132,9 @@ Future release:
  + Ensure graceful handling of failed ports (does not appear to work)
  * Make config_builder API compatible with the other Builders?
  * Catch exceptions from callback (all callbacks)
- - Use port's stage_builder (than calling directly)
- - Extend port's stage_builder for non_blocking version
- - Add checks for already fetched files
+ * Use port's stage_builder (than calling directly)
+ * Extend port's stage_builder for non_blocking version
+ * Add checks for already fetched files
  * Add labels for queues (active, queued, pending, failed)
  * Add failed queue
 
@@ -152,12 +152,11 @@ Future release:
  * Increase callback hardiness
  * Fix RWLock (unsure state handling)
  * Make sure ports configured before creating DependHandler
- - DependHandler:
+ + DependHandler:
    * Ensure _count is done properly
    * Handle depenancies with fetch_only
-   - Should depends list be empty with fetch_only?
    * Fix check (with ref to usage)
-   - Do not do cyclic dependency allocation (or move to late)
+   * Do not do cyclic dependency allocation (or move to late)
    * DependHandler must handle the case when a dependency fails unresolved
    - Check for cyclic dependencies
    - _verify:
@@ -167,7 +166,6 @@ Future release:
    - Handle a port having failed and still satisfy its dependants
    - Add a concurrent implementation (and probably a cache of sorts)
    - When doing individual checks, cache as they can be duplicated
-   - Allow switching for depends resolution (from complex to simple...)
    - Check for conflicts (and handle)
 
 0.0.5 - Milestone 5 (Finish basic ports infrastructure):
