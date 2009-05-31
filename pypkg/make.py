@@ -167,7 +167,7 @@ class Make(object):
       self._log.error("Unable to execute sudo (not installed?)")
       return None
 
-  def target(self, origin, args, pipe=None, priv=False):
+  def target(self, origin, args, pipe=None, priv=False, block=True):
     """
       Run make to build a target with the given arguments and the appropriate
       addition settings.
@@ -180,6 +180,8 @@ class Make(object):
       @type pipe: C{bool|file}
       @param priv: Indicate if the make command needs to be privileged
       @type priv: C{bool}
+      @param block: If must wait for pipe lock
+      @type block: C{bool}
       @return: The make process interface
       @rtype: C{Popen}
     """
@@ -204,7 +206,8 @@ class Make(object):
     # This allows unrestricted access to the console (and acts as a lock)
     if pipe is False and not Make.no_opt:
       from .monitor import monitor
-      monitor.pause()
+      if not monitor.pause(block):
+        return None
 
     try:
       args = self.pre_cmd + ['make', '-C',
