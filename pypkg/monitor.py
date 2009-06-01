@@ -419,6 +419,7 @@ class Top(Monitor):
     msg = "port count: %i" % port_new[2]
     if port_new[0]:
       if port_new[1]:
+        port_new[1] += port_new[0]
         msg += "; retrieving %i (of %i)" % tuple(port_new[:2])
       else:
         msg += "; retrieving %i" % port_new[0]
@@ -540,13 +541,13 @@ class Statistics(object):
     self.__time = time()
     self.__ports = [len(ports), ports.qsize(), len(cache)]
 
-    self.__config = target.config_builder.stats()
+    #self.__config = target.config_builder.stats()
     self.__fetch = target.fetch_builder.stats()
     self.__build = target.build_builder.stats()
     self.__install = target.install_builder.stats()
     self.__queues = self.__get_queues()
 
-    self.__config = [len(i) for i in self.__config]
+    #self.__config = [len(i) for i in self.__config]
     self.__fetch = [len(i) for i in self.__fetch]
     self.__build = [len(i) for i in self.__build]
     self.__install = [len(i) for i in self.__install]
@@ -554,7 +555,6 @@ class Statistics(object):
     # Correct sizes
     self.__install[2] -= sum(self.__build[:3])
     self.__build[2] -= sum(self.__fetch[:3])
-    self.__fetch[2] -= sum(self.__config[:3])
 
   def ports(self):
     """
