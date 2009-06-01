@@ -50,18 +50,24 @@ def main():
 
   # Execute the primary build target
   if options.index:
+    if len(args):
+      parser.error("Ports cannot be specified with --index")
     target.index_builder()
   else:
     callback = target.Caller(len(args), terminate)
     for i in args:
       port = get(i)
       if port:
-        status = port.install_status()
-        if (options.install and status == Port.ABSENT) or \
-          (not options.install and status < Port.CURRENT):
-          target.install_builder.put(port, callback)
+        if options.fetch:
+          target.rfetch_builder(port, callback)
         else:
-          callback()
+          status = port.install_status()
+          # TODO:
+          if (options.install and status == Port.ABSENT) or \
+            (not options.install and status < Port.CURRENT):
+            target.install_builder(port, callback)
+          else:
+            callback()
       else:
         callback()
 
@@ -129,9 +135,6 @@ def set_options(options):
 
   # Batch mode, no configuring (-b)
   Port.force_noconfig = options.batch
-
-  # Only fetch the ports
-  Port.fetch_only = options.fetch
 
   # No operations (-n)
   if options.no_opt:

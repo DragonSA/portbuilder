@@ -109,11 +109,10 @@ Future release:
  - Add all assertions
  * Use relative imports
  + Add recursive command:
-   - config
+   * config
    * fetch
    - install
    - package
- - Make recursive commands generic
  + Port:
    - Separate package building?
    - No auto-cleaning?
