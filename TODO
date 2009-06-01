@@ -122,7 +122,7 @@ Future release:
    * Support stalling of build (interactive)
  + StageBuilder:
    + Handle stage stalls
-   - Support loaded jobs
+   * Support loaded jobs
    - Identify working jobs by JID
  + Queues:
    - Implement a deadlock resolver (with lock monitor)

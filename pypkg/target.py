@@ -357,6 +357,27 @@ class BuildBuilder(StageBuilder):
 
     StageBuilder.__init__(self, Port.BUILD, build_queue, prev_builder)
 
+  def _put_queue(self, port):
+    """
+       Place a port onto the queue with the proper load.
+
+       @param port: The port to place on the queue
+       @type port: C{Port}
+    """
+    from .queue import build_queue, ncpu
+
+    if port.attr('jobs_disable') or port.attr('jobs_unsafe'):
+      load = 1
+    elif port.attr('jobs_force') or port.attr('jobs_safe'):
+      try:
+        load = int(port.attr('jobs_number'))
+      except ValueError:
+        load = ncpu
+    else:
+      load = 1
+
+    build_queue.put(lambda: self.build(port), load)
+
 def recursive_fetch_builder(port, callback=None):
   """
      Recursively fetch all port's distfiles

@@ -56,6 +56,7 @@ ports_attr = {
 "jobs_unsafe":  ["MAKE_JOBS_UNSAFE",  bool], # Port doesn't support make jobs
 "jobs_force":   ["FORCE_MAKE_JOBS",   bool], # Force make jobs
 "jobs_disable": ["DISABLE_MAKE_JOBS", bool], # Disable make jobs
+"jobs_number":  ["MAKE_JOBS_NUMBER",  str],  # Number of make jobs requested
 
 # Various restrictions
 "conflict":   ["CONFLICTS",  tuple], # Ports this one conflicts with
