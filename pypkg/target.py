@@ -177,7 +177,7 @@ class StageBuilder(object):
       self.__queues[StageBuilder.QUEUED].remove(port)
       self.__queues[StageBuilder.ACTIVE].append(port)
 
-    if not port.build_stage(self.__stage, False):
+    if not port.build_stage(self.__stage):
       with self.__lock:
         self.__queues[StageBuilder.FAILED].append(port)
 
