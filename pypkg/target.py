@@ -132,7 +132,6 @@ class StageBuilder(object):
         return
 
       with port.lock():
-        stage = port.stage()
         bail = self._port_check(port)
         if not bail:
           self.__building[port] = callable(callback) and [callback] or []
@@ -205,6 +204,17 @@ class StageBuilder(object):
 
       self.__log.debug("Placing port onto queue: ``%s''" % port.origin())
       self._put_queue(port)
+
+  def has_port(self, port):
+    """
+       Indicates if we have the port to be built.
+
+       @param port: The port
+       @type port: C{Port}
+       @return: If we have the port
+       @rtype: C{bool}
+    """
+    return self.__building.has_key(port)
 
   def stats(self, summary=False):
     """
@@ -378,28 +388,114 @@ class BuildBuilder(StageBuilder):
 
     build_queue.put(lambda: self.build(port), load)
 
-def recursive_fetch_builder(port, callback=None):
+def fetchable(port):
   """
-     Recursively fetch all port's distfiles
+     Checks if a port is fetchable (hasn't failed or already been fetched).
 
-     @param port: The port which to fetch
-     @type port: C{port}
-     @param callback: The callback function
-     @type callback: C{callable}
+     @param port: The port to check
+     @type port: C{Port}
+     @return: If the port is fetchable
+     @rtype: C{bool}
   """
-  depends = [port]
+  return not port.failed() and (port.stage() < Port.FETCH or \
+              (port.stage() == Port.FETCH and port.working()))
 
-  ind = 0
-  while ind < len(depends):
-    for i in depends[ind].dependancy().get():
-      if i not in depends:
-        depends.append(i)
-    ind += 1
-  depends.reverse()
+class RConfigBuilder(object):
+  """
+      Recursively place objects onto the queue.
+  """
 
-  callback = Callable(len(depends), callback)
-  for i in depends:
-    fetch_builder.put(i, callback)
+  def __init__(self, port, callback):
+    """
+        Initialise the internals and start the callback
+    """
+    from threading import RLock
+    self.__lock = RLock()
+    self.__pending = []
+    self.__callback = callback
+
+    self.put(port)
+
+  def put(self, port):
+    with self.__lock:
+      if port not in self.__pending:
+        if port.status() < Port.CONFIG:
+          queue = [port]
+        else:
+          queue = []
+          depends = port.dependancy().get()
+          idx = 0
+          while idx < len(depends):
+            port = depends[idx]
+            if port.status() < Port.CONFIG:
+              if port not in self.__pending:
+                queue.append(port)
+            else:
+              depends.extend([i for i in port.dependancy().get()
+                              if i not in depends])
+            idx += 1
+
+        self.__pending.extend(queue)
+
+        if not len(self.__pending):
+          protected_callback(self.__callback)
+        else:
+          for i in queue:
+            config_builder(port, lambda: self.configured(i))
+
+  def configured(self, port):
+    """
+        A port has been configured, remove it from the pending.
+
+        @param port: The port
+        @type port: C{Port}
+    """
+    with self.__lock:
+      self.__pending.remove(port)
+      self.put(port)
+rconfig_builder = RConfigBuilder
+
+def rfetch_builder(self, port, callback=None, cache=None, lock=None):
+  """
+     Add a port to be recursively fetched.
+
+     @param port: The port to recursively fetch
+     @type port: C{Port}
+     @param callback: The callback function to call once finished
+     @type callback: C{Callable}
+     @param cache: Cache of ports that been passed
+     @type cache: C{[]}
+     @param lock: Lock to access the cache
+     @type lock: C{Lock}
+  """
+  if port.stage() < Port.CONFIG:
+    config_builder(port, lambda: self.put(port, callback, cache, lock))
+    return
+
+  if cache is None or lock is None:
+    from threading import Lock
+    cache = []
+    lock = Lock()
+
+  fetch = fetchable(port)
+  depends = port.dependancy().get()
+
+  with lock:
+    depends = [i for i in depends if i not in cache]
+    if port not in cache:
+      cache.append(port)
+    cache.extend(depends)
+
+  if not fetch and not len(depends):
+    protected_callback(callback)
+  else:
+    callback = Caller(len(depends) + (fetch and 1 or 0), callback)
+
+    for i in depends:
+      rfetch_builder(i, callback, cache, lock)
+
+    if fetch:
+      fetch_builder(i, callback)
 
 def index_builder():
   """
@@ -442,7 +538,7 @@ def index_builder():
   index.close()
 
 #: The builder for the config stage
-config_builder  = ConfigBuilder(Port.CONFIG)
+config_builder  = ConfigBuilder()
 #: The builder for the fetch stage
 fetch_builder   = StageBuilder(Port.FETCH, fetch_queue, config_queue)
 #: The builder for the build stage
