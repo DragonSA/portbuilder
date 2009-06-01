@@ -117,7 +117,8 @@ class StageBuilder(object):
        @param callback: The callback function
        @type callback: C{callable}
     """
-    if port.stage() < Port.CONFIG and self.__stage != Port.CONFIG:
+    if (port.stage() < Port.CONFIG or (port.stage() == Port.CONFIG and \
+                              port.working())) and self.__stage != Port.CONFIG:
       config_builder(port, lambda: self.put(port, callback))
       return
     elif self.__stage != Port.CONFIG:
@@ -138,7 +139,7 @@ class StageBuilder(object):
           self.__queues[StageBuilder.PENDING].append(port)
 
           depends = self._depends_check(port)
-          prev_stage = stage < self.__stage - 1 or \
+          prev_stage = port.stage() < self.__stage - 1 or \
                       (port.working() and stage == self.__stage - 1)
           assert self.__prev_builder is not None or not prev_stage
 
@@ -455,7 +456,7 @@ class RConfigBuilder(object):
       self.put(port)
 rconfig_builder = RConfigBuilder
 
-def rfetch_builder(self, port, callback=None, cache=None, lock=None):
+def rfetch_builder(port, callback=None, cache=None, lock=None):
   """
      Add a port to be recursively fetched.
 
@@ -468,8 +469,9 @@ def rfetch_builder(self, port, callback=None, cache=None, lock=None):
      @param lock: Lock to access the cache
      @type lock: C{Lock}
   """
-  if port.stage() < Port.CONFIG:
-    config_builder(port, lambda: self.put(port, callback, cache, lock))
+  if port.stage() < Port.CONFIG or \
+                             (port.stage() == Port.CONFIG and port.working()):
+    config_builder(port, lambda: rfetch_builder(port, callback, cache, lock))
     return
 
   if cache is None or lock is None:
@@ -495,7 +497,7 @@ def rfetch_builder(self, port, callback=None, cache=None, lock=None):
       rfetch_builder(i, callback, cache, lock)
 
     if fetch:
-      fetch_builder(i, callback)
+      fetch_builder(port, callback)
 
 def index_builder():
   """
