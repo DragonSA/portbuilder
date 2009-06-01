@@ -315,20 +315,18 @@ class ConfigBuilder(StageBuilder):
      Configures a port.
   """
 
-  def __init__(self, stage, queue, prev_builder=None):
+  def __init__(self):
     """
        Create a target builder for a given stage using a given queue.  Also, if
        a previous stage is handled by a builder then use that builder to for the
        previous stages.
 
-       @param stage: The stage this builder handles
-       @type stage: C{int}
-       @param queue: The queue to use for this stage
-       @type queue: C{WorkerQueue}
        @param prev_builder: The builder for the previous stage
        @type prev_builder: C{callable}
     """
-    StageBuilder.__init__(self, stage, queue, prev_builder)
+    from .queue import config_queue
+
+    StageBuilder.__init__(self, Port.CONFIG, config_queue)
 
   def _depends_check(self, port):
     """
@@ -340,6 +338,24 @@ class ConfigBuilder(StageBuilder):
        @rtype: C{[Port]}
     """
     return []
+
+class BuildBuilder(StageBuilder):
+  """
+     Builds a port.
+  """
+
+  def __init__(self, prev_builder=None):
+    """
+       Create a target builder for a given stage using a given queue.  Also, if
+       a previous stage is handled by a builder then use that builder to for the
+       previous stages.
+
+       @param prev_builder: The builder for the previous stage
+       @type prev_builder: C{callable}
+    """
+    from .queue import build_queue
+
+    StageBuilder.__init__(self, Port.BUILD, build_queue, prev_builder)
 
 def recursive_fetch_builder(port, callback=None):
   """
@@ -405,10 +421,10 @@ def index_builder():
   index.close()
 
 #: The builder for the config stage
-config_builder  = ConfigBuilder(Port.CONFIG, config_queue)
+config_builder  = ConfigBuilder(Port.CONFIG)
 #: The builder for the fetch stage
 fetch_builder   = StageBuilder(Port.FETCH, fetch_queue, config_queue)
 #: The builder for the build stage
-build_builder   = StageBuilder(Port.BUILD, build_queue, fetch_builder)
+build_builder   = BuildBuilder(fetch_builder)
 #: The builder for the install stage
 install_builder = StageBuilder(Port.INSTALL, install_queue, build_builder)
