@@ -547,14 +547,15 @@ class Statistics(object):
     self.__install = target.install_builder.stats()
     self.__queues = self.__get_queues()
 
-    #self.__config = [len(i) for i in self.__config]
+    check = sum(self.__fetch)
+    self.__build[2] = [i for i in self.__build[2] if i not in check]
+
+    check += sum(self.__build)
+    self.__install[2] = [i for i in self.__install[2] if i not in check]
+
     self.__fetch = [len(i) for i in self.__fetch]
     self.__build = [len(i) for i in self.__build]
     self.__install = [len(i) for i in self.__install]
-
-    # Correct sizes
-    self.__install[2] -= sum(self.__build[:3])
-    self.__build[2] -= sum(self.__fetch[:3])
 
   def ports(self):
     """
