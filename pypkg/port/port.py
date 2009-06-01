@@ -219,7 +219,6 @@ class Port(object):
 
   force_noconfig = False  #: If the port should not configure itself
   force_config = False  #: Force issueing a `make config'
-  fetch_only = False  #: Only fetch the port, skip all other stages
   package = False  #: If newly installed ports should be packaged
 
   _log = getLogger("pypkg.port")
@@ -250,6 +249,10 @@ class Port(object):
 
     for i in self._attr_map['depends']:
       cache.add(i)
+
+    # If there are no options, we are already configured
+    if not len(self._attr_map['options']):
+      self.__stage = Port.CONFIG
 
   def attr(self, attr):
     """
@@ -496,7 +499,7 @@ class Port(object):
 
     # If the port has options and they are out of date or configuring is
     # requested then configure the port
-    if len(self._attr_map['options']) != 0  and not Port.force_noconfig and \
+    if len(self._attr_map['options'])  and not Port.force_noconfig and \
          check_config(self.attr('optionsfile'), self.attr('pkgname')) or \
          Port.force_config:
       make = make_target(self._origin, 'config', pipe=False, priv=True)
@@ -673,15 +676,6 @@ class Port(object):
       # This stage has already completed
       if stage <= self.__stage:
         return False, True
-
-      # We are only fetching, fail for any other stage
-      # TODO: Remove, should be handled in target_builder
-      if Port.fetch_only and stage > Port.FETCH:
-        self.__stage = stage
-        self.__failed = True
-        self._dependant.status_changed()
-        self.__lock.notifyAll()
-        return False, False
 
       assert self.__stage == stage - 1
 
