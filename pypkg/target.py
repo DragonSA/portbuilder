@@ -25,6 +25,7 @@ class Caller(object):
        @param callback: The callback function/method/class
        @type callback: C{callable}
     """
+    assert callable(callback)
     self.__count = count
     self.__callback = callback
 
@@ -48,8 +49,7 @@ class Caller(object):
       if self.__count > 0:
         return
 
-    if callable(self.__callback):
-      self.__callback()
+    self.__callback()
 
 def protected_callback(callback):
   """
@@ -229,12 +229,9 @@ class StageBuilder(object):
     """
     from copy import copy
     with self.__lock:
-      qcopy = ()
+      qcopy = []
       for i in self.__queues:
-        if summary:
-          qcopy += (len(i),)
-        else:
-          qcopy += (copy(i),)
+        qcopy.append(summary and len(i) or copy(i))
       return qcopy
 
   def stalled(self):
@@ -261,11 +258,12 @@ class StageBuilder(object):
 
        @param port: The port
        @type port: C{Port}
-       @return: If the port can be built
+       @return: If the port cannot be built
        @rtype: C{bool}
     """
-    return port.failed() or port.dependant().failed() or \
-                                                   port.stage() >= self.__stage
+    assert not port.working() or port.stage() != self.__stage
+    return port.failed() or port.stage() >= self.__stage or \
+                                      not port.dependancy().check(self.__stage)
 
   def _depends_check(self, port):
     """
