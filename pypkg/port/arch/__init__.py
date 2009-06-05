@@ -43,9 +43,10 @@ def attr(origin):
     db['port.attr'][origin] = att
 
     # Record the dependening makefiles details
+    nooptions = not att['options']
     optionsfile = att['optionsfile']
     depfiles = att['makefiles']
-    if optionsfile in depfiles:
+    if no_options or optionsfile in depfiles:
       set_files('port.makefiles', origin, depfiles)
     else:
       set_files('port.makefiles', origin, depfiles + [optionsfile])
