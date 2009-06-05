@@ -547,10 +547,10 @@ class Statistics(object):
     self.__install = target.install_builder.stats()
     self.__queues = self.__get_queues()
 
-    check = sum(self.__fetch)
+    check = sum(self.__fetch, [])
     self.__build[2] = [i for i in self.__build[2] if i not in check]
 
-    check += sum(self.__build)
+    check += sum(self.__build, [])
     self.__install[2] = [i for i in self.__install[2] if i not in check]
 
     self.__fetch = [len(i) for i in self.__fetch]
@@ -638,4 +638,4 @@ class Statistics(object):
         pending.append(i)
     pending.reverse()
 
-    return (tuple(active), tuple(queued), tuple(pending), tuple(failed))
+    return [active, queued, pending, failed]
