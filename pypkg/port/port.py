@@ -624,7 +624,7 @@ class Port(object):
 
     make = make_target(self._origin, args, priv=True)
 
-    status = Port.INSTALL, make.wait() is SUCCESS
+    status = make.wait() is SUCCESS
     if status:
       from os.path import isfile, join
 

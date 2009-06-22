@@ -263,7 +263,7 @@ class StageBuilder(object):
     """
     assert not port.working() or port.stage() != self.__stage
     return port.failed() or port.stage() >= self.__stage or \
-                                      not port.dependancy().check(self.__stage)
+                                                      port.dependant().failed()
 
   def _depends_check(self, port):
     """
