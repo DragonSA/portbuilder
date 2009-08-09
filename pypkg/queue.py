@@ -178,7 +178,6 @@ class WorkerQueue(object):
 
         self._log.debug("Worker %d: Job %d stalled")
         self._stalled.append((lock, load))
-        self._stalled += 1
         self._curload -= load
         self._start()
 
@@ -276,7 +275,7 @@ class WorkerQueue(object):
        @param wid: The worker ID
        @type wid: C{int}
        @param job: The first job to run
-       @type job: C{int, int, Callable}
+       @type job: C{Callable, int, int}
     """
     from threading import currentThread
     from Queue import Empty
@@ -296,9 +295,9 @@ class WorkerQueue(object):
         self._curload -= load
 
         while self._stalled and self._curload < self._load:
-          worker = self._find_worker()
-          self._curload += worker[1]
-          worker[0].release()
+          lock, load = self._find_worker()
+          self._curload += load
+          lock.release()
 
         if self._curload >= self._load or not self._queue:
           break
@@ -338,7 +337,7 @@ class WorkerQueue(object):
 
 config_queue  = WorkerQueue("config", 1)  #: Queue for configuring port options
 build_queue   = WorkerQueue("build", ncpu + 1)  #: Queue for building ports
-fetch_queue   = WorkerQueue("fetch", 1)  #: Queue for fetching dist files
+fetch_queue   = WorkerQueue("fetch", 2)  #: Queue for fetching dist files
 install_queue = WorkerQueue("install", 1)  #: Queue for installing ports
 ports_queue   = WorkerQueue("ports", ncpu * 2)  #: Queue for fetching port info
 queues        = [config_queue, build_queue, fetch_queue, install_queue,

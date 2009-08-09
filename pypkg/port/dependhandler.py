@@ -157,7 +157,7 @@ class Dependant(DependHandler):
        Indicates that our port's status has changed, this may mean either we
        now satisfy our dependants or not.
     """
-    if self._port.failed():
+    if self._port.failed() or self._port.dependancy().failed():
       status = Dependant.FAILURE
       # TODO: We might have failed and yet still satisfy our dependants
     elif self._port.install_status() > Port.ABSENT:
@@ -238,6 +238,7 @@ class Dependancy(DependHandler):
     """
     self._count = 0  #: The count of outstanding dependancies
     self._dependancies = [[], [], [], [], [], []]  #: All dependancies
+    self._failed = False  #: If a dependancy has failed
     self._port = port  #: The port whom we handle
     self._report_log = []  #: Log of all problems reported (to prevent dups)
 
@@ -289,9 +290,19 @@ class Dependancy(DependHandler):
       if status != Dependant.RESOLV:
         self._count += 1
       if status == Dependant.FAILURE:
-        if self._status != Dependant.FAILURE:
-          self._status = Dependant.FAILURE
-          self._notify_all()
+        self._failed = True
+        if not self._port.dependant().failed():
+          self._port.dependant().status_changed()
+          
+  def failed(self):
+    """
+       Indicates if one of our dependancies has been failed (thus we could never
+       complete).
+       
+       @return: A dependancy has failed
+       @rtype: C{bool}
+    """
+    return self._failed
 
   def get(self, typ=None):
     """
@@ -331,7 +342,8 @@ class Dependancy(DependHandler):
       else:
         for i in Dependancy.STAGE2DEPENDS[stage]:
           for j in self._dependancies[i]:
-            if j.dependant().status() != Dependant.RESOLV:
+            status = j.dependant().status()
+            if status != Dependant.RESOLV:
               return False
         return True
 
@@ -354,6 +366,9 @@ class Dependancy(DependHandler):
     status = depend.status()
     with self._lock:
       if status == Dependant.FAILURE:
+        self._failed = True
+        if not self._port.dependant().failed():
+          self._port.dependant().status_changed()
         delta = -1
       elif status == Dependant.RESOLV:
         delta = 1
