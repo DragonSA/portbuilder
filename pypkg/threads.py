@@ -66,7 +66,10 @@ class _Watcher(object):
     from logging import getLogger
     from signal import SIGKILL
     from sys import stderr
+    from time import sleep
     from traceback import format_list
+
+    from .exit import terminate
 
     msg = " --- Cyclic deadlock ---\n"
     for lock, thr in stack:
@@ -84,8 +87,10 @@ class _Watcher(object):
       msg += 'Lock "%s" (held by thread "%s"):\n' % (str(lock), self.__locks[lock][0].name)
       msg += ''.join(format_list(self.__locks[lock][1]))
 
-    stderr.write("Cyclic deadlock detected, terminating problem\n" + msg)
+    stderr.write("Cyclic deadlock detected, terminating problem\n")
     getLogger("pypkg.threading").critical(msg)
+    terminate()
+    sleep(5)
     kill(getpid(), SIGKILL)
 
 _watcher = _Watcher()
