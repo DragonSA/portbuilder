@@ -29,7 +29,7 @@ class WorkerQueue(object):
     # without not holding the locks and doing this will cause a dead lock...
     self._lock = Condition(Lock())  #: The locker of this queue
     self._log = getLogger("pypkg.queue." + name)  #: Logger of this queue
-    #self._name = name  #: The name of this queue
+    self._name = name  #: The name of this queue
     self._load = load  #: The requested load
     self._curload = 0  #: The current load experianced
 
@@ -281,6 +281,7 @@ class WorkerQueue(object):
     from Queue import Empty
 
     thread = currentThread()
+    thread.name = self._name[0].upper() + self._name[1:] + "Worker-%i" % wid
 
     self._log.debug("Worker %d: Created" % wid)
 
