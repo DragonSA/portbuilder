@@ -143,7 +143,7 @@ Future release:
  - Refine and condense code
  - Implement proper and complete logging (and comments)
  - Ensure thread safety
- - Vet the thread locking for deadlocks
+ + Vet the thread locking for deadlocks
  - Move variables from protected to private (were appropriate)
  - Add all assertions
  - Move to collections (from DictMixin)
@@ -151,6 +151,9 @@ Future release:
  * Increase callback hardiness
  * Fix RWLock (unsure state handling)
  * Make sure ports configured before creating DependHandler
+ - threads:
+   - Add documentation
+   - Convert all locking to Watched
  + DependHandler:
    * Ensure _count is done properly
    * Handle depenancies with fetch_only

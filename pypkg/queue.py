@@ -24,7 +24,8 @@ class WorkerQueue(object):
        @type load: C{int}
     """
     from logging import getLogger
-    from threading import Condition, Lock
+    from threading import Condition
+    from .threads import WatchLock as Lock
     # We have to use our own locks since we cannot access Queue's functions
     # without not holding the locks and doing this will cause a dead lock...
     self._lock = Condition(Lock())  #: The locker of this queue
@@ -165,9 +166,9 @@ class WorkerQueue(object):
        @return: If stalling is possible
        @rtype: C{bool}
     """
-    from threading import currentThread, Lock
+    from .threads import current_thread, WatchLock as Lock
 
-    wid, jid, load = self._pool[currentThread()]
+    wid, jid, load = self._pool[current_thread()]
     lock = Lock()
 
     with lock:
@@ -208,7 +209,7 @@ class WorkerQueue(object):
     assert not self._lock.acquire(False)
 
     while self._queue and self._curload < self._load:
-      from threading import Thread
+      from .threads import Thread
 
       job = self._find_job()
 

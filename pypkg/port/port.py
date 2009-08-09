@@ -126,7 +126,8 @@ class FetchLock(object):
     """
        Initialise the locks and database of files.
     """
-    from threading import Condition, Lock
+    from threading import Condition
+    from ..threads import WatchLock as Lock
 
     self.__lock = Condition(Lock())
     self._files = []
@@ -197,7 +198,8 @@ class Port(object):
      dependancies and dependants.
   """
   from logging import getLogger
-  from threading import Condition, Lock
+  from threading import Condition
+  from ..threads import WatchLock as Lock
 
   ABSENT  = 0  #: Status flag for a port that is not installed
   OLDER   = 1  #: Status flag for a port that is old

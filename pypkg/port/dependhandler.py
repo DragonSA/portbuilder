@@ -14,7 +14,7 @@ class DependHandler(object):
      Dependant and Dependancy.
   """
   from logging import getLogger
-  from threading import RLock
+  from ..threads import WatchRLock as RLock
 
   # The type of dependancies
   BUILD   = 0  #: Build dependants
@@ -45,7 +45,7 @@ class Dependant(DependHandler):
   RESOLV   = 1   #: Dependants resolved
 
   from logging import getLogger
-  from threading import RLock
+  from ..threads import WatchRLock as RLock
 
   _log = getLogger("pypkg.dependant")
 

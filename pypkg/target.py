@@ -12,7 +12,7 @@ class Caller(object):
      The Caller class.  This class provides a counted callback (similar to a
      Semaphore).  Once the count gets to 0 the callback is called.
   """
-  from threading import Lock
+  from .threads import WatchLock as Lock
 
   __lock = Lock()
 
@@ -95,7 +95,7 @@ class StageBuilder(object):
        @type prev_builder: C{callable}
     """
     from logging import getLogger
-    from threading import Lock
+    from .threads import WatchLock as Lock
     self.__lock = Lock()  #: Synchroniser lock for this builder
     #: Logger for this builder
     self.__log = getLogger("pypkg.target." + Port.STAGE_NAME[stage])
@@ -408,7 +408,7 @@ class RConfigBuilder(object):
     """
         Initialise the internals and start the callback
     """
-    from threading import RLock
+    from .threads import WatchRLock as RLock
     self.__lock = RLock()
     self.__pending = []
     self.__callback = callback
@@ -473,7 +473,7 @@ def rfetch_builder(port, callback=None, cache=None, lock=None):
     return
 
   if cache is None or lock is None:
-    from threading import Lock
+    from .threads import WatchLock as Lock
     cache = []
     lock = Lock()
 
