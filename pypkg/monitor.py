@@ -26,13 +26,13 @@ class Monitor(Thread):
      this class (and override run) or provide the start/stop interface.
   """
 
-  def __init__(self):
+  def __init__(self, name="Monitor"):
     """
        Initialise the monitor
     """
     from threading import Lock
 
-    Thread.__init__(self)
+    Thread.__init__(self, name=name)
 
     self.__delay = 1  #: Delay between monitor iterations
     self.__lock = Lock()  #: Lock, to manage operations
@@ -158,7 +158,7 @@ class Stat(Monitor):
        @type delay: C{int}
     """
     from time import time
-    Monitor.__init__(self)
+    Monitor.__init__(self, "StatMonitor")
     self.set_delay(delay)
 
     self.__start = time()  #: The time we started
@@ -325,7 +325,7 @@ class Top(Monitor):
        Initialise the top monitor.
     """
     from time import time
-    Monitor.__init__(self)
+    Monitor.__init__(self, "TopMonitor")
 
     self._offset = 0
     self.__start = time()
