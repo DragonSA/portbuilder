@@ -397,6 +397,9 @@ class Port(object):
                     ('depend_build', 'depend_extract', 'depend_fetch',
                      'depend_lib',   'depend_run',     'depend_patch')])
 
+    if self._dependancy.failed() and not self._dependant.failed():
+      self._dependant.status_changed()
+
     with self.__lock:
       # Notify other threads it has been created
       self.__lock.notifyAll()
