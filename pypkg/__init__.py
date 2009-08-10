@@ -12,7 +12,7 @@ def run_main(main):
      @param main: The main function to execute
      @type main: C{callable}
   """
-  from threading import Thread
+  from .threads import Thread
 
   from .exit import exit_handler, start, terminate
 
@@ -32,5 +32,5 @@ def run_main(main):
       getLogger("pypkg").exception("Main function failed")
       terminate()
 
-  Thread(target=call).start()
+  Thread(target=call, name="Main").start()
   exit_handler.run()

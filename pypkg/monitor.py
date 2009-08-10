@@ -3,7 +3,7 @@ The Monitor module.  This module provides a variaty of displays for the user.
 """
 from __future__ import absolute_import
 
-from threading import Thread
+from .threads import Thread
 
 monitor = None
 
@@ -30,7 +30,7 @@ class Monitor(Thread):
     """
        Initialise the monitor
     """
-    from threading import Lock
+    from .threads import Lock
 
     Thread.__init__(self, name=name)
 
