@@ -29,7 +29,7 @@ class AutoExit(object):
     from .threads import Condition, Lock
 
     self._log = getLogger('pypkg.AutoExit')
-    self.__lock = Lock()
+    self.__lock = Lock("ExitLock")
     self.__wait = Condition(self.__lock)
     self.__pid = getpid()
     self.__started = False

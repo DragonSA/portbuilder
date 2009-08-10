@@ -148,6 +148,7 @@ Future release:
  - Add all assertions
  - Move to collections (from DictMixin)
  - Handle bsddb not installed
+ - Add documentation to RWLock and FetchLock (and move into threads?)
  * Increase callback hardiness
  * Fix RWLock (unsure state handling)
  * Make sure ports configured before creating DependHandler

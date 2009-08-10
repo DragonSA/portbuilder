@@ -27,7 +27,8 @@ class WorkerQueue(object):
     from .threads import Condition, Lock
     # We have to use our own locks since we cannot access Queue's functions
     # without not holding the locks and doing this will cause a dead lock...
-    self._lock = Condition(Lock())  #: The locker of this queue
+    lname = name[0].upper() + name[1:] + "QueueLock"
+    self._lock = Condition(Lock(lname))  #: The locker of this queue
     self._log = getLogger("pypkg.queue." + name)  #: Logger of this queue
     self._name = name  #: The name of this queue
     self._load = load  #: The requested load
@@ -168,7 +169,7 @@ class WorkerQueue(object):
     from .threads import current_thread, WatchLock as Lock
 
     wid, jid, load = self._pool[current_thread()]
-    lock = Lock()
+    lock = Lock("StalledLock",  True)
 
     with lock:
       with self._lock:

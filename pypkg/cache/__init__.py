@@ -64,7 +64,7 @@ def set_files(db_name, name, files):
 
     db[db_name][name] = data
 
-def getstats(path, cache=dict(), lock=Lock()):
+def getstats(path, cache=dict(), lock=Lock("GetStatsLock")):
   """
      Get the statistics on a given file.  Uses cache when possible.
 

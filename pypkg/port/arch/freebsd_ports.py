@@ -88,7 +88,7 @@ ports_attr["makefiles"].append(lambda x: [i for i in x if i != '..'])
 
 del strip_depends
 
-def get_status(origin, attr, cache=dict(), lock=Lock()):
+def get_status(origin, attr, cache=dict(), lock=Lock("GetStatus")):
   """
      Get the current status of a port.  A port is either ABSENT, OLDER, CURRENT
      or NEWER.

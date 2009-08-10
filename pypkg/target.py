@@ -14,7 +14,7 @@ class Caller(object):
   """
   from .threads import WatchLock as Lock
 
-  __lock = Lock()
+  __lock = Lock("CallerLock")
 
   def __init__(self, count, callback):
     """
@@ -96,7 +96,7 @@ class StageBuilder(object):
     """
     from logging import getLogger
     from .threads import WatchLock as Lock
-    self.__lock = Lock()  #: Synchroniser lock for this builder
+    self.__lock = Lock("StageBuilderLock", True)  #: Synchroniser lock for this builder
     #: Logger for this builder
     self.__log = getLogger("pypkg.target." + Port.STAGE_NAME[stage])
     self.__stage = stage  #: The stage we are taking care of
@@ -410,7 +410,7 @@ class RConfigBuilder(object):
         Initialise the internals and start the callback
     """
     from .threads import WatchRLock as RLock
-    self.__lock = RLock()
+    self.__lock = RLock("RConfigBuilderLock", True)
     self.__pending = []
     self.__callback = callback
 
@@ -476,7 +476,7 @@ def rfetch_builder(port, callback=None, cache=None, lock=None):
   if cache is None or lock is None:
     from .threads import WatchLock as Lock
     cache = []
-    lock = Lock()
+    lock = Lock("RFectBuilderLock", True)
 
   fetch = fetchable(port)
   depends = port.dependancy().get()

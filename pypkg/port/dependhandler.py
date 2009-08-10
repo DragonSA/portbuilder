@@ -31,7 +31,7 @@ class DependHandler(object):
     Port.INSTALL: (LIB, RUN),                   # The install dependancies
   } #: The dependancies for a given stage
 
-  _lock = RLock()
+  _lock = RLock("DependHandlerLock")
   _log = getLogger("pypkg.depend_handler")
 
 class Dependant(DependHandler):

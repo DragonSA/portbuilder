@@ -35,7 +35,7 @@ class Monitor(Thread):
     Thread.__init__(self, name=name)
 
     self.__delay = 1  #: Delay between monitor iterations
-    self.__lock = Lock()  #: Lock, to manage operations
+    self.__lock = Lock("MonitorLock", True)  #: Lock, to manage operations
     self.__paused = False  #: If we are pausing
     self.__started = False  #: Indicate if we have started
     self.__stop = False  #: Indicate the stopped status
