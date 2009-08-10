@@ -117,11 +117,14 @@ class WatchLock(object):
   __lock_count = 0
   __intr_lock  = _allocate_lock()
 
-  def __init__(self):
+  def __init__(self, name=None, enum=False):
     self.__lock = _allocate_lock()
-    with WatchLock.__intr_lock:
-      self.__name = "WatchLock-%i" % WatchLock.__lock_count
-      WatchLock.__lock_count += 1
+    if name and not enum:
+      self.__name = name
+    else:
+      with WatchLock.__intr_lock:
+        self.__name = "%s-%i" % (name and name or "WatchLock", WatchLock.__lock_count)
+        WatchLock.__lock_count += 1
 
   def __repr__(self):
     return "<%s>" % (self.__class__.__name__)
@@ -156,12 +159,15 @@ class WatchRLock(threading._RLock):
   __lock_count = 0
   __intr_lock  = _allocate_lock()
 
-  def __init__(self):
+  def __init__(self, name=None, enum=False):
     threading._RLock.__init__(self)
-    self._RLock__block = WatchLock()
-    with WatchRLock.__intr_lock:
-      self.__name = "WatchRLock-%i" % WatchRLock.__lock_count
-      WatchRLock.__lock_count += 1
+     if name and not enum:
+      self.__name = name
+    else:
+      with WatchLock.__intr_lock:
+        self.__name = "%s-%i" % (name and name or "WatchRLock", WatchLock.__lock_count)
+        WatchLock.__lock_count += 1
+    self._RLock__block = WatchLock(self.__name)
 
   def __str__(self):
     return self.__name
