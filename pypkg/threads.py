@@ -161,7 +161,7 @@ class WatchRLock(threading._RLock):
 
   def __init__(self, name=None, enum=False):
     threading._RLock.__init__(self)
-     if name and not enum:
+    if name and not enum:
       self.__name = name
     else:
       with WatchLock.__intr_lock:

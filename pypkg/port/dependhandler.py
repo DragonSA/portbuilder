@@ -138,7 +138,7 @@ class Dependant(DependHandler):
        Indicates that our port's status has changed, this may mean either we
        now satisfy our dependants or not.
     """
-    if self._port.failed() or (self._port,has_dependancy() and
+    if self._port.failed() or (self._port.has_dependancy() and
                                self._port.dependancy().failed()):
       status = Dependant.FAILURE
       # TODO: We might have failed and yet still satisfy our dependants
