@@ -51,7 +51,7 @@ class Dependant(DependHandler):
 
   def __init__(self, port, depends=None):
     """
-       Initialise the databases of dependants
+       Initialise the databases of dependants.
 
        @param port: The port this is a dependant handler for
        @type port: Port
@@ -68,7 +68,7 @@ class Dependant(DependHandler):
 
   def add(self, field, port, typ):
     """
-       Add a dependant to our list
+       Add a dependant to our list.
 
        @param field: The field data for the dependant
        @type field: C{str}
@@ -106,28 +106,9 @@ class Dependant(DependHandler):
 
     return tuple(set([i[1] for i in sum(depends, [])]))
 
-  def update(self, depend):
-    """
-       Called when a dependancy has changes status
-
-       @param depend: The dependancies dependant handler
-       @type depend: C{DependHandler}
-    """
-    status = depend.status()
-    with self._lock:
-      if self._status == Dependant.FAILURE:
-        # We have failed, no need to continue
-        return
-
-      if status == Dependant.FAILURE:
-        if self._status == Dependant.UNRESOLV:
-          # We will never satisfy our dependants
-          self._status = Dependant.FAILURE
-          self._notify_all()
-
   def port(self):
     """
-       Return the port this is a dependant handle for
+       Return the port this is a dependant handle for.
 
        @return: The port
        @rtype: C{Port}
@@ -145,7 +126,7 @@ class Dependant(DependHandler):
 
   def failed(self):
     """
-       Shorthand for self.status() == Dependant.FAILURE
+       Shorthand for self.status() == Dependant.FAILURE.
 
        @return: The failed status
        @rtype: C{bool}
@@ -182,8 +163,7 @@ class Dependant(DependHandler):
        Notify all dependants that we have changed status.
     """
     for i in self.get():
-      i.dependant().update(self)
-      i.dependancy().update(self)
+      i.has_dependancy() and i.dependancy().update(self)
 
   def _update(self, field, typ):
     """
@@ -225,7 +205,7 @@ class Dependant(DependHandler):
 
 class Dependancy(DependHandler):
   """
-     The Dependancy class.  This class tracking the dependanies of a Port
+     The Dependancy class.  This class tracking the dependanies for a Port.
   """
 
   def __init__(self, port, depends=None):
@@ -307,7 +287,7 @@ class Dependancy(DependHandler):
 
   def get(self, typ=None):
     """
-       Retrieve a list of dependancies, with all of them or just a subset
+       Retrieve a list of dependancies, with all of them or just a subset.
 
        @param typ: The subset of dependancies to get
        @type typ: C{int} or C{(int)}
@@ -328,7 +308,7 @@ class Dependancy(DependHandler):
 
   def check(self, stage):
     """
-       Check the dependancy status for a given stage
+       Check the dependancy status for a given stage.
 
        @param stage: The stage to check for
        @type stage: C{int}
@@ -350,7 +330,7 @@ class Dependancy(DependHandler):
 
   def port(self):
     """
-       Return the port this is a dependant handle for
+       Return the port this is a dependant handle for.
 
        @return: The port
        @rtype: C{Port}
@@ -359,7 +339,7 @@ class Dependancy(DependHandler):
 
   def update(self, depend):
     """
-       Called when a dependancy has changes status
+       Called when a dependancy has changes status.
 
        @param depend: The dependancies dependant handler
        @type depend: C{DependHandler}
