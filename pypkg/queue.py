@@ -182,7 +182,7 @@ class WorkerQueue(object):
         self._start()
 
       # Wait for a worker to finish
-      lock.acquire()
+      lock.acquire(watch=False)
       self._log.debug("Worker %d: Job %d resuming")
       # `self._curload += load` called by waker
       # `self._stalled.remove((lock, load))` called by waker
