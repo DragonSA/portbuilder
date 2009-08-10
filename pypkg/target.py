@@ -121,7 +121,8 @@ class StageBuilder(object):
                               port.working())) and self.__stage != Port.CONFIG:
       config_builder(port, lambda: self.put(port, callback))
       return
-    elif self.__stage != Port.CONFIG:
+
+    if self.__stage != Port.CONFIG:
       # Make sure we have dependant object created
       port.dependancy()
 
