@@ -157,7 +157,8 @@ class Dependant(DependHandler):
        Indicates that our port's status has changed, this may mean either we
        now satisfy our dependants or not.
     """
-    if self._port.failed() or self._port.dependancy().failed():
+    if self._port.failed() or (self._port,has_dependancy() and
+                               self._port.dependancy().failed()):
       status = Dependant.FAILURE
       # TODO: We might have failed and yet still satisfy our dependants
     elif self._port.install_status() > Port.ABSENT:
@@ -293,12 +294,12 @@ class Dependancy(DependHandler):
         self._failed = True
         if not self._port.dependant().failed():
           self._port.dependant().status_changed()
-          
+
   def failed(self):
     """
        Indicates if one of our dependancies has been failed (thus we could never
        complete).
-       
+
        @return: A dependancy has failed
        @rtype: C{bool}
     """
