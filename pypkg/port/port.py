@@ -122,13 +122,13 @@ class FetchLock(object):
   """
      A fetch lock, excludes fetching the same files from different ports.
   """
-  def __init__(self):
+  def __init__(self, name=None, enum=False):
     """
        Initialise the locks and database of files.
     """
     from ..threads import Condition, Lock
 
-    self.__lock = Condition(Lock())
+    self.__lock = Condition(Lock(name, enum))
     self._files = []
 
   def acquire(self, files, blocking=True):
@@ -222,8 +222,8 @@ class Port(object):
   package = False  #: If newly installed ports should be packaged
 
   _log = getLogger("pypkg.port")
-  __lock = Condition(Lock())  #: The notifier and locker for all ports
-  __lock_fetch = FetchLock()  #: Mutual exclusion lock for fetching file
+  __lock = Condition(Lock("PortLock"))  #: The notifier and locker for all ports
+  __lock_fetch = FetchLock("FetchLock")  #: Mutual exclusion lock for fetching file
 
   def __init__(self, origin):
     """

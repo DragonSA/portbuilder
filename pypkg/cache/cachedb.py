@@ -20,15 +20,15 @@ class CacheDB(object):
     from bsddb.db import DBEnv, DB_CREATE, DB_RECOVER, DB_THREAD
     from bsddb.db import DB_INIT_LOCK, DB_INIT_LOG, DB_INIT_MPOOL, DB_INIT_TXN
     from bsddb.db import DB_AUTO_COMMIT #, DB_DIRECT_DB, DB_DIRECT_LOG
-    from threading import Lock
 
+    from ..threads import Lock
     from ..env import dirs
 
     self._dbcache = {}
     self._dbcache_root = {}
     self._env = DBEnv()
     self._env_root = None
-    self.__lock = Lock()
+    self.__lock = Lock("CacheDBLock", True)
 
     self._env.set_flags(DB_AUTO_COMMIT, 1) # | DB_DIRECT_DB | DB_DIRECT_LOG, 1)
     self._env.set_data_dir(dirs['db'])
@@ -121,7 +121,7 @@ class DBProxy(DictMixin):
     """
     self.__db = bsddb
     self.__bases = bases
-    self.__lock = RWLock()
+    self.__lock = RWLock("DBProxyLock", True)
 
   def __getitem__(self, key):
     """
@@ -258,13 +258,13 @@ class RWLock(object):
   READ_PENDING = READ_LOCK   # A read lock request is pending
   WRITE_PENDING = WRITE_LOCK # A write lock request is pending
 
-  def __init__(self):
+  def __init__(self, name=None, enum=False):
     """
        Initialise the lock.
     """
-    from threading import Condition, Lock
+    from ..threads import Condition, Lock
 
-    self.__lock = Lock()
+    self.__lock = Lock(name, enum)
     self.__rcond = Condition(self.__lock)
     self.__wcond = Condition(self.__lock)
 
