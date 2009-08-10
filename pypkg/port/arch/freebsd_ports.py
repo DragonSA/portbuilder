@@ -5,8 +5,8 @@ infrastructure.
 from __future__ import absolute_import, with_statement
 
 from logging import getLogger
-from threading import Lock
 
+from ...threads import Lock
 from ...make import env
 
 __all__ = ['get_status', 'get_attr']

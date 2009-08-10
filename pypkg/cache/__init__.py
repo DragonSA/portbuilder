@@ -3,9 +3,8 @@ The Cache module.  This module stores various items of information statically.
 """
 from __future__ import absolute_import, with_statement
 
-from threading import Lock
-
 from .cachedb import CacheDB
+from ..threads import Lock
 
 __all__ = ['db', 'no_cache', 'check_files', 'set_files']
 

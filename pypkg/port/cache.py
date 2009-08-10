@@ -20,7 +20,7 @@ class PortCache(dict):
     """
     dict.__init__(self)
 
-    from threading import Condition, Lock
+    from ..threads import Condition, Lock
 
     self.__dead_cnt = 0  #: The number of 'bad' ports
     self.__lock = Condition(Lock())  #: The lock for this cache

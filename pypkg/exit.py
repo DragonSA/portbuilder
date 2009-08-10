@@ -26,7 +26,7 @@ class AutoExit(object):
     from logging import getLogger
     from os import getpid, setpgrp
     from signal import signal, SIGINFO, SIGINT, SIGTERM
-    from threading import Condition, Lock
+    from .threads import Condition, Lock
 
     self._log = getLogger('pypkg.AutoExit')
     self.__lock = Lock()
