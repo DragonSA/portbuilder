@@ -24,8 +24,7 @@ class WorkerQueue(object):
        @type load: C{int}
     """
     from logging import getLogger
-    from threading import Condition
-    from .threads import WatchLock as Lock
+    from .threads import Condition, Lock
     # We have to use our own locks since we cannot access Queue's functions
     # without not holding the locks and doing this will cause a dead lock...
     self._lock = Condition(Lock())  #: The locker of this queue
@@ -66,9 +65,9 @@ class WorkerQueue(object):
        @return: The current workers JID
        @rtype: C{int}
     """
-    from threading import currentThread
+    from .threads import current_thread
 
-    return self._pool[currentThread()][1]
+    return self._pool[current_thread()][1]
 
   def job(self, jid):
     """
@@ -277,10 +276,10 @@ class WorkerQueue(object):
        @param job: The first job to run
        @type job: C{Callable, int, int}
     """
-    from threading import currentThread
+    from .threads import current_thread
     from Queue import Empty
 
-    thread = currentThread()
+    thread = current_thread()
     thread.name = self._name[0].upper() + self._name[1:] + "Worker-%i" % wid
 
     self._log.debug("Worker %d: Created" % wid)
