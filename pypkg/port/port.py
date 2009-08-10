@@ -346,6 +346,16 @@ class Port(object):
     """
     return self._dependant
 
+  def has_dependancy(self):
+    """
+       Indicates if the dependancy handler has been created (may not have if
+       config stage has not completed).
+
+       @return: If the dependancy handler is available
+       @rtype: C{bool}
+    """
+    return bool(self._dependancy)
+
   def dependancy(self):
     """
        Returns the dependancy handler for this port.
