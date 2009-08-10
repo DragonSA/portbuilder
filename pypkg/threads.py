@@ -132,9 +132,9 @@ class WatchLock(object):
   def __str__(self):
     return self.__name
 
-  def acquire(self, blocking=True):
-    if not blocking:
-      status = self.__lock.acquire(False)
+  def acquire(self, blocking=True, watch=True):
+    if not blocking or not watch:
+      status = self.__lock.acquire(blocking)
       if status:
         _watcher.acquired(self)
       return status
