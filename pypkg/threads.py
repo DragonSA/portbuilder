@@ -4,16 +4,19 @@ To use the locking diagnostics use the WatchLock or WatchRLock for the locks
 that should be monitored for deadlocks.
 """
 from __future__ import absolute_import, with_statement
-from threading import Lock, RLock, Thread, current_thread, _RLock
+import threading
+from thread import allocate_lock as _allocate_lock
+from threading import *
+from threading import _active, _DummyThread
 
-__all__ = ['Lock', 'RLock', 'Thread', 'WatchLock', 'WatchRLock', 'current_thread']
+__all__ = threading.__all__ + ['WatchLock', 'WatchRLock']
 
 class _Watcher(object):
   def __init__(self):
-    self.__lock = Lock()
+    self.__lock = _allocate_lock()
     self.__locks = {}
     self.__waiting = {}
-    watcher = Thread(target=self._watcher)
+    watcher = threading.Thread(target=self._watcher)
     watcher.daemon = True
     watcher.start()
 
@@ -35,14 +38,45 @@ class _Watcher(object):
     with self.__lock:
       self.__locks[lock] = (current_thread(), extract_stack())
 
-  def released(self, lock):
+  def release(self, lock, release):
+    assert lock.locked()
     with self.__lock:
+      release()
       self.__locks.pop(lock)
+  
+  def info(self, stack=None):
+    from traceback import format_list
+    if not stack:
+      all_acq = True
+      stack = [(i[1][0], i[0]) for i in self.__waiting.iteritems() if i[1]]
+      msg = " --- Waiting threads ---\n"
+    else:
+      all_acq = False
+      msg = " --- Cyclic deadlock ---\n"
+    for lock, thr in stack:
+      msg += 'Thread "%s" waiting for lock "%s"\n' % (thr.name, str(lock))
+      msg += '\tLock "%s" held by thread "%s"\n' % (str(lock), self.__locks[lock][0].name)
+
+    msg += "\n\n --- Waiting threads traceback ---\n"
+    for lock, thr in stack:
+      msg += '\nThread "%s" (waiting for lock "%s"):\n' % (thr.name, str(lock))
+      msg += ''.join(format_list(self.__waiting[thr][1]))
+
+    if all_acq:
+      stack = [(i[0], i[1][0]) for i in self.__locks.iteritems()]
+    msg += "\n\n --- Acquired locks traceback ---\n"
+    for i in stack:
+      lock = i[0]
+      msg += '\nLock "%s" (held by thread "%s"):\n' % (str(lock), self.__locks[lock][0].name)
+      msg += ''.join(format_list(self.__locks[lock][1]))
+    return msg
 
   def _watcher(self):
     from time import sleep
+    from sys import stderr
     while True:
       sleep(5)
+      #stderr.write(self.info())
       with self.__lock:
         for lock, thr in [(i[1][0], i[0]) for i in self.__waiting.iteritems() if i[1]]:
           stack = [(lock, thr)]
@@ -67,71 +101,37 @@ class _Watcher(object):
     from signal import SIGKILL
     from sys import stderr
     from time import sleep
-    from traceback import format_list
 
     from .exit import terminate
 
-    msg = " --- Cyclic deadlock ---\n"
-    for lock, thr in stack:
-      msg += 'Thread "%s" waiting for lock "%s"\n' % (thr.name, str(lock))
-      msg += '\tLock "%s" held by thread "%s"\n' % (str(lock), self.__locks[lock][0].name)
+    stderr.write("Cyclic deadlock detected, terminating program\n")
+    getLogger("pypkg.threading").critical(self.info(stack))
 
-    msg += "\n --- Waiting threads traceback ---\n"
-    for lock, thr in stack:
-      msg += 'Thread "%s" (waiting for lock "%s"):\n' % (thr.name, str(lock))
-      msg += ''.join(format_list(self.__waiting[thr][1]))
-
-    msg += "\n --- Acquired locks traceback ---\n"
-    for i in stack:
-      lock = i[0]
-      msg += 'Lock "%s" (held by thread "%s"):\n' % (str(lock), self.__locks[lock][0].name)
-      msg += ''.join(format_list(self.__locks[lock][1]))
-
-    stderr.write("Cyclic deadlock detected, terminating problem\n")
-    getLogger("pypkg.threading").critical(msg)
     terminate()
     sleep(5)
     kill(getpid(), SIGKILL)
 
 _watcher = _Watcher()
 
-def _acquire_wait(lock, timeout):
-  from time import sleep, time
-  # Balancing act:  We can't afford a pure busy loop, so we
-  # have to sleep; but if we sleep the whole timeout time,
-  # we'll be unresponsive.  The scheme here sleeps very
-  # little at first, longer as time goes on, but never longer
-  # than 20 times per second (or the timeout time remaining).
-  endtime = time() + timeout
-  delay = 0.0005 # 500 us -> initial delay of 1 ms
-  while True:
-    if lock.acquire(False):
-      return True
-    remaining = endtime - time()
-    if remaining <= 0:
-      return False
-    delay = min(delay * 2, remaining, .05)
-    sleep(delay)
-
 class WatchLock(object):
   __lock_count = 0
-  __intr_lock  = Lock()
+  __intr_lock  = _allocate_lock()
 
   def __init__(self):
-    self.__lock = Lock()
+    self.__lock = _allocate_lock()
     with WatchLock.__intr_lock:
-      self.__name = "WatchLock_%i" % WatchLock.__lock_count
+      self.__name = "WatchLock-%i" % WatchLock.__lock_count
       WatchLock.__lock_count += 1
 
   def __repr__(self):
-    return "<%s(%s)>" % (self.__class__.__name__, repr(self.__lock))
+    return "<%s>" % (self.__class__.__name__)
 
   def __str__(self):
     return self.__name
 
   def acquire(self, blocking=True):
     if not blocking:
-      status = self.__lock.acquire(wait)
+      status = self.__lock.acquire(False)
       if status:
         _watcher.acquired(self)
       return status
@@ -144,8 +144,7 @@ class WatchLock(object):
   __enter__ = acquire
 
   def release(self):
-    self.__lock.release()
-    _watcher.released(self)
+    _watcher.release(self, self.__lock.release)
 
   def __exit__(self, t, v, bt):
     self.release()
@@ -153,16 +152,19 @@ class WatchLock(object):
   def locked(self):
     return self.__lock.locked()
 
-class WatchRLock(_RLock):
+class WatchRLock(threading._RLock):
   __lock_count = 0
-  __intr_lock  = Lock()
+  __intr_lock  = _allocate_lock()
 
   def __init__(self):
-    _RLock.__init__(self)
+    threading._RLock.__init__(self)
     self._RLock__block = WatchLock()
     with WatchRLock.__intr_lock:
-      self.__name = "WatchRLock_%i" % WatchRLock.__lock_count
+      self.__name = "WatchRLock-%i" % WatchRLock.__lock_count
       WatchRLock.__lock_count += 1
 
   def __str__(self):
     return self.__name
+
+Lock = WatchLock
+RLock = WatchRLock
