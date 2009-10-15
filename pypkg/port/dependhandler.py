@@ -292,7 +292,7 @@ class Dependancy(DependHandler):
        @param typ: The subset of dependancies to get
        @type typ: C{int} or C{(int)}
        @return: A list of dependancies
-       @rtype: C{(DependHandler)}
+       @rtype: C{(Port)}
     """
     with self._lock:
       if typ is None:
@@ -366,7 +366,7 @@ class Dependancy(DependHandler):
         # TODO: Remove, debug check
         report = False
         for i in self.get():
-          if i.status() != Dependant.RESOLV:
+          if i.dependant().status() != Dependant.RESOLV:
             report = True
             self._count += 1
         if report:
