@@ -259,6 +259,7 @@ class WorkerQueue(object):
 
     worker = 0
 
+    # TODO: Find the best fit for load.
     for i in xrange(len(self._stalled)):
       if self._stalled[i][1] <= load:
         return self._stalled.pop(i)
