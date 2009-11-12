@@ -174,7 +174,7 @@ class WorkerQueue(object):
     with lock:
       with self._lock:
         if not self._load:
-          return False
+          return True
 
         self._log.debug("Worker %d: Job %d stalled")
         self._stalled.append((lock, load))
@@ -187,7 +187,7 @@ class WorkerQueue(object):
       # `self._curload += load` called by waker
       # `self._stalled.remove((lock, load))` called by waker
 
-    return bool(self._load)
+    return True
 
   def terminate(self):
     """
