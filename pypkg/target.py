@@ -239,6 +239,9 @@ class StageBuilder(object):
     """
        Indicates if a port has stalled.  Places the port back onto the queue and
        allows another port to work.
+
+       @return: If the port successfully stalled
+       @rtype: C{bool}
     """
     #jid = self.__queue.jid()
     #port =
@@ -247,7 +250,7 @@ class StageBuilder(object):
     #  self.__queues[StageBuilder.ACTIVE].remove(port)
     #  self.__queues[StageBuilder.QUEUED].insert(0, port)
 
-    self.__queue.stalled()
+    return self.__queue.stalled()
 
     #with self.__lock:
     #  self.__queues[StageBuilder.QUEUED].remove(port)
