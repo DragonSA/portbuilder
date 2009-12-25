@@ -178,8 +178,7 @@ class Stat(Monitor):
         count += 1
         old_options = options
         options = (len(queue.ports_queue) != 0, len(target.fetch_builder) != 0,
-                len(target.build_builder) != 0 and not Port.fetch_only,
-                len(target.install_builder) != 0 and not Port.fetch_only)
+                len(target.build_builder) != 0, len(target.install_builder) != 0)
 
         if count > 20 or options != old_options:
           count = 0
