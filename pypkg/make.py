@@ -93,9 +93,10 @@ class Make(object):
     self.__am_root = getuid()  #: Indicate if we are root
     self.__password = None  #: Password to access root status (via su or sudo)
 
-    self.env["PORTSDIR"] = getenv("PORTSDIR", "/usr/ports/") #: Location of port
+    self.env["PORTSDIR"] = getenv("PORTSDIR", "/usr/ports") #: Location of port
     self.env["BATCH"] = None  #: Default to use batch mode
     self.env["NOCLEANDEPENDS"] = None  #: Default to only clean ports
+    self.env["NO_DEPENDS"] = None  #: Do not try and resolve dependencies
 
   def mkdir(self, path):
     """
@@ -195,7 +196,7 @@ class Make(object):
     # Include BATCH if the target is not 'config'
     # Include NOCLEANDEPENDS if the target includes 'clean'
     args = args + [v and '%s="%s"' % (k, v) or "-D%s" % k for k, v in
-                  self.env.items() if (k, v) != ("PORTSDIR", "/usr/ports/") and
+                  self.env.items() if (k, v) != ("PORTSDIR", "/usr/ports") and
                       (args[0], k) != ('config', "BATCH") and
                       (k != "NOCLEANDEPENDS" or 'clean' in args)]
 
