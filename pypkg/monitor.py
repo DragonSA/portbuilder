@@ -462,7 +462,6 @@ class Top(Monitor):
        @param stats: The statistics about the stage
        @type stats: C{[int, int, int, int]}
     """
-
     if sum(stats):
       msg = "%s: " % stage_name
       msgv = []

@@ -195,7 +195,7 @@ class Make(object):
     # Include PORTSDIR if it is not the default
     # Include BATCH if the target is not 'config'
     # Include NOCLEANDEPENDS if the target includes 'clean'
-    args = args + [v and '%s="%s"' % (k, v) or "-D%s" % k for k, v in
+    args = args + [v and '%s=%s' % (k, v) or "-D%s" % k for k, v in
                   self.env.items() if (k, v) != ("PORTSDIR", "/usr/ports") and
                       (args[0], k) != ('config', "BATCH") and
                       (k != "NOCLEANDEPENDS" or 'clean' in args)]

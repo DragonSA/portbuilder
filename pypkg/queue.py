@@ -337,7 +337,7 @@ class WorkerQueue(object):
       self._log.debug("Worker %d: Finished job %d" % (wid, jid))
 
 config_queue  = WorkerQueue("config", 1)  #: Queue for configuring port options
-build_queue   = WorkerQueue("build", ncpu + 1)  #: Queue for building ports
+build_queue   = WorkerQueue("build", ncpu * 2)  #: Queue for building ports
 fetch_queue   = WorkerQueue("fetch", 2)  #: Queue for fetching dist files
 install_queue = WorkerQueue("install", 1)  #: Queue for installing ports
 ports_queue   = WorkerQueue("ports", ncpu * 2)  #: Queue for fetching port info

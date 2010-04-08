@@ -71,13 +71,13 @@ ports_attr = {
 } #: The attributes of the given port
 
 # The following are 'fixes' for various attributes
-ports_attr["depends"].append(lambda x: [i[len(env['PORTSDIR']):] for i in x])
+ports_attr["depends"].append(lambda x: [i[len(env['PORTSDIR']) + 1:] for i in x])
 ports_attr["depends"].append(lambda x: ([x.remove(i) for i in x
                                          if x.count(i) > 1], x)[1])
 ports_attr["distfiles"].append(lambda x: [i.split(':', 1)[0] for i in x])
 
 strip_depends = lambda x: [(i.split(':', 1)[0].strip(),
-                  i.split(':', 1)[1][len(env['PORTSDIR']):].strip()) for i in x]
+                  i.split(':', 1)[1][len(env['PORTSDIR']) + 1:].strip()) for i in x]
 ports_attr["depend_build"].append(strip_depends)
 ports_attr["depend_extract"].append(strip_depends)
 ports_attr["depend_fetch"].append(strip_depends)
@@ -159,9 +159,9 @@ def get_attr(origin):
   """
   from ...make import make_target, SUCCESS
 
-  # Make sure ports ends in a trailing slash
-  if env['PORTSDIR'][-1] != '/':
-    env['PORTSDIR'] += '/'
+  # Make sure ports does not end in a trailing slash
+  if env['PORTSDIR'][-1] == '/':
+    env['PORTSDIR'] = env['PORTSDIR'][:-1]
 
   args = []  #: Arguments to be passed to the make target
   # Pass all the arguments from ports_attr table
