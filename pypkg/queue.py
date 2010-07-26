@@ -338,7 +338,7 @@ class WorkerQueue(object):
 
 config_queue  = WorkerQueue("config", 1)  #: Queue for configuring port options
 build_queue   = WorkerQueue("build", ncpu * 2)  #: Queue for building ports
-fetch_queue   = WorkerQueue("fetch", 2)  #: Queue for fetching dist files
+fetch_queue   = WorkerQueue("fetch", 1)  #: Queue for fetching dist files
 install_queue = WorkerQueue("install", 1)  #: Queue for installing ports
 ports_queue   = WorkerQueue("ports", ncpu * 2)  #: Queue for fetching port info
 queues        = [config_queue, build_queue, fetch_queue, install_queue,
