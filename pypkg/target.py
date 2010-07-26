@@ -140,7 +140,8 @@ class StageBuilder(object):
           self.__queues[StageBuilder.PENDING].append(port)
 
           depends = self._depends_check(port)
-          prev_stage = port.stage() < self.__stage - 1 or \
+          prev_stage = (port.stage() < self.__stage - 1 and \
+                        self.__stage != Port.PKGINSTALL) or \
                       (port.working() and stage == self.__stage - 1)
           assert self.__prev_builder is not None or not prev_stage
 
@@ -159,7 +160,7 @@ class StageBuilder(object):
                      (len(callback), port.origin()))
 
     for i in depends:
-      install_builder(i, callback)
+      installer(i, callback)
 
     if prev_stage:
       self.__prev_builder(port, callback)
@@ -198,7 +199,8 @@ class StageBuilder(object):
       self.__callbacks(port, 2)
     else:
       assert self.__stage == Port.CONFIG or port.dependancy().check(self.__stage)
-      assert port.stage() == self.__stage - 1 and not port.working()
+      assert (port.stage() == self.__stage - 1 or \
+              self.__stage == Port.PKGINSTALL) and not port.working()
 
       with self.__lock:
         self.__queues[StageBuilder.PENDING].remove(port)
@@ -228,12 +230,12 @@ class StageBuilder(object):
        @return: The list of ports (active, queued, pending, failures)
        @rtype: C{([Port], [Port], [Port], [Port])}
     """
-    from copy import copy
     with self.__lock:
-      qcopy = []
-      for i in self.__queues:
-        qcopy.append(summary and len(i) or copy(i))
-      return qcopy
+      if summary:
+        return [len(i) for i in self.__queues]
+      else:
+        from copy import copy
+        return [copy(i) for i in self.__queues]
 
   def stalled(self):
     """
@@ -391,6 +393,43 @@ class BuildBuilder(StageBuilder):
 
     build_queue.put(lambda: self.build(port), load)
 
+class PkgInstallBuilder(StageBuilder):
+  """
+     Install a port from its package, if possible.
+  """
+
+  def __init__(self, install_builder=None):
+    """
+       Create a target builder for a given stage using a given queue.  Also, if
+       a previous stage is handled by a builder then use that builder to for the
+       previous stages.
+
+       @param prev_builder: The builder for the previous stage
+       @type prev_builder: C{callable}
+    """
+    from .queue import build_queue
+
+    StageBuilder.__init__(self, Port.PKGINSTALL, install_queue)
+
+    self.__install_builder = install_builder
+
+  def put(self, port, callback=None):
+    """
+       Place a port on the queue to be build.  When the port has finished call
+       the given callback.  If the port can be installed via package then
+       installed it otherwise call the install_builder
+
+       @param port: The port to build
+       @type port: C{Port} or C{str}
+       @param callback: The callback function
+       @type callback: C{callable}
+    """
+    if port.has_package():
+      StageBuilder.put(self, port, callback)
+    else:
+      self.__install_builder(port, callback)
+
+
 def fetchable(port):
   """
      Checks if a port is fetchable (hasn't failed or already been fetched).
@@ -541,6 +580,41 @@ def index_builder():
 
   index.close()
 
+class Installer(object):
+  """
+     Specify which queue (install or pkginstall) should be used to install
+     ports.
+  """
+
+  def __init__(self, builder):
+    """
+       Use builder as the default builder
+
+       @param builder: The default builder to use to install ports
+       @type builder: C{StageBuilder}
+    """
+    self._builder = builder
+
+  def use(self, builder):
+    """
+       Specify a builder to use
+
+       @param builder: The builder to use to install ports
+       @type builder: C{StageBuilder}
+    """
+    self._builder = builder
+
+  def __call__(self, port, callback=None):
+    """
+       Place a port on the queue to be installed.
+
+       @param port: The port to build
+       @type port: C{Port} or C{str}
+       @param callback: The callback function
+       @type callback: C{callable}
+    """
+    self._builder(port, callback)
+
 #: The builder for the config stage
 config_builder  = ConfigBuilder()
 #: The builder for the fetch stage
@@ -549,3 +623,8 @@ fetch_builder   = StageBuilder(Port.FETCH, fetch_queue, config_queue)
 build_builder   = BuildBuilder(fetch_builder)
 #: The builder for the install stage
 install_builder = StageBuilder(Port.INSTALL, install_queue, build_builder)
+#: The builder for the pkg-install stage
+pkginstall_builder = PkgInstallBuilder(install_builder)
+
+#: The installer builder
+installer = Installer(install_builder)
