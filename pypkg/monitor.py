@@ -298,12 +298,11 @@ def get_stage(port, offset=0):
   """
   from .port import Port
 
-  stage = Port.STAGE_NAME[port.stage() + offset]
-  if stage[-1] == 'l':
-    return stage[:-1]
-  if stage.endswith('ure'):
-    return stage[:-3]
-  return stage
+  try:
+    stage = Port.STAGE_NAME[port.stage() + offset]
+  except KeyError:
+    stage = Port.STAGE_NAME[-1]
+  return stage[:6]
 
 def get_name(port):
   """
@@ -499,28 +498,28 @@ class Top(Monitor):
       else:
         time = ' ' * 6
       scr.addnstr(offset + i, 0, ' %6s  active %s %s' %
-                  (get_stage(port)[:6], time, get_name(port)), columns)
+                  (get_stage(port), time, get_name(port)), columns)
 
     lines -= len(active)
     offset += len(active)
     for i in range(min(lines, len(queued))):
       port = queued[i]
       scr.addnstr(offset + i, 0, ' %6s  queued        %s' %
-                  (get_stage(port, 1)[:6], get_name(port)), columns)
+                  (get_stage(port, 1), get_name(port)), columns)
 
     lines -= len(queued)
     offset += len(queued)
     for i in range(min(lines, len(pending))):
       port = pending[i]
       scr.addnstr(offset + i, 0, ' %6s pending        %s' %
-                  (get_stage(port, 1)[:6], get_name(port)), columns)
+                  (get_stage(port, 1), get_name(port)), columns)
 
     lines -= len(pending)
     offset += len(pending)
     for i in range(min(lines, len(failed))):
       port = failed[i]
       scr.addnstr(offset + i, 0, ' %6s  failed        %s' %
-                  (get_stage(port)[:6], get_name(port)), columns)
+                  (get_stage(port), get_name(port)), columns)
 
 
 class Statistics(object):
