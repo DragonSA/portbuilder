@@ -31,6 +31,7 @@ Future release:
    - Move to DictMixin
  - Arch:
    - Only require pkgname, not attr (get_status)
+ - when pkginstall failes, switch to normal install
 
 0.0.9 - Milestone 9 (Sundry modules):
  - modules:
