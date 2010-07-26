@@ -29,6 +29,7 @@ class DependHandler(object):
     Port.FETCH:   (FETCH,),                     # The fetch dependancies
     Port.BUILD:   (EXTRACT, PATCH, LIB, BUILD), # The build dependancies
     Port.INSTALL: (LIB, RUN),                   # The install dependancies
+    Port.PKGINSTALL: (LIB, RUN),                # The pkginstall dependencies
   } #: The dependancies for a given stage
 
   _lock = RLock("DependHandlerLock")
