@@ -2,13 +2,14 @@
 """
 Controller for various ports operations
 """
-from logging import getLogger, FileHandler, DEBUG, INFO
+from logging import getLogger, FileHandler, Formatter, DEBUG, INFO
 
 from pypkg.env import files
 from pypkg import run_main
 
 handler = FileHandler(files['log'], 'w')
 handler.setLevel(DEBUG)
+handler.setFormatter(Formatter("%(name)s: %(levelname)s\n\t%(message)s "))
 log = getLogger('pypkg')
 log.addHandler(handler)
 log.setLevel(INFO)
