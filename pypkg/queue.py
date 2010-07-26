@@ -176,14 +176,14 @@ class WorkerQueue(object):
         if not self._load:
           return True
 
-        self._log.debug("Worker %d: Job %d stalled")
+        self._log.debug("Worker %d: Job %d stalled" % (wid, jid))
         self._stalled.append((lock, load))
         self._curload -= load
         self._start()
 
       # Wait for a worker to finish
       lock.acquire(watch=False)
-      self._log.debug("Worker %d: Job %d resuming")
+      self._log.debug("Worker %d: Job %d resuming" % (wid, jid))
       # `self._curload += load` called by waker
       # `self._stalled.remove((lock, load))` called by waker
 
