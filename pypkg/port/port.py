@@ -367,7 +367,13 @@ class Port(object):
     from os.path import isfile, join
 
     pkgfile = join(self.attr("pkgdir"), "All", self.attr("pkgname"))
-    return isfile(pkgfile + ".tbz") or isfile(pkgfile + ".tgz")
+    if isfile(pkgfile + ".tbz") or isfile(pkgfile + ".tgz"):
+      # HACK: should have some other way of specifying we are at this point
+      # TODO: if we are installing via pkg then all previous stages are not valid
+      self.__stage = Port.INSTALL
+      return True
+    else:
+      return False
 
   def dependancy(self):
     """
@@ -546,9 +552,11 @@ class Port(object):
 
       # TODO: XXX: deinstall existing port
 
-      cmd = ["env", "BATCH=yes", "pkg_add", "%s" % (pkgdir, pkgfile)]
+      cmd = ["env", "BATCH=yes", "pkg_add", pkgfile]
       pcmd = Popen(cmd, stdin=stdin, stdout=stdout, stderr=stderr, close_fds=True)
-      pcmd.stdin.write("yes\n")
+      #pcmd.stdin.write("yes\n")
+      # TODO: some ports want feedback?
+      pcmd.stdin.close()
 
       status = pcmd.wait() is SUCCESS
 
@@ -725,7 +733,7 @@ class Port(object):
                               status(self._origin, self._attr_map, True)
       if install_status != self._install_status:
         self._dependant.status_changed()
-      if install_status == Port.ABSENT:
+      if self._install_status == Port.ABSENT:
         self._log.error("%s should have been installed" % self._origin)
         return False
       return True
