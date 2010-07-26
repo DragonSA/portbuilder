@@ -208,6 +208,7 @@ class Port(object):
   FETCH   = 2  #: Status flag for a port that is fetching sources
   BUILD   = 3  #: Status flag for a port that is building
   INSTALL = 4  #: Status flag for a port that is installing
+  PKGINSTALL = 5  #: Status flag for a port that is instaling via package
 
   #: Translation table for the install flags
   INSTALL_NAME = {ABSENT : "Not Installed", OLDER : "Older",
@@ -215,7 +216,7 @@ class Port(object):
 
   #: Translation table for the build flags
   STAGE_NAME = {CONFIG : "configure", FETCH : "fetch", BUILD : "build",
-                INSTALL : "install"}
+                INSTALL : "install", PKGINSTALL : "pkginstall" }
 
   force_noconfig = False  #: If the port should not configure itself
   force_config = False  #: Force issueing a `make config'
@@ -356,6 +357,18 @@ class Port(object):
     """
     return bool(self._dependancy)
 
+  def has_package(self):
+    """
+       Indicates if the port has a package.
+
+       @return: If the port has a package
+       @rtype: C{bool}
+    """
+    from os.path import isfile, join
+
+    pkgfile = join(self.attr("pkgdir"), "All", self.attr("pkgname"))
+    return isfile(pkgfile + ".tbz") or isfile(pkgfile + ".tgz")
+
   def dependancy(self):
     """
        Returns the dependancy handler for this port.
@@ -456,8 +469,11 @@ class Port(object):
 
     self._log.debug("Cleaning: %s" % self._origin)
 
-    # Clean the port itself
-    status = make_target(self._origin, ['clean']).wait() is SUCCESS
+    if self.__stage is not Port.PKGINSTALL:
+      # Clean the port itself
+      status = make_target(self._origin, ['clean']).wait() is SUCCESS
+    else:
+      status = True
 
     if not self.__failed:
       from os.path import isfile
@@ -489,7 +505,8 @@ class Port(object):
        @rtype: C{bool}
     """
     stage_handler = {Port.CONFIG: self._config, Port.FETCH: self._fetch,
-                     Port.BUILD: self._build, Port.INSTALL: self._install}
+                     Port.BUILD: self._build, Port.INSTALL: self._install,
+                     Port.PKGINSTALL: self._pkginstall}
 
     proceed, status = self.__prepare(stage)
     if not proceed:
@@ -499,6 +516,57 @@ class Port(object):
     status = stage_handler[stage]()
 
     return self.__finalise(stage, status)
+
+  def _pkginstall(self):
+    """
+       Install the package for this port.
+
+       @return: The success status
+       @rtype: C{bool}
+    """
+    from os.path import isfile, join
+    from subprocess import Popen
+
+    from ..make import Make, cmdtostr, get_pipe, SUCCESS
+
+    pkgdir = self.attr("pkgdir")
+    pkgfile = join(pkgdir, "All", self.attr("pkgname"))
+    if isfile(pkgfile + ".tbz"):
+      pkgfile += ".tbz"
+    elif isfile(pkgfile + ".tgz"):
+      pkgfile += ".tgz"
+    else:
+      return False
+
+    if Make.no_opt:
+      print cmdtostr(cmd)
+      status = True
+    else:
+      stdin, stdout, stderr = get_pipe(None, self._origin)
+
+      # TODO: XXX: deinstall existing port
+
+      cmd = ["env", "BATCH=yes", "pkg_add", "%s" % (pkgdir, pkgfile)]
+      pcmd = Popen(cmd, stdin=stdin, stdout=stdout, stderr=stderr, close_fds=True)
+      pcmd.stdin.write("yes\n")
+
+      status = pcmd.wait() is SUCCESS
+
+    if status:
+      from .arch import status
+
+      # Update the install status (and notify depend handler of our change)
+      install_status = self._install_status
+      self._install_status = Make.no_opt and Port.CURRENT or \
+                              status(self._origin, self._attr_map, True)
+      if install_status != self._install_status:
+        self._dependant.status_changed()
+      if self._install_status == Port.ABSENT:
+        self._log.error("%s should have been installed" % self._origin)
+        return False
+      return True
+    else:
+      return False
 
   def _config(self):
     """
@@ -643,7 +711,7 @@ class Port(object):
 
       from .arch import status
       from ..make import env
- 
+
       #  Don't need to lock to change this as it will already have been set
       pkg_message = join(env['PORTSDIR'], self._origin, 'pkg-message')
       if isfile(pkg_message):
@@ -654,11 +722,15 @@ class Port(object):
       # Update the install status (and notify depend handler of our change)
       install_status = self._install_status
       self._install_status = Make.no_opt and Port.CURRENT or \
-                              status(self._origin, self._attr_map)
+                              status(self._origin, self._attr_map, True)
       if install_status != self._install_status:
         self._dependant.status_changed()
-
-    return status
+      if install_status == Port.ABSENT:
+        self._log.error("%s should have been installed" % self._origin)
+        return False
+      return True
+    else:
+      return False
 
   def __prepare(self, stage):
     """
@@ -690,7 +762,7 @@ class Port(object):
       if stage <= self.__stage:
         return False, True
 
-      assert self.__stage == stage - 1
+      assert self.__stage == stage - 1 or stage == Port.PKGINSTALL
 
       self.__stage = stage
 
@@ -738,7 +810,7 @@ class Port(object):
       self.__lock.notifyAll()
 
     # Clean up after ourselves
-    if not status and stage > Port.FETCH or stage is Port.INSTALL:
+    if not status and stage > Port.FETCH or stage >= Port.INSTALL:
       self.clean()
 
     if self.__failed:
