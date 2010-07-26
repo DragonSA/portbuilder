@@ -65,7 +65,7 @@ def main():
           # TODO:
           if (options.install and status == Port.ABSENT) or \
             (not options.install and status < Port.CURRENT):
-            target.install_builder(port, callback)
+            target.installer(port, callback)
           else:
             callback()
       else:
@@ -102,6 +102,8 @@ def gen_parser():
   parser.add_option("-p", "--package", action="store_true", default=False,
                     help="When installing ports, also generate packages (i.e." \
                     " do a ``make package'').")
+  parser.add_option("-P", dest="pref_package", action="store_true",
+                    default=False, help="Install packages where possible.")
   parser.add_option("-u", "--update", dest="install", action="store_false",
                     default=True, help="Update mode.  Updates the given port." \
                     "  The last -i or -u will be the determining one.")
@@ -142,5 +144,10 @@ def set_options(options):
 
   # Package the ports after installing (-p)
   Port.package = options.package
+
+  # Use packages for port and its dependancies
+  if options.pref_package:
+    from pypkg.target import pkginstall_builder, installer
+    installer.use(pkginstall_builder)
 
 run_main(main)
