@@ -178,7 +178,8 @@ class Stat(Monitor):
         count += 1
         old_options = options
         options = (len(queue.ports_queue) != 0, len(target.fetch_builder) != 0,
-                len(target.build_builder) != 0, len(target.install_builder) != 0)
+                len(target.build_builder) != 0, len(target.install_builder) +
+                                                len(target.pkginstall_builder) != 0)
 
         if count > 20 or options != old_options:
           count = 0
@@ -277,7 +278,8 @@ class Stat(Monitor):
     if install_q:
       line.append(" %3i %5i %5i " % (len(queue.install_queue),
                                       queue.install_queue.qsize(),
-                                      len(target.install_builder)))
+                                      len(target.install_builder) +
+                                      len(target.pkginstall_builder)))
 
     print "|".join(line)
 
@@ -497,28 +499,28 @@ class Top(Monitor):
       else:
         time = ' ' * 6
       scr.addnstr(offset + i, 0, ' %6s  active %s %s' %
-                  (get_stage(port), time, get_name(port)), columns)
+                  (get_stage(port)[:6], time, get_name(port)), columns)
 
     lines -= len(active)
     offset += len(active)
     for i in range(min(lines, len(queued))):
       port = queued[i]
       scr.addnstr(offset + i, 0, ' %6s  queued        %s' %
-                  (get_stage(port, 1), get_name(port)), columns)
+                  (get_stage(port, 1)[:6], get_name(port)), columns)
 
     lines -= len(queued)
     offset += len(queued)
     for i in range(min(lines, len(pending))):
       port = pending[i]
       scr.addnstr(offset + i, 0, ' %6s pending        %s' %
-                  (get_stage(port, 1), get_name(port)), columns)
+                  (get_stage(port, 1)[:6], get_name(port)), columns)
 
     lines -= len(pending)
     offset += len(pending)
     for i in range(min(lines, len(failed))):
       port = failed[i]
       scr.addnstr(offset + i, 0, ' %6s  failed        %s' %
-                  (get_stage(port), get_name(port)), columns)
+                  (get_stage(port)[:6], get_name(port)), columns)
 
 
 class Statistics(object):
@@ -542,7 +544,7 @@ class Statistics(object):
     #self.__config = target.config_builder.stats()
     self.__fetch = target.fetch_builder.stats()
     self.__build = target.build_builder.stats()
-    self.__install = target.install_builder.stats()
+    self.__install = [i[0] + i[1] for i in zip(target.install_builder.stats(), target.pkginstall_builder.stats())]
     self.__queues = self.__get_queues()
 
     check = sum(self.__fetch, [])
