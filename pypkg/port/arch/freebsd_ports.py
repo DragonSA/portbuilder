@@ -64,9 +64,10 @@ ports_attr = {
 
 # Sundry information
 "depends":     ["_DEPEND_DIRS",   tuple], # The ports dependants
+"interactive": ["IS_INTERACTIVE", bool],  # The port is interactive
 "makefiles":   [".MAKEFILE_LIST", tuple], # The makefiles included
 "optionsfile": ["OPTIONSFILE",    str],   # The options file
-"interactive": ["IS_INTERACTIVE", bool],   # The port is interactive
+"pkgdir":      ["PACKAGES",       str],   # The package directory
 "wrkdir":      ["WRKDIR",         str],   # The ports working directory
 } #: The attributes of the given port
 
@@ -88,7 +89,7 @@ ports_attr["makefiles"].append(lambda x: [i for i in x if i != '..'])
 
 del strip_depends
 
-def get_status(origin, attr, cache=dict(), lock=Lock("GetStatus")):
+def get_status(origin, attr, changed=False, cache=dict(), lock=Lock("GetStatus")):
   """
      Get the current status of a port.  A port is either ABSENT, OLDER, CURRENT
      or NEWER.
@@ -97,6 +98,8 @@ def get_status(origin, attr, cache=dict(), lock=Lock("GetStatus")):
      @type origin: C{str}
      @param attr: The attributes of the port
      @type attr: C{\{str:str|(str)|\}}
+     @param changed: Hint that a port has changed (i.e. invalidate cache)
+     @type changed: C{bool}
      @param cache: The cache of ports installed
      @type cache: C{\{str:[str]|str|int\}}
      @param lock: The lock for the cache
@@ -112,9 +115,18 @@ def get_status(origin, attr, cache=dict(), lock=Lock("GetStatus")):
   pkg = "/var/db/pkg"  #: The path to the pkg database
   with lock:
     # If the cached pkg list is old or non-existant update it
-    if not cache.has_key('mtime') or path.getmtime(pkg) != cache['mtime']:
-      cache['mtime'] = path.getmtime(pkg)
-      cache['listdir'] = listdir(pkg)
+    if changed or not cache.has_key('mtime') or path.getmtime(pkg) != cache['mtime']:
+      count = 5
+      while True:
+        try:
+          cache['mtime'] = path.getmtime(pkg)
+          cache['listdir'] = listdir(pkg)
+          break
+        except OSError:
+          # May happen on occation, retry
+          count -= 1
+          if not count:
+            raise
 
   status = Port.ABSENT  #: Default status of the port
   name = attr['pkgname'].rsplit('-', 1)[0]  #: The ports name
