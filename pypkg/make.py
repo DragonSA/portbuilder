@@ -37,7 +37,7 @@ def cmdtostr(args):
     argstr.append(i.replace("\\", "\\\\").replace('"', '\\"').\
                     replace("'", "\\'").replace('\n', '\\\n'))
     if ' ' in i or '\t' in i or '\n' in i:
-      argstr[-1] = '"%s"' & argstr[-1]
+      argstr[-1] = '"%s"' % argstr[-1]
   return ' '.join(argstr)
 
 def get_pipe(pipe, origin):
