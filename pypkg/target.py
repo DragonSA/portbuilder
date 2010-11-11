@@ -176,6 +176,9 @@ class StageBuilder(object):
     assert self.__building.has_key(port)
 
     with self.__lock:
+      if port in self.__queues[StageBuilder.ACTIVE]:
+        self.__log.error("Port '%s' already in active queue" % port.origin())
+        return
       self.__queues[StageBuilder.QUEUED].remove(port)
       self.__queues[StageBuilder.ACTIVE].append(port)
 
