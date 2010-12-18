@@ -30,7 +30,6 @@ ports_attr = {
 "suffix":  ["PKGNAMESUFFIX", str], # The port's package suffix
 
 # Port's dependancies and conflicts
-"conflicts":      ["CONFLICTS",       tuple], # The port's conflictions
 "depends":        ["_DEPEND_DIRS",    tuple], # The port's dependency list
 "depend_build":   ["BUILD_DEPENDS",   tuple], # The port's build dependancies
 "depend_extract": ["EXTRACT_DEPENDS", tuple], # The port's extract dependancies
@@ -59,11 +58,10 @@ ports_attr = {
 "jobs_number":  ["MAKE_JOBS_NUMBER",  str],  # Number of make jobs requested
 
 # Various restrictions
-"conflict":   ["CONFLICTS",  tuple], # Ports this one conflicts with
+"conflict":   ["CONFLICTS",  tuple],  # Ports this one conflicts with
 "no_package": ["NO_PACKAGE", bool],   # Packages distribution restricted
 
 # Sundry information
-"depends":     ["_DEPEND_DIRS",   tuple], # The ports dependants
 "interactive": ["IS_INTERACTIVE", bool],  # The port is interactive
 "makefiles":   [".MAKEFILE_LIST", tuple], # The makefiles included
 "optionsfile": ["OPTIONSFILE",    str],   # The options file
