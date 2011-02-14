@@ -121,7 +121,13 @@ def status(port, changed=False, cache=dict()):
         pstatus = max(pstatus, cmp_status(port.attr['pkgname'], i))
   return pstatus
 
-def attr(origin, callback):
+def attr(origin, callback, reget=False):
+  from ..job import AttrJob
+  from .. import attr_queue
+
+  attr_queue.add(AttrJob(origin, callback, reget))
+
+def attr_stage1(origin, callback):
   """Retrieves the attributes for a given port."""
   from ..make import make_target
 
@@ -161,9 +167,9 @@ def attr_stage2(make, origin, callback):
         #                                                (name, attr_map[name]))
         # Rather fail here than mysteriously later
         #raise
-        callback(origin, None)
+        callback(None)
 
-  callback(origin, attr_map)
+  callback(attr_map)
 
 def cmp_status(old, new):
   """Compare two package names and indicates the difference."""
