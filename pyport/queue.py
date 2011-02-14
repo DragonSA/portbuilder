@@ -44,7 +44,7 @@ class QueueManager(object):
     stalled = []
     for queue in (self.stalled, self.queue):
       while self.active_load < self.load and len(queue):
-        job = self._find_job(self.load - self.active, queue)
+        job = self._find_job(self.load - self.active_load, queue)
         try:
           self.active_load += job.load
           self.active.append(job)

@@ -32,7 +32,7 @@ class EventManager(object):
       try:
         func(*args, **kwargs)
       except BaseException:
-        pass
+        raise
 
 _manager = EventManager()
 
