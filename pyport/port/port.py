@@ -68,11 +68,15 @@ class Port(object):
 
   def __init__(self, origin, attr):
     """Itialise the port with the required information."""
+    from os.path import join
     from ..signal import Signal
     from .mk import status
     from .dependhandler import Dependant
 
+    LOG_DIR="/tmp/pypkg"
+
     self.attr = attr
+    self.log_file = join(LOG_DIR, attr["uniquename"])
     self.failed = False
     self.load = 1
     self.origin = origin
@@ -114,16 +118,36 @@ class Port(object):
 
   def _pre_config(self):
     """Configure the ports options."""
-    self._make_target("config", pipe=False)
+    if len(self.attr["option"]):
+      self._make_target("config", pipe=False)
+    else:
+      from .dependhandler import Dependancy
+      self.dependancy = Dependancy(self)
 
   def _post_config(self, _make, status):
     """Refetch attr data if ports were configured successfully."""
     if status:
       from .mk import attr
 
-      self.attr = attr(self.origin)
-      # TODO: load dependancy
+      attr(self.origin, self._load_attr)
+      return None
     return status
+
+  def _load_attr(self, _origin, attr):
+    """Load the attributes for this port."""
+    from os.path import join
+    from .dependhandler import Dependancy
+
+    if attr is None:
+      self._finalise(self.stage, False)
+      return
+    self.attr = attr
+    LOG_DIR="/tmp/pypkg"
+    self.log_file = join(LOG_DIR, attr["uniquename"])
+    self.dependancy = Dependancy(self)
+
+  def dependancy_loaded(self, status):
+    self._finalise(self.stage, status)
 
   def _pre_checksum(self):
     """Check if distfiles are available."""
