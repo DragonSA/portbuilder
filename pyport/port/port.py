@@ -14,8 +14,37 @@ __all__ = ["Port"]
 # - build
 # - install
 
+class Lock(object):
+  """A simple Uniprocessor lock."""
+
+  def __init__(self):
+    """Initialise lock."""
+    self._locked = False
+
+  def acquire(self):
+    """Acquire lock."""
+    if self._locked:
+      return False
+    self._locked = True
+    return True
+
+  def release(self):
+    """Release lock."""
+    assert self._locked
+    self._locked = False
+
+  @contextmanager
+  def lock(self):
+    """Create a context manager for a lock."""
+    self.acquire()
+    try:
+      yield
+    finally:
+      self.release()
+
 class FileLock(object):
   """A file lock, excludes accessing the same files from different ports."""
+
   def __init__(self):
     """Initialise the locks and database of files."""
     self._files = set()
@@ -60,6 +89,7 @@ class Port(object):
   INSTALL    = 5
   PKGINSTALL = 6
 
+  _config_lock = Lock()
   _checksum_lock = FileLock()
   _fetch_lock = FileLock()
   _bad_checksum = set()
@@ -89,9 +119,6 @@ class Port(object):
 
     self.dependancy = None
     self.dependant = Dependant(self)
-
-    #if not len(self.attr['option']):
-      #self.stage = Port.CONFIG
 
   def clean(self):
     """Clean the ports working directory any log file."""
@@ -123,12 +150,16 @@ class Port(object):
   def _pre_config(self):
     """Configure the ports options."""
     if len(self.attr["options"]):
+      if not self._config_lock.acquire():
+        from ..job import StalledJob
+        raise StalledJob()
       self._make_target("config", pipe=False)
     else:
       self._load_dependancy()
 
   def _post_config(self, _make, status):
     """Refetch attr data if ports were configured successfully."""
+    self._config_lock.release()
     if status:
       from .mk import attr
 
