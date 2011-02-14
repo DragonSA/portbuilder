@@ -121,8 +121,7 @@ class Port(object):
     if len(self.attr["option"]):
       self._make_target("config", pipe=False)
     else:
-      from .dependhandler import Dependancy
-      self.dependancy = Dependancy(self)
+      self._load_dependancy()
 
   def _post_config(self, _make, status):
     """Refetch attr data if ports were configured successfully."""
@@ -136,15 +135,23 @@ class Port(object):
   def _load_attr(self, _origin, attr):
     """Load the attributes for this port."""
     from os.path import join
-    from .dependhandler import Dependancy
 
     if attr is None:
       self._finalise(self.stage, False)
       return
-    self.attr = attr
-    LOG_DIR = "/tmp/pypkg"
-    self.log_file = join(LOG_DIR, attr["uniquename"])
-    self.dependancy = Dependancy(self)
+    else:
+      self.attr = attr
+      LOG_DIR = "/tmp/pypkg"
+      self.log_file = join(LOG_DIR, attr["uniquename"])
+      self._load_dependancy()
+
+  def _load_dependancy(self):
+    """Create a dependancy object for this port."""
+    from .dependhandler import Dependancy
+
+    depends = ('depend_build', 'depend_extract', 'depend_fetch', 'depend_lib',
+               'depend_run', 'depend_patch')
+    self.dependancy = Dependancy(self, [self.attr(i) for i in depends])
 
   def dependancy_loaded(self, status):
     """Informs port that dependancy loading has completed."""
@@ -227,7 +234,9 @@ class Port(object):
   def _post_install(self, _make, status):
     """Update the install status."""
     if status:
-      self.install_status = Port.CURRENT
+      from .mk import status
+
+      self.install_status = status(port, True)
     else:
       # TODO???
       self.install_status = Port.ABSENT
