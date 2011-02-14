@@ -1,3 +1,6 @@
+"""Modelling of FreeBSD ports."""
+
+from contextlib import contextmanager
 
 __all__ = ["Port"]
 
@@ -20,7 +23,7 @@ class FileLock(object):
   def acquire(self, files):
     """Acquire a lock for the given files."""
     if not self._files.isdisjoint(files):
-        return False
+      return False
     self._files.update(files)
     return True
 
@@ -78,7 +81,7 @@ class Port(object):
 
     self.stage = Port.ZERO
     self.stage_completed = Signal()
-    self.install_status = status(origin, self.atttr)
+    self.install_status = status(origin, self.attr)
 
     self.dependancy = None
     self.dependant = Dependant(self)
@@ -113,10 +116,10 @@ class Port(object):
     """Configure the ports options."""
     self._make_target("config", pipe=False)
 
-  def _post_config(self, make, status):
+  def _post_config(self, _make, status):
     """Refetch attr data if ports were configured successfully."""
     if status:
-      from .arch import attr
+      from .mk import attr
 
       self.attr = attr(self.origin)
       # TODO: load dependancy
@@ -143,7 +146,7 @@ class Port(object):
     else:
       self._make_target("checksum", BATCH=True, FETCH_REGET=0)
 
-  def _post_checksum(self, make, status):
+  def _post_checksum(self, _make, status):
     """Advance to build stage if checksum passed."""
     distfiles = self.attr("distfiles")
     self._fetch_lock.release(distfiles)
@@ -166,7 +169,7 @@ class Port(object):
     else:
       self._make_target("checksum", BATCH=True)
 
-  def _post_fetch(self, make, status):
+  def _post_fetch(self, _make, status):
     """Register fetched files if fetch succeeded."""
     distfiles = self.attr("distfiles")
     self._fetch_lock.release(distfiles)
@@ -183,7 +186,8 @@ class Port(object):
     # TODO: interactive port
     self._make_target(["clean","all"], BATCH=True, NOCLEANDEPENDS=True)
 
-  def _post_build(self, make, status):
+  def _post_build(self, _make, status):
+    """Indicate build status."""
     return status
 
   def _pre_install(self):
@@ -195,7 +199,7 @@ class Port(object):
     # TODO: package
     self._make_target(target)
 
-  def _post_install(self, make, status):
+  def _post_install(self, _make, status):
     """Update the install status."""
     if status:
       self.install_status = Port.CURRENT
@@ -204,11 +208,11 @@ class Port(object):
       self.install_status = Port.ABSENT
     return status
 
-  def _make_target(self, targets):
+  def _make_target(self, targets, **kwargs):
     """Build the requested targets."""
     from ..make import make_target
 
-    make_target(self._make, self.origin, targets)
+    make_target(self._make, self.origin, targets, **kwargs)
 
   def _make(self, make):
     """Call the _post_[stage] function and finalise the stage."""
@@ -216,9 +220,10 @@ class Port(object):
 
     post_map = (self._post_config, self._post_checksum, self._post_fetch,
                 self._post_build, self._post_install)
+    stage = self.stage
     status = post_map[stage](make, make.wait() is SUCCESS)
     if status is not None:
-      self._finalise(self.stage, status)
+      self._finalise(stage, status)
 
   def _finalise(self, stage, status):
     """Finalise the stage."""
