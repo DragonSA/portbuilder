@@ -132,7 +132,7 @@ class Port(object):
     if status:
       from .mk import attr
 
-      attr(self.origin, self._load_attr)
+      attr(self.origin, self._load_attr, True)
       return None
     return status
 
