@@ -48,6 +48,23 @@ class Job(Signal):
     This method should be subclassed so as to do something useful."""
     pass
 
+class AttrJob(Job):
+  """A port attributes job."""
+
+  def __init__(self, origin, callback, reget):
+    Job.__init__(self, 2 if reget else 1)
+    self.origin = origin
+    self.callback = callback
+
+  def work(self):
+    """Fetch a ports attributes."""
+    from .port.mk import attr_stage1 as attr
+    attr(self.origin, self._attr)
+
+  def _attr(self, attr):
+    self.callback(self.origin, attr)
+    self._done()
+
 class PortJob(Job):
   """A port stage job.  Runs a port stage."""
 
