@@ -16,9 +16,12 @@ class PortCache(object):
       from ..event import post_event
       post_event(callback, self._ports[origin])
     else:
-      from .mk import attr
-      self._waiters.setdefault(origin, []).append(callback)
-      attr(origin, self._attr)
+      if origin in self._waiters:
+        self._waiters[origin].append(callback)
+      else:
+        from .mk import attr
+        self._waiters[origin] = [callback]
+        attr(origin, self._attr)
 
   def _attr(self, origin, attr):
     """Use attr to create a port."""
