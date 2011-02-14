@@ -1,7 +1,7 @@
 """Event management utilities.
 
 Provides a framework for calling functions asynchroniously."""
-__all__ = ["post_event", "run"]
+__all__ = ["pending_events", "post_event", "run"]
 
 class EventManager(object):
   """Handles Events that need to be called asynchroniously."""
@@ -13,6 +13,9 @@ class EventManager(object):
     from collections import deque
 
     self._events = deque()
+
+  def __len__(self):
+    return len(self._events)
 
   def post_event(self, func, *args, **kwargs):
     """Add an event to be called asynchroniously."""
@@ -33,5 +36,6 @@ class EventManager(object):
 
 _manager = EventManager()
 
+pending_events = _manager.__len__
 post_event = _manager.post_event
 run = _manager.run
