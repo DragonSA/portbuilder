@@ -13,6 +13,9 @@ class QueueManager(object):
     self.stalled = []
     self.active_load = 0
 
+  def __len__(self):
+    return len(self.queue) + len(self.active) + len(self.stalled)
+
   def add(self, job):
     """Add a job to be run."""
     assert(job not in self.queue)
