@@ -24,12 +24,14 @@ class ChildrenMonitor(object):
 
   def _signal(self, _signum, _frame):
     """Handle a signal from child process."""
-    from os import wait
+    from os import waitpid, WNOHANG
     from .event import post_event
 
     try:
       while True:
-        pid, status = wait()
+        pid, status = waitpid(-1, WNOHANG)
+        if not pid:
+          break
 
         if status & 0xff:
           # If low byte set then process exited due to signal
