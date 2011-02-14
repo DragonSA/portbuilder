@@ -66,7 +66,7 @@ class Port(object):
   def __init__(self, origin, attr):
     """Itialise the port with the required information."""
     from ..signal import Signal
-    from .arch import status
+    from .mk import status
     from .dependhandler import Dependant
 
     self.attr = attr
@@ -83,8 +83,8 @@ class Port(object):
     self.dependancy = None
     self.dependant = Dependant(self)
 
-    if not len(self.attr['option']):
-      self.stage = Port.CONFIG
+    #if not len(self.attr['option']):
+      #self.stage = Port.CONFIG
 
   def clean(self):
     """Clean the ports working directory any log file."""
@@ -94,6 +94,9 @@ class Port(object):
     """Build the requested stage."""
     from time import time
     from ..job import StalledJob
+
+    pre_map = (self._pre_config, self._pre_checksum, self._pre_fetch,
+                self._pre_build, self._pre_install)
 
     if self.working or self.stage != stage - 1 or self.failed:
       return False
