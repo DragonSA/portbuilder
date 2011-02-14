@@ -2,7 +2,6 @@
 __all__ = ["Port"]
 
 # TODO:
-# Fetch lock
 # No_opt
 # Non-privleged mode
 
@@ -12,8 +11,8 @@ __all__ = ["Port"]
 # - build
 # - install
 
-class FetchLock(object):
-  """A fetch lock, excludes fetching the same files from different ports."""
+class FileLock(object):
+  """A file lock, excludes accessing the same files from different ports."""
   def __init__(self):
     """Initialise the locks and database of files."""
     self._files = set()
@@ -58,7 +57,8 @@ class Port(object):
   INSTALL  = 4
   PKGINSTALL = 5
 
-  _fetch_lock = FetchLock()
+  _checksum_lock = FileLock()
+  _fetch_lock = FileLock()
   _bad_checksum = set()
   _fetched = set()
   _fetch_failed = set()
@@ -121,29 +121,45 @@ class Port(object):
 
   def _pre_checksum(self):
     """Check if distfiles are available."""
-    # TODO: Check if all files exist, if so run
-    # if files_exist() and not cache_hit()
-    # make_target(self._make, self.origin, 'checksum', FETCH_REGET=0)
-    # return
-    # else
-    return True
+    from os.path import join, isfile
+
+    distfiles = self.attr("distfiles")
+    if self._fetched.issuperset(distfiles):
+      self.stage = Port.FETCH
+      return True
+    if not self._bad_checksum.isdisjoint(distfiles):
+      return True
+    distdir = self.attr("distdir")
+    for i in distfiles:
+      if not isfile(join(distdir, i)):
+        self._bad_checksum.add(i)
+        return True
+    if not self._checksum_lock.acquire(distfiles):
+      from ..job import StalledJob
+      raise StalledJob()
+    else:
+      self._make_target("checksum", FETCH_REGET=0)
 
   def _post_checksum(self, make, status):
     """Advance to build stage if checksum passed."""
+    distfiles = self.attr("distfiles")
+    self._fetch_lock.release(distfiles)
     if status:
       self.stage = Port.FETCH
+    else:
+      self._bad_checksum.update(distfiles)
     return True
 
   def _pre_fetch(self):
     """Fetch the ports files."""
     distfiles = self.attr("distfiles")
+    if self._fetched.issuperset(distfiles):
+      return True
     if self._fetch_failed.issuperset(distfiles):
       return False
     if not self._fetch_lock.acquire(distfiles):
       from ..job import StalledJob
       raise StalledJob()
-    if self._fetched.issuperset(distfiles):
-      return True
     else:
       self._make_target("checksum")
 
@@ -155,6 +171,7 @@ class Port(object):
       self._bad_checksum.difference_update(distfiles)
       self._fetched.update(distfiles)
     else:
+      self._bad_checksum.update(distfiles)
       self._fetch_failed.update(distfiles)
     return status
 
