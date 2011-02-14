@@ -108,7 +108,7 @@ class Port(object):
 
   def _pre_config(self):
     """Configure the ports options."""
-    self._make_target("config")
+    self._make_target("config", pipe=False)
 
   def _post_config(self, make, status):
     """Refetch attr data if ports were configured successfully."""
@@ -138,7 +138,7 @@ class Port(object):
       from ..job import StalledJob
       raise StalledJob()
     else:
-      self._make_target("checksum", FETCH_REGET=0)
+      self._make_target("checksum", BATCH=True, FETCH_REGET=0)
 
   def _post_checksum(self, make, status):
     """Advance to build stage if checksum passed."""
@@ -161,7 +161,7 @@ class Port(object):
       from ..job import StalledJob
       raise StalledJob()
     else:
-      self._make_target("checksum")
+      self._make_target("checksum", BATCH=True)
 
   def _post_fetch(self, make, status):
     """Register fetched files if fetch succeeded."""
@@ -178,7 +178,7 @@ class Port(object):
   def _pre_build(self):
     """Build the port."""
     # TODO: interactive port
-    self._make_target(["clean","all"])
+    self._make_target(["clean","all"], BATCH=True, NOCLEANDEPENDS=True)
 
   def _post_build(self, make, status):
     return status
@@ -213,11 +213,13 @@ class Port(object):
 
     post_map = (self._post_config, self._post_checksum, self._post_fetch,
                 self._post_build, self._post_install)
-    self._finalise(self.stage, post_map[stage](make, make.wait() is SUCCESS))
+    status = post_map[stage](make, make.wait() is SUCCESS)
+    if status is not None:
+      self._finalise(self.stage, status)
 
   def _finalise(self, stage, status):
     """Finalise the stage."""
-    if status:
+    if not status:
       self.failed = True
     self.working = False
     self.stage = max(stage + 1, self.stage)
