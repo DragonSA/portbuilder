@@ -52,13 +52,13 @@ class Port(object):
   NEWER   = 3
 
   # Build stage status flags
-  ZERO     = 0
-  CONFIG   = 1
-  CHECKSUM = 2
-  FETCH    = 2
-  BUILD    = 3
-  INSTALL  = 4
-  PKGINSTALL = 5
+  ZERO       = 0
+  CONFIG     = 1
+  CHECKSUM   = 2
+  FETCH      = 3
+  BUILD      = 4
+  INSTALL    = 5
+  PKGINSTALL = 6
 
   _checksum_lock = FileLock()
   _fetch_lock = FileLock()
@@ -85,7 +85,7 @@ class Port(object):
 
     self.stage = Port.ZERO
     self.stage_completed = Signal()
-    self.install_status = status(origin, self.attr)
+    self.install_status = status(self)
 
     self.dependancy = None
     self.dependant = Dependant(self)
@@ -107,6 +107,8 @@ class Port(object):
 
     if self.working or self.stage != stage - 1 or self.failed:
       return False
+    if self.stage >= Port.CONFIG and not self.dependancy.check(stage):
+      return False
 
     self.working = time()
     try:
@@ -115,10 +117,12 @@ class Port(object):
         self._finalise(stage - 1, status)
     except StalledJob:
       self.working = False
+      raise
+    return True
 
   def _pre_config(self):
     """Configure the ports options."""
-    if len(self.attr["option"]):
+    if len(self.attr["options"]):
       self._make_target("config", pipe=False)
     else:
       self._load_dependancy()
@@ -151,7 +155,7 @@ class Port(object):
 
     depends = ('depend_build', 'depend_extract', 'depend_fetch', 'depend_lib',
                'depend_run', 'depend_patch')
-    self.dependancy = Dependancy(self, [self.attr(i) for i in depends])
+    self.dependancy = Dependancy(self, [self.attr[i] for i in depends])
 
   def dependancy_loaded(self, status):
     """Informs port that dependancy loading has completed."""
@@ -161,13 +165,13 @@ class Port(object):
     """Check if distfiles are available."""
     from os.path import join, isfile
 
-    distfiles = self.attr("distfiles")
+    distfiles = self.attr["distfiles"]
     if self._fetched.issuperset(distfiles):
       self.stage = Port.FETCH
       return True
     if not self._bad_checksum.isdisjoint(distfiles):
       return True
-    distdir = self.attr("distdir")
+    distdir = self.attr["distdir"]
     for i in distfiles:
       if not isfile(join(distdir, i)):
         self._bad_checksum.add(i)
@@ -180,8 +184,8 @@ class Port(object):
 
   def _post_checksum(self, _make, status):
     """Advance to build stage if checksum passed."""
-    distfiles = self.attr("distfiles")
-    self._fetch_lock.release(distfiles)
+    distfiles = self.attr["distfiles"]
+    self._checksum_lock.release(distfiles)
     if status:
       self.stage = Port.FETCH
     else:
@@ -190,7 +194,7 @@ class Port(object):
 
   def _pre_fetch(self):
     """Fetch the ports files."""
-    distfiles = self.attr("distfiles")
+    distfiles = self.attr["distfiles"]
     if self._fetched.issuperset(distfiles):
       return True
     if self._fetch_failed.issuperset(distfiles):
@@ -203,7 +207,7 @@ class Port(object):
 
   def _post_fetch(self, _make, status):
     """Register fetched files if fetch succeeded."""
-    distfiles = self.attr("distfiles")
+    distfiles = self.attr["distfiles"]
     self._fetch_lock.release(distfiles)
     if status:
       self._bad_checksum.difference_update(distfiles)
@@ -246,7 +250,7 @@ class Port(object):
     """Build the requested targets."""
     from ..make import make_target
 
-    make_target(self._make, self.origin, targets, **kwargs)
+    make_target(self._make, self, targets, **kwargs)
 
   def _make(self, make):
     """Call the _post_[stage] function and finalise the stage."""
@@ -265,4 +269,4 @@ class Port(object):
       self.failed = True
     self.working = False
     self.stage = max(stage + 1, self.stage)
-    self.stage_completed(stage + 1)
+    self.stage_completed(self)
