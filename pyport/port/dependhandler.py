@@ -15,11 +15,12 @@ class DependHandler(object):
   PATCH   = 5  #: Patch dependants
 
   STAGE2DEPENDS = {
-    Port.CONFIG:  (),                           # The config dependancies
-    Port.FETCH:   (FETCH,),                     # The fetch dependancies
-    Port.BUILD:   (EXTRACT, PATCH, LIB, BUILD), # The build dependancies
-    Port.INSTALL: (LIB, RUN),                   # The install dependancies
-    Port.PKGINSTALL: (LIB, RUN),                # The pkginstall dependencies
+    Port.CONFIG:     (),                           # The config dependancies
+    Port.CHECKSUM:   (),                           # The checksum dependancies
+    Port.FETCH:      (FETCH,),                     # The fetch dependancies
+    Port.BUILD:      (EXTRACT, PATCH, LIB, BUILD), # The build dependancies
+    Port.INSTALL:    (LIB, RUN),                   # The install dependancies
+    Port.PKGINSTALL: (LIB, RUN),                   # The pkginstall dependencies
   } #: The dependancies for a given stage
 
 class Dependant(DependHandler):
@@ -141,28 +142,28 @@ class Dependancy(DependHandler):
       for j in depends[i]:
         self._loading += 1
         get_port(j[1], lambda x: self._add(x, j[0], i))
+    if not self._loading:
+      self.port.dependancy_loaded(False)
 
   def _add(self, port, field, typ):
     """Add a port to our dependancy list."""
     self._loading -= 1
 
     if port is not None:
+      status = port.dependant.status
       if port not in self._dependancies[typ]:
         self._dependancies[typ].append(port)
         port.dependant.add(field, self.port, typ)
 
-        status = port.dependant.status
         if status != Dependant.RESOLV:
           self._count += 1
-      else:
-        port = None
 
     if port is None or status == Dependant.FAILURE:
       self.failed = True
-      if not self.port.dependant.failed():
+      if not self.port.dependant.failed:
         self.port.dependant.status_changed()
     if self._loading == 0:
-      self.port.dependancy_loaded()
+      self.port.dependancy_loaded(not self.failed)
 
   def get(self, typ=None):
     """Retrieve a list of dependancies."""
@@ -182,7 +183,7 @@ class Dependancy(DependHandler):
     # DependHandler status might change without Port's changing
     for i in Dependancy.STAGE2DEPENDS[stage]:
       for j in self._dependancies[i]:
-        status = j.dependant().status()
+        status = j.dependant.status
         if status != Dependant.RESOLV:
           return False
     return True
