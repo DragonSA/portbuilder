@@ -1,5 +1,7 @@
 """Monitor subprocesses for completion (via signal(3))"""
 
+from __future__ import absolute_import
+
 __all__ = ["active_popen", "add_popen"]
 
 class ChildrenMonitor(object):
@@ -20,7 +22,7 @@ class ChildrenMonitor(object):
     """Add a popen instance to be monitored, with callback function."""
     self._pid_map[popen.pid] = (popen, callback)
 
-  def _signal(self, signum, frame):
+  def _signal(self, _signum, _frame):
     """Handle a signal from child process."""
     from os import wait
     from .event import post_event
