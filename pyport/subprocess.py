@@ -27,15 +27,19 @@ class ChildrenMonitor(object):
     from os import wait
     from .event import post_event
 
-    pid, status = wait()
+    try:
+      while True:
+        pid, status = wait()
 
-    if status & 0xff:
-      # If low byte set then process exited due to signal
-      status = -(status & 0xff)
-    else:
-      # Else high byte contains exit status
-      status = status >> 8
-    post_event(self._process_signal, pid, status)
+        if status & 0xff:
+          # If low byte set then process exited due to signal
+          status = -(status & 0xff)
+        else:
+          # Else high byte contains exit status
+          status = status >> 8
+        post_event(self._process_signal, pid, status)
+    except OSError:
+      pass
 
   def _process_signal(self, pid, status):
     """Update the subprocess object and dispatch the callback."""
