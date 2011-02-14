@@ -236,7 +236,7 @@ class Port(object):
     if status:
       from .mk import status
 
-      self.install_status = status(port, True)
+      self.install_status = status(self, True)
     else:
       # TODO???
       self.install_status = Port.ABSENT

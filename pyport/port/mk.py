@@ -131,7 +131,7 @@ def attr(origin, callback):
     args.append('-V')
     args.append(i[0])
 
-  make_target(lambda x: attr_stage2(x, origin, callback), origin, args, pipe=True)
+  make_target(lambda x: attr_stage2(x, origin, callback), origin, args, True)
 
 def attr_stage2(make, origin, callback):
   """Parse the attributes from a port and call the requested function."""
