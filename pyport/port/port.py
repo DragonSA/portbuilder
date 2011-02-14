@@ -73,7 +73,7 @@ class Port(object):
     from .mk import status
     from .dependhandler import Dependant
 
-    LOG_DIR="/tmp/pypkg"
+    LOG_DIR = "/tmp/pypkg"
 
     self.attr = attr
     self.log_file = join(LOG_DIR, attr["uniquename"])
@@ -142,11 +142,12 @@ class Port(object):
       self._finalise(self.stage, False)
       return
     self.attr = attr
-    LOG_DIR="/tmp/pypkg"
+    LOG_DIR = "/tmp/pypkg"
     self.log_file = join(LOG_DIR, attr["uniquename"])
     self.dependancy = Dependancy(self)
 
   def dependancy_loaded(self, status):
+    """Informs port that dependancy loading has completed."""
     self._finalise(self.stage, status)
 
   def _pre_checksum(self):
