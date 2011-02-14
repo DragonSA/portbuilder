@@ -20,7 +20,7 @@ class Job(Signal):
     Higher the value of priority, the greater the precident.  Load indicates
     how many resources is required to run the job (i.e. CPUs)."""
     Signal.__init__(self)
-    if not hasattr(self, "priority"):
+    if priority is not None:
       self.priority = priority
     self.load = load
     self.__manager = None
@@ -31,10 +31,7 @@ class Job(Signal):
     The method may throw StalledJob, indicating the job should be placed on the
     stalled queue and another run in its place."""
     self.__manager = manager
-    try:
-      self.work()
-    except StalledJob:
-      self.__manager.stalled_job(self)
+    self.work()
 
   def _done(self):
     """Utility method to indicate the work has completed."""
@@ -70,7 +67,7 @@ class PortJob(Job):
 
   def __init__(self, port, stage):
     # TODO
-    Job.__init__(self, port.load)
+    Job.__init__(self, port.load, None)
     self.port = port
     self.stage = stage
     self.port.stage_completed.connect(self._stage_done)
@@ -78,8 +75,7 @@ class PortJob(Job):
   @property
   def priority(self):
     """Priority of port.  Port's priority may change without notice."""
-    # TODO
-    return self.port.priority
+    return self.port.dependant.priority
 
   def work(self):
     """Run the required port stage."""
