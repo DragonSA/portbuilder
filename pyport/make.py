@@ -1,5 +1,7 @@
 """Make targets."""
 
+from __future__ import absolute_import
+
 __all__ = ["SUCCESS", "make_target"]
 
 SUCCESS = 0
@@ -13,7 +15,7 @@ def kwargs2str(kwargs):
 
 def make_target(callback, port, targets, pipe=None, **kwargs):
   """Build a make target and call a function when finished."""
-  from os.path import make
+  from os.path import join
   from subprocess import PIPE, STDOUT, Popen
   from .subprocess import add_popen
 
