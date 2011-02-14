@@ -34,10 +34,10 @@ class Dependant(DependHandler):
   def __init__(self, port):
     """Initialise the databases of dependants."""
     DependHandler.__init__(self)
-    self._dependants   = [[], [], [], [], [], []]  #: All dependants
+    self._dependants = [[], [], [], [], [], []]  #: All dependants
     self.port = port  #: The port whom we handle
+    self.priority = port.priority
     # TODO: Change to actually check if we are resolved
-    # Port._install depends on install_status having been called here
     if port.install_status > Port.ABSENT:
       self.status = Dependant.RESOLV
     else:
@@ -56,15 +56,17 @@ class Dependant(DependHandler):
   def get(self, typ=None):
     """Retrieve a list of dependants."""
     if typ is None:
-      depends = self._dependants
+      depends = set()
+      for i in self._dependants:
+        depends.update(j[1] for j in i)
     elif isinstance(typ, int):
-      depends = [self._dependants[typ]]
+      depends = set(j[1] for j in self._dependants[typ])
     else:
-      depends = []
+      depends = set()
       for i in typ:
-        depends.append(self._dependants[i])
+        depends.update(j[1] for j in self._dependants[i])
 
-    return tuple(set([i[1] for i in sum(depends, [])]))
+    return depends
 
   @property
   def failed(self):
@@ -143,7 +145,8 @@ class Dependancy(DependHandler):
         self._loading += 1
         get_port(j[1], lambda x: self._add(x, j[0], i))
     if not self._loading:
-      self.port.dependancy_loaded(False)
+      self._update_priority()
+      self.port.dependancy_loaded(True)
 
   def _add(self, port, field, typ):
     """Add a port to our dependancy list."""
@@ -159,24 +162,28 @@ class Dependancy(DependHandler):
           self._count += 1
 
     if port is None or status == Dependant.FAILURE:
+      from sys import stderr
       self.failed = True
       if not self.port.dependant.failed:
         self.port.dependant.status_changed()
     if self._loading == 0:
+      self._update_priority()
       self.port.dependancy_loaded(not self.failed)
 
   def get(self, typ=None):
     """Retrieve a list of dependancies."""
     if typ is None:
-      depends = self._dependancies
+      depends = set()
+      for i in self._dependancies:
+        depends.update(i)
     elif isinstance(typ, int):
-      depends = [self._dependancies[typ]]
+      depends = set(self._dependancies[typ])
     else:
-      depends = []
+      depends = set()
       for i in typ:
-        depends.append(self._dependancies[i])
+        depends.update(self._dependancies[i])
 
-    return tuple(set(sum(depends, [])))
+    return depends
 
   def check(self, stage):
     """Check the dependancy status for a given stage."""
@@ -211,3 +218,19 @@ class Dependancy(DependHandler):
       for i in self.get():
         if i.dependant.status != Dependant.RESOLV:
           self._count += 1
+
+  def _update_priority(self):
+    """Update the priority of all ports that are affected by this port,"""
+    from collections import deque
+
+    update_list = deque()
+    updated = set()
+    update_list.extend(self.get())
+    priority = self.port.dependant.priority
+    while len(update_list):
+      port = update_list.popleft()
+      if port not in updated:
+        port.dependant.priority += priority
+        if port.dependancy is not None:
+          update_list.extend(port.dependancy.get())
+        updated.add(port)
