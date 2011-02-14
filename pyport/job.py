@@ -66,10 +66,11 @@ class PortJob(Job):
 
   def work(self):
     """Run the required port stage."""
-    self.port.stage(self.stage)
+    if self.port.build_stage(self.stage) is False:
+      self._stage_done(self.stage)
 
   def _stage_done(self, stage):
     """Handle the completion of a port stage."""
-    if stage == self.stage:
+    if stage >= self.stage:
       self._done()
       self.port.stage_completed.disconnect(self._stage_done)
