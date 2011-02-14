@@ -6,6 +6,40 @@ __all__ = ["Port"]
 # No_opt
 # Non-privleged mode
 
+# - config
+# - checksum
+# * fetch
+# - build
+# - install
+
+class FetchLock(object):
+  """A fetch lock, excludes fetching the same files from different ports."""
+  def __init__(self):
+    """Initialise the locks and database of files."""
+    self._files = set()
+
+  def acquire(self, files):
+    """Acquire a lock for the given files."""
+    if not self._files.isdisjoint(files):
+        return False
+    self._files.update(files)
+    return True
+
+  def release(self, files):
+    """Release a lock fir the given files."""
+    assert self._files.issuperset(files)
+
+    self._files.symmetric_difference_update(files)
+
+  @contextmanager
+  def lock(self, files):
+    """Create a context manager for a lock of the given files."""
+    self.acquire(files)
+    try:
+      yield
+    finally:
+      self.release(files)
+
 class Port(object):
   """A FreeBSD port class."""
 
@@ -23,6 +57,11 @@ class Port(object):
   BUILD    = 3
   INSTALL  = 4
   PKGINSTALL = 5
+
+  _fetch_lock = FetchLock()
+  _bad_checksum = set()
+  _fetched = set()
+  _fetch_failed = set()
 
   def __init__(self, origin, attr):
     """Itialise the port with the required information."""
@@ -97,11 +136,26 @@ class Port(object):
 
   def _pre_fetch(self):
     """Fetch the ports files."""
-    self._make_target("checksum")
+    distfiles = self.attr("distfiles")
+    if self._fetch_failed.issuperset(distfiles):
+      return False
+    if not self._fetch_lock.acquire(distfiles):
+      from ..job import StalledJob
+      raise StalledJob()
+    if self._fetched.issuperset(distfiles):
+      return True
+    else:
+      self._make_target("checksum")
 
-  def _post_fetch(self, make):
+  def _post_fetch(self, make, status):
     """Register fetched files if fetch succeeded."""
-    # TODO
+    distfiles = self.attr("distfiles")
+    self._fetch_lock.release(distfiles)
+    if status:
+      self._bad_checksum.difference_update(distfiles)
+      self._fetched.update(distfiles)
+    else:
+      self._fetch_failed.update(distfiles)
     return status
 
   def _pre_build(self):
