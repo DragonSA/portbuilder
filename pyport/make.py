@@ -19,13 +19,19 @@ def make_target(callback, port, targets, pipe=None, **kwargs):
   from subprocess import PIPE, STDOUT, Popen
   from .subprocess import add_popen
 
+  if type(port) is str:
+    assert pipe is True
+    origin = port
+  else:
+    origin = port.origin
+
   if type(targets) is str:
     targets = (targets,)
   if type(targets) != tuple:
     targets = tuple(targets)
 
   PORTSDIR = "/usr/ports"
-  args = ("make", "-C", join(PORTSDIR, port.origin)) + targets
+  args = ("make", "-C", join(PORTSDIR, origin)) + targets
   args += tuple(kwargs2str(kwargs))
 
   if pipe is True:
