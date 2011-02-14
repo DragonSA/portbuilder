@@ -11,9 +11,9 @@ ports_attr = {
 "uniquename": ["UNIQUENAME", str], # The port's unique name
 
 # Port's package naming
-"pkgname": ["PKGNAME",       str], # The port's package name
-"prefix":  ["PKGNAMEPREFIX", str], # The port's package prefix
-"suffix":  ["PKGNAMESUFFIX", str], # The port's package suffix
+"pkgname":   ["PKGNAME",       str], # The port's package name
+"pkgprefix": ["PKGNAMEPREFIX", str], # The port's package prefix
+"pkgsuffix": ["PKGNAMESUFFIX", str], # The port's package suffix
 
 # Port's dependancies and conflicts
 "depends":        ["_DEPEND_DIRS",    tuple], # The port's dependency list
@@ -56,13 +56,14 @@ ports_attr = {
 } #: The attributes of the given port
 
 # The following are 'fixes' for various attributes
-ports_attr["depends"].append(lambda x: [i[len(env["PORTSDIR"]) + 1:] for i in x])
+PORTSDIR = "/usr/ports"
+ports_attr["depends"].append(lambda x: [i[len(PORTSDIR) + 1:] for i in x])
 ports_attr["depends"].append(lambda x: ([x.remove(i) for i in x
                                          if x.count(i) > 1], x)[1])
 ports_attr["distfiles"].append(lambda x: [i.split(':', 1)[0] for i in x])
 
 strip_depends = lambda x: [(i.split(':', 1)[0].strip(),
-                  i.split(':', 1)[1][len(env["PORTSDIR"]) + 1:].strip()) for i in x]
+                  i.split(':', 1)[1][len(PORTSDIR) + 1:].strip()) for i in x]
 ports_attr["depend_build"].append(strip_depends)
 ports_attr["depend_extract"].append(strip_depends)
 ports_attr["depend_fetch"].append(strip_depends)
@@ -94,7 +95,7 @@ def status(port, changed=False, cache=dict()):
         if not count:
           raise
 
-  status = Port.ABSENT  #: Default status of the port
+  pstatus = Port.ABSENT  #: Default status of the port
   name = port.attr['pkgname'].rsplit('-', 1)[0]  #: The ports name
 
   for i in cache['listdir']:
@@ -107,12 +108,9 @@ def status(port, changed=False, cache=dict()):
           if j.startswith('@comment ORIGIN:'):
             porigin = j[16:-1].strip()
             break
-          elif j.startswith('@name '):
-            if j[6:-1].strip() != i:
-              log_status.warn("Package %s has a conflicting name: %s" %
-                                                          (i, j[6:-1].strip()))
-              porigin = None
-              break
+          elif j.startswith('@name ') and j[6:-1].strip() != i:
+            porigin = None
+            break
       except (IOError, OSError):
         # TODO
         raise
@@ -120,25 +118,12 @@ def status(port, changed=False, cache=dict()):
 
       # If the pkg has the same origin get the maximum of the install status
       if porigin == port.origin:
-        if status > Port.ABSENT:
-          # TODO
-          pass
-          #log_status.warn("Multiple ports with same origin: %s" % origin)
-        status = max(status, cmp_status(port.attr['pkgname'], i))
-      else:
-        # TODO
-        pass
-        #log_status.warn("Package has same name as %s but with " \
-        #                "different origin: %s" % (origin, i))
-  return status
+        pstatus = max(pstatus, cmp_status(port.attr['pkgname'], i))
+  return pstatus
 
 def attr(origin, callback):
   """Retrieves the attributes for a given port."""
   from ..make import make_target
-
-  # Make sure ports does not end in a trailing slash
-  if env['PORTSDIR'][-1] == '/':
-    env['PORTSDIR'] = env['PORTSDIR'][:-1]
 
   args = []  #: Arguments to be passed to the make target
   # Pass all the arguments from ports_attr table
@@ -146,7 +131,7 @@ def attr(origin, callback):
     args.append('-V')
     args.append(i[0])
 
-  make_target(lambda x: attr_stage2(x, origin, callback), pipe=True)
+  make_target(lambda x: attr_stage2(x, origin, callback), origin, args, pipe=True)
 
 def attr_stage2(make, origin, callback):
   """Parse the attributes from a port and call the requested function."""
@@ -196,14 +181,14 @@ def cmp_status(old, new):
     return Port.CURRENT
 
   # Check the ports apoch
-  old, new, status = cmp_attr(old, new, ',')
-  if status:
-    return Port.CURRENT + status
+  old, new, pstatus = cmp_attr(old, new, ',')
+  if pstatus:
+    return Port.CURRENT + pstatus
 
   # Check the ports revision
-  old, new, status = cmp_attr(old, new, '_')
-  if status:
-    return Port.CURRENT + status
+  old, new, pstatus = cmp_attr(old, new, '_')
+  if pstatus:
+    return Port.CURRENT + pstatus
 
   # Check the ports version from left to right
   old = old.split('.')
@@ -211,20 +196,20 @@ def cmp_status(old, new):
   for i in range(min(len(old), len(new))):
     # Try numirical comparison, otherwise use str
     try:
-      status = cmp(int(old[i]), int(new[i]))
+      pstatus = cmp(int(old[i]), int(new[i]))
     except ValueError:
-      status = cmp(old[i], new[i])
+      pstatus = cmp(old[i], new[i])
     # If there is a difference is leveled version
-    if status:
-      return Port.CURRENT + status
+    if pstatus:
+      return Port.CURRENT + pstatus
 
   # The difference between the number of leveled versioning
   return Port.CURRENT + cmp(len(old), len(new))
 
-def cmp_attr(old, new, attr):
+def cmp_attr(old, new, sym):
   """Compare the two attributes of the port."""
-  old = old.rsplit(attr, 1)  # The value of the old pkg
-  new = new.rsplit(attr, 1)  # The value of the new pkg
+  old = old.rsplit(sym, 1)  # The value of the old pkg
+  new = new.rsplit(sym, 1)  # The value of the new pkg
   if len(old) > len(new):  # If old has versioning and new does not
     return (old[0], new[0], 1)
   elif len(old) < len(new): # If new has versioning and old does not
