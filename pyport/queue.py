@@ -17,7 +17,7 @@ class QueueManager(object):
     """Add a job to be run."""
     assert(job not in self.queue)
     self.queue.append(job)
-    self.queue.sort(key=lambda x: x.priority)
+    self.queue.sort(key=lambda x: -x.priority)
     if self.active_load < self.load:
       self._run()
 
@@ -46,14 +46,16 @@ class QueueManager(object):
       while self.active_load < self.load and len(queue):
         job = self._find_job(self.load - self.active, queue)
         try:
-          job.run(self)
           self.active_load += job.load
           self.active.append(job)
+          job.run(self)
         except StalledJob:
+          self.active_load -= job.load
+          self.active.remove(job)
           stalled.append(job)
     if len(stalled):
       self.stalled.extend(stalled)
-      self.stalled.sort(key=lambda x: x.priority)
+      self.stalled.sort(key=lambda x: -x.priority)
 
   @staticmethod
   def _find_job(load, queue):
