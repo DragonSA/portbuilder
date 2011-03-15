@@ -74,7 +74,9 @@ class PortJob(Job):
   """A port stage job.  Runs a port stage."""
 
   def __init__(self, port, stage):
-    Job.__init__(self, port.load, None)
+    from .port.port import Port
+
+    Job.__init__(self, port.load if stage == Port.BUILD else 1, None)
     self.port = port
     self.stage = stage
 
@@ -95,6 +97,7 @@ class PortJob(Job):
         #self.stage_done(self.port)
     except StalledJob:
       self.port.stage_completed.disconnect(self.stage_done)
+      raise
 
   def stage_done(self, port=None):
     """Handle the completion of a port stage."""
