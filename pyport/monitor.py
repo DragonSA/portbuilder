@@ -159,6 +159,7 @@ class Top(Monitor):
   def _update_header(self, scr):
     """Update the header details."""
     from time import strftime
+    from .event import pending_events
 
     self._offset = 0
     self._update_ports(scr)
@@ -173,6 +174,8 @@ class Top(Monitor):
     days = offset / 60 / 60 / 24
     running = "running %i+%02i:%02i:%02i  " % (days, hours, mins, secs)
     running += strftime("%H:%M:%S")
+    if pending_events():
+      running = "events %i  " % pending_events() + running
     scr.addstr(0, scr.getmaxyx()[1] - len(running) - 1, running)
 
   def _update_ports(self, scr):
@@ -260,7 +263,7 @@ class Top(Monitor):
         if not lines:
           return
     elif skip > len(failed) - lines:
-        self._skip = skip = max(0, len(failed) - lines)
+      self._skip = skip = max(0, len(failed) - lines)
 
     if self._idle or self._failed_only:
       for stage, name in ((queued, "queued"), (pending, "pending"), (failed, "failed")):
@@ -274,6 +277,7 @@ class Top(Monitor):
           if skip:
             skip -= 1
             continue
+          stage = STAGE_NAME[port.stage + stg]
           scr.addnstr(offset, 0, ' %6s %7s        %s' %
                       (STAGE_NAME[port.stage + stg], name, get_name(port)), columns)
           offset += 1
@@ -322,6 +326,8 @@ class Statistics(object):
 
       for port in builder.ports:
         if port not in seen:
+          if stage == "install" and port.stage == port.CONFIG:
+            continue
           stats[self.PENDING].append(port)
       self.summary[self.PENDING].extend(reversed(stats[self.PENDING]))
       seen.update(stats[self.PENDING])
