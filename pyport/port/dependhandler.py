@@ -33,12 +33,14 @@ class Dependant(DependHandler):
 
   def __init__(self, port):
     """Initialise the databases of dependants."""
+    from ..env import flags
+
     DependHandler.__init__(self)
     self._dependants = [[], [], [], [], [], []]  #: All dependants
     self.port = port  #: The port whom we handle
     self.priority = port.priority
     # TODO: Change to actually check if we are resolved
-    if port.install_status > Port.ABSENT:
+    if flags["mode"] == "install" and port.install_status > Port.ABSENT:
       self.status = Dependant.RESOLV
     else:
       self.status = Dependant.UNRESOLV
@@ -77,9 +79,13 @@ class Dependant(DependHandler):
 
   def status_changed(self):
     """Indicates that our port's status has changed."""
+    from ..env import flags
+
     if self.port.failed or (self.port.dependancy and self.port.dependancy.failed):
       status = Dependant.FAILURE
       # TODO: We might have failed and yet still satisfy our dependants
+    elif flags["fetch_only"]:
+      status = Dependant.RESOLV
     elif self.port.install_status > Port.ABSENT:
       status = Dependant.RESOLV
       if not self._verify():
@@ -128,6 +134,7 @@ class Dependancy(DependHandler):
 
   def __init__(self, port, depends=None):
     """Initialise the databases of dependancies."""
+    from ..env import flags
     from . import get_port
 
     DependHandler.__init__(self)
@@ -146,6 +153,8 @@ class Dependancy(DependHandler):
         get_port(j[1], lambda x: self._add(x, j[0], i))
     if not self._loading:
       self._update_priority()
+      if flags["mode"] == "upgrade" and self.port.install_status >= Port.CURRENT:
+        self.port.dependant.status_changed()
       self.port.dependancy_loaded(True)
 
   def __repr__(self):
