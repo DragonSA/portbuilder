@@ -107,11 +107,11 @@ class Port(object):
     LOG_DIR = "/tmp/pypkg"
 
     self.attr = attr
-    self.log_file = join(LOG_DIR, attr["uniquename"])
+    self.log_file = None
     self.failed = False
     self.load = 1
     self.origin = origin
-    self.priority = 1
+    self.priority = 0
     self.working = False
 
     self.stage = Port.ZERO
@@ -170,21 +170,22 @@ class Port(object):
 
   def _load_attr(self, _origin, attr):
     """Load the attributes for this port."""
-    from os.path import join
-
     if attr is None:
       self._finalise(self.stage, False)
       return
     else:
       self.attr = attr
-      LOG_DIR = "/tmp/pypkg"
-      self.log_file = join(LOG_DIR, attr["uniquename"])
       self._load_dependancy()
 
   def _load_dependancy(self):
     """Create a dependancy object for this port."""
+    from os.path import join
     from .dependhandler import Dependancy
 
+    LOG_DIR = "/tmp/pypkg"
+    self.log_file = join(LOG_DIR, self.attr["uniquename"])
+    self.priority = self._get_priority()
+    self.dependant.priority += self.priority
     depends = ('depend_build', 'depend_extract', 'depend_fetch', 'depend_lib',
                'depend_run', 'depend_patch')
     self.dependancy = Dependancy(self, [self.attr[i] for i in depends])
@@ -323,3 +324,20 @@ class Port(object):
     # if diff_version:
     #   return config_pkgname == pkgname
     return True
+
+  def _get_priority(self):
+    from os.path import isfile
+
+    distfiles = self.attr["distfiles"]
+    if not len(distfiles) or not isfile(self.attr["distinfo"]):
+      return 0
+    priority = 0
+    for i in open(self.attr["distinfo"], 'r'):
+      if i.startswith("SIZE"):
+        i = i.split()
+        name, size = i[1], i[-1]
+        name = name[1:-1]
+        name = name.split('/')[-1]
+        if name in distfiles:
+          priority += int(size)
+    return priority
