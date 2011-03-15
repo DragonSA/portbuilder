@@ -112,14 +112,14 @@ class Port(object):
     self.working = False
 
     self.stage = Port.ZERO
-    self.stage_completed = Signal()
+    self.stage_completed = Signal("%s.stage_completed" % self)
     self.install_status = status(self)
 
     self.dependancy = None
     self.dependant = Dependant(self)
 
   def __repr__(self):
-    return "<Port(origin=%s)>" % (self.origin)
+    return "<Port(%s)>" % (self.origin)
 
   def clean(self):
     """Clean the ports working directory any log file."""
@@ -324,12 +324,14 @@ class Port(object):
 
   def _finalise(self, stage, status):
     """Finalise the stage."""
+    from ..env import flags
+
     if not status:
       self.failed = True
     self.working = False
     self.stage = max(stage + 1, self.stage)
     self.stage_completed(self)
-    if self.failed or self.stage >= Port.INSTALL:
+    if self.failed or self.stage >= (Port.FETCH if flags["fetch_only"] else Port.INSTALL):
       self.dependant.status_changed()
 
   def _check_config(self):
@@ -355,7 +357,7 @@ class Port(object):
           options.add(i.split('_', 1)[1].split('=', 1)[0])
     if flags["config"] == "changed" and options != set(self.attr["options"]):
       return False
-    if flags["config"] == "newer" and pkg_version(pkgname, config_pkgname) == Port.OLDER:
+    if flags["config"] == "newer" and pkg_version(pkgname, config_pkgname) == Port.NEWER:
       return False
     return True
 
