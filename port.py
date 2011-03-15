@@ -19,15 +19,13 @@ class PortDelegate(object):
     if isinstance(port, str):
       self.no_port.append(port)
       return
-    if not flags["mode"] == "upgrade":
+    if not flags["mode"] == "recursive":
       if self.upgrade:
         if port.install_status >= port.CURRENT:
           return
         else:
-          # NOTE: A trivial attempt to resolve indirect dependancies in non-
-          # recursive mode, to be fixed
           port.dependant.status = port.dependant.UNRESOLV
-      elif port.install_status >= port.ABSENT:
+      elif port.install_status > port.ABSENT:
         return
     if self.package:
       from pyport.builder import package_builder
@@ -207,7 +205,13 @@ def set_options(options):
     env["BATCH"] = True
 
   # Set chroot environment
-  flags["chroot"] = options.chroot
+  if options.chroot:
+    from os.path import isdir
+    if options.chroot[-1] == '/':
+      options.chroot = options.chroot[:-1]
+    if not isdir(options.chroot):
+      options.parser.error("chroot needs to be a valid directory")
+    flags["chroot"] = options.chroot
 
   # Debug mode
   if options.debug:
@@ -261,10 +265,14 @@ def set_options(options):
     flags["package"] = True
     options.package = True
 
-  # Upgrade mode
+  # Upgrade all ports
   if options.upgradeA:
-    flags["mode"] = "upgrade"
+    flags["upgrade"] = True
     options.upgrade = True
+
+  # Upgrade ports
+  if options.upgrade:
+    flags["mode"] = "recursive"
 
 def read_port_file(ports_file):
   """Get ports from a file."""
