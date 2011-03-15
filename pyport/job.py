@@ -25,6 +25,9 @@ class Job(Signal):
     self.load = load
     self.__manager = None
 
+  def __lt__(self, other):
+    return self.priority > other.priority
+
   def run(self, manager):
     """Run the job.
 
