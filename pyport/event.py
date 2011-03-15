@@ -2,7 +2,7 @@
 
 Provides a framework for calling functions asynchroniously."""
 __all__ = ["pending_events", "post_event", "pending_events" "run", "alarm",
-           "select", "unselect", "suspend_alarm", "resume_alarm"]
+           "select", "unselect", "suspend_alarm", "resume_alarm", "traceback"]
 
 class EventManager(object):
   """Handles Events that need to be called asynchroniously."""
@@ -17,28 +17,34 @@ class EventManager(object):
     self._alarms = []
     self._alarm_active = True
     self._selects = ({}, {}, {})
+    self.traceback = None
+    self._no_tb = False
 
   def __len__(self):
+    """The number of outstanding events."""
     return len(self._events)
 
   def alarm(self, callback, interval):
     """Add a function for period callback."""
     from time import time
-    self._alarms.append([callback, time() + interval])
+    from .debug import get_tb
+    self._alarms.append([callback, time() + interval, get_tb()])
 
   def select(self, callback, rlist=None, wlist=None, xlist=None):
     """Add a callback to the required file describtor."""
+    from .debug import get_tb
+
     for fd, cb in zip((rlist, wlist, xlist), self._selects):
       if fd:
         if fd not in cb:
-          cb[fd] = []
-        cb[fd].append(callback)
+          cb[fd] = {}
+        cb[fd][callback] = get_tb()
 
   def unselect(self, callback, rlist=None, wlist=None, xlist=None):
     """Remove a callback from the given file describtor."""
     for fd, cb in zip((rlist, wlist, xlist), self._selects):
       if fd:
-        cb[fd].remove(callback)
+        cb[fd].pop(callback)
         if not len(cb[fd]):
           del cb[fd]
 
@@ -53,37 +59,29 @@ class EventManager(object):
 
   def post_event(self, func, *args, **kwargs):
     """Add an event to be called asynchroniously."""
-    from .env import flags
-    if flags["debug"]:
-      from traceback import extract_stack
-      tb = extract_stack()[:-1]
-    else:
-      tb = None
+    from .debug import get_tb
+
     if not callable(func):
       assert(len(func) == 4)
-      self._events.append(func + (tb,))
+      self._events.append(func + (get_tb(1),))
     else:
-      self._events.append((func, args, kwargs, None, tb))
+      self._events.append((func, args, kwargs, None, get_tb()))
 
   def run(self):
     """Run the currently queued events."""
     from .subprocess import active_popen
 
+    self.traceback = None
     try:
       while True:
         while len(self._events):
           self._alarm()
           self._select()
           func, args, kwargs, tb_slot, tb_call = self._events.popleft()
-          try:
-            func(*args, **kwargs)
-          except BaseException:
-            for tb, name in ((tb_slot, "connect"), (tb_call, "caller")):
-              if tb is not None:
-                from traceback import format_list
-                print "Traceback from signal %s (most recent call last):" % name
-                print "".join(format_list(tb))
-            raise
+
+          self._construct_tb((tb_slot, "signal connect"), (tb_call, "signal caller"))
+          func(*args, **kwargs)
+          self._clear_tb()
 
         if not active_popen():
           break
@@ -92,6 +90,22 @@ class EventManager(object):
 
     finally:
       self._alarm(True)
+
+  def _construct_tb(self, *args):
+    """Add extra tracebacks for debugging perposes."""
+    if self.traceback is not None:
+      self._no_tb = True
+    self.traceback = []
+    for tb, name in args:
+      if tb is not None:
+        self.traceback.append(tb, name)
+
+  def _clear_tb(self):
+    """Clear any pending tracebacks."""
+    if self._no_tb:
+      self._no_tb = False
+    else:
+      self.traceback = False
 
   def _alarm(self, end=False):
     """Run all outstanding alarms."""
@@ -104,11 +118,14 @@ class EventManager(object):
     for item in reversed(self._alarms):
       if item[1] <= now or end is not False:
         try:
+          self._construct_tb((item[2], "alarm connect"))
           trigger = item[0](end)
+          self._clear_tb()
         except BaseException:
           if end is not True:
             raise
           else:
+            self._clear_tb()
             continue
         if trigger:
           item[1] = now + trigger
@@ -145,8 +162,10 @@ class EventManager(object):
     try:
       for fds, cb in zip(select(rlist, wlist, xlist, timeout), self._selects):
         for fd in fds:
-          for callback in cb[fd]:
+          for callback, tb_select in cb[fd].items():
+            self._construct_tb((tb_select, "select connect"))
             callback()
+            self._clear_tb()
     except error:
       pass
 
@@ -160,3 +179,4 @@ resume_alarm   = _manager.resume_alarm
 pending_events = _manager.__len__
 post_event     = _manager.post_event
 run            = _manager.run
+traceback      = lambda: _manager.traceback
