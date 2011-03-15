@@ -274,7 +274,7 @@ class Top(Monitor):
           if skip:
             skip -= 1
             continue
-          scr.addnstr(offset, 0, ' %6s  %6s        %s' %
+          scr.addnstr(offset, 0, ' %6s %7s        %s' %
                       (STAGE_NAME[port.stage + stg], name, get_name(port)), columns)
           offset += 1
           lines -= 1
