@@ -104,6 +104,7 @@ class StageBuilder(object):
 
     if port.failed or port.dependancy.failed:
       self.ports[port].stage_done()
+      return
 
     depends = port.dependancy.check(self.stage)
 
@@ -124,26 +125,44 @@ class StageBuilder(object):
 
   def _cleanup(self, job):
     """Cleanup after the port has completed its stage."""
-    if job.port.failed or job.port.dependancy.failed:
-      self.failed.append(job.port)
+    del self.ports[job.port]
+    self._port_failed(job.port)
     if job.port in self.cleanup:
       self.cleanup.remove(job.port)
       job.port.clean()
-    del self.ports[job.port]
 
   def _depend_resolv(self, job):
     """Update dependancy structures for resolved dependancy."""
-    for port in self._depends[job.port]:
-      self._pending[port] -= 1
-      if not self._pending[port]:
-        self._port_ready(port)
-    del self._depends[job.port]
+    if not self._port_failed(job.port):
+      for port in self._depends.pop(job.port):
+        self._pending[port] -= 1
+        if not self._pending[port]:
+          self._port_ready(port)
 
   def _stage_resolv(self, job):
     """Update pending structures for resolved prior stage."""
-    self._pending[job.port] -= 1
-    if not self._pending[job.port]:
-      self._port_ready(job.port)
+    if not self._port_failed(job.port):
+      self._pending[job.port] -= 1
+      if not self._pending[job.port]:
+        self._port_ready(job.port)
+
+  def _port_failed(self, port):
+    if port in self.failed:
+      return True
+    elif port.failed or port.dependancy.failed:
+      from .event import post_event
+
+      if port not in self.prev_builder.ports:
+        self.failed.append(port)
+        if port in self._depends:
+          for deps in self._depends.pop(port):
+            if deps not in self.prev_builder.ports:
+              post_event(self._port_failed, deps)
+        if port in self.ports:
+          del self._pending[port]
+          self.ports[port].stage_done()
+      return True
+    return False
 
   def _port_ready(self, port):
     """Add a port to the stage queue."""
@@ -165,7 +184,7 @@ class StageBuilder(object):
         self.ports[port].stage_done()
 
 config_builder   = ConfigBuilder()
-checksum_builder = StageBuilder(Port.CHECKSUM, checksum_queue)
-fetch_builder    = StageBuilder(Port.FETCH,    fetch_queue,   checksum_builder)
-build_builder    = StageBuilder(Port.BUILD,    build_queue,   fetch_builder)
-install_builder  = StageBuilder(Port.INSTALL,  install_queue, build_builder)
+checksum_builder = StageBuilder(Port.CHECKSUM, checksum_queue, config_builder)
+fetch_builder    = StageBuilder(Port.FETCH,    fetch_queue,    checksum_builder)
+build_builder    = StageBuilder(Port.BUILD,    build_queue,    fetch_builder)
+install_builder  = StageBuilder(Port.INSTALL,  install_queue,  build_builder)
