@@ -2,6 +2,8 @@
 
 from __future__ import absolute_import
 
+from . import event
+
 def stop(kill=False, kill_clean=False):
   """Stop building ports and cleanup."""
   from os import killpg
