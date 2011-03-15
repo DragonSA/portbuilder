@@ -36,16 +36,16 @@ class EventManager(object):
 
   def post_event(self, func, *args, **kwargs):
     """Add an event to be called asynchroniously."""
-    if not callable(func):
-      assert(len(func) == 4)
-      self._events.append(func)
+    from .env import flags
+    if flags["debug"]:
+      from traceback import extract_stack
+      tb = extract_stack()
     else:
-      from .env import flags
-      if flags["debug"]:
-        from traceback import extract_stack
-        tb = extract_stack()
-      else:
-        tb = None
+      tb = None
+    if not callable(func):
+      assert(len(func) == 3)
+      self._events.append(func + (tb,))
+    else:
       self._events.append((func, args, kwargs, tb))
 
   def run(self):

@@ -46,11 +46,5 @@ class Signal(object):
     from .env import flags
     from .event import post_event
 
-    if flags["debug"]:
-      from traceback import extract_stack
-      tb = extract_stack()
-    else:
-      tb = None
-
     for slot in self._slots:
-      post_event((slot, args, kwargs, tb))
+      post_event((slot, args, kwargs))
