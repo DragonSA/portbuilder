@@ -1,0 +1,99 @@
+DESCRIPTION
+-----------
+A concurrent ports building tool.  Although FreeBSD ports supports building a
+single port using multiple jobs (via MAKE_JOBS) however it cannot build
+multiple ports concurrently.  This tool accomplishes just that.
+
+Some of its key features:
+ * Concurrent port building
+ * Load control
+ * Top like UI
+ * Persistent builds (by default)
+
+REQUIREMENTS
+------------
+python >= 2.6
+
+INSTALLATION
+------------
+Does not install currently, run from pypkg/ directory
+
+USAGE
+-----
+NOTE: all ports are specified using [category]/[directory] as found in the ports
+tree.  For example, to build all of KDE specify x11/kde4, or for VLC specify
+multimedia/vlc
+
+
+Usage:  port.py [-bdnpruFN] [-c config] [-D variable] [-f file] [variable=value] port ...
+
+Options:
+  --version             show program's version number and exit
+  -h, --help            show this help message and exit
+  --arch=ARCH           Set the architecture environment variables (for cross
+                        building)
+  -b, --batch           Batch mode.  Skips the config stage.
+  -c CONFIG, --config=CONFIG
+                        Specify which ports to configure (none, all, newer,
+                        changed) [default: changed]
+  -C CHROOT             Build ports in chroot environment.
+  -d, --debug           Turn on extra diagnostic information (slower)
+  -D variable           Define the given variable for make (i.e. add ``-D
+                        variable'' to the make calls).
+  -f PORTS_FILE, --ports-file=PORTS_FILE
+                        Use ports from file.
+  -F, --fetch-only      Only fetch the distribution files for the ports
+  --force               Force (re)installation of specified ports.
+  --force-all           Force (re)installation of specified ports and all its
+                        dependancies.
+  -n                    Display the commands that would have been executed,
+                        but do not actually execute them.
+  -N                    Do not execute any commands.
+  -p, --package         Create packages for specified ports.
+  -P, --package-all     Create packages for all installed ports
+  -u, --upgrade         Upgrade specified ports.
+  -U, --upgrade-all     Upgrade specified ports and all its dependancies.
+
+
+EXAMPLES
+--------
+Install KDE 4 and Xorg:
+# ./port.py x11/kde4 x11/xorg
+
+Install all ports specified in a file (# comments respected)
+# cat /root/ports
+print/cups      # For printing
+devel/svk       # For development
+^C
+# ./port.py -f /root/ports
+
+Fetch all the files required to update all ports (and their dependancies) in a file
+# ./port.py -FUf /root/ports
+
+Reconfigure and upgrade all ports (and their dependancies) in a file
+# ./port.py -c all -Uf /root/ports
+
+Display the commands that will upgrade all ports (and their dependancies) in a file
+# ./port.py -nUf /root/ports
+
+Simulate the above (using the Top display) without printing the commands
+# ./port.py -NUf /root/ports
+
+Rebuild strigi with debug symbols
+# ./port.py --force deskutils/strigi -DWITH_DEBUG
+
+NOTES
+-----
+ * Build log files are stored in /tmp/pypkg, check there if a port failed.
+ * Ensure the program runs as root, or has write access to build area (and
+   /usr/ports/distfiles if ports need to fetch) and can su without password.
+ * The load per stage can be seen under pyports/queue.py (at end of file).
+   Default values (build load can be as high as cpus * 3 - 1, or more):
+      config   = cpus * 2
+      checksum = 1
+      fetch    = 1
+      build    = cpus * 2
+      install  = 1
+      package  = 1
+ * The project and program needs a name.
+ * Suggestions/criticisms welcome.
