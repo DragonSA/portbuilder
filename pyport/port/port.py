@@ -130,7 +130,7 @@ class Port(object):
     else:
       self._cleaned()
 
-  def _cleaned(self, make=None):
+  def _cleaned(self, _make=None):
     """Make the port as clean."""
     self.failed = False
     self.stage = Port.CONFIG

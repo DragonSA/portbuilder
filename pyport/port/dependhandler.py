@@ -169,10 +169,7 @@ class Dependancy(DependHandler):
     """Add a port to our dependancy list."""
     self._loading -= 1
 
-    if isinstance(port, str):
-      port = False
-
-    if port:
+    if not isinstance(port, str):
       status = port.dependant.status
       if port not in self._dependancies[typ]:
         self._dependancies[typ].append(port)
@@ -181,10 +178,12 @@ class Dependancy(DependHandler):
         if status != Dependant.RESOLV:
           self._count += 1
 
-    if not port or status == Dependant.FAILURE:
-      self.failed = True
-      if not self.port.dependant.failed:
+    if isinstance(port, str) or status == Dependant.FAILURE:
+      if not self.failed and not self.port.dependant.failed:
+        self.failed = True
         self.port.dependant.status_changed()
+      else:
+        self.failed = True
     if self._loading == 0:
       self._update_priority()
       self.port.dependancy_loaded(not self.failed)

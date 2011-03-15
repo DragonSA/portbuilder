@@ -1,32 +1,36 @@
 #!/usr/bin/env python
 """Controller for various ports operations."""
 
+no_port = []
+
+VAR_NAME = "^[a-zA-Z_][a-zA-Z0-9_]*$"
+
 def port_install(port):
+  """Install the port,"""
   from pyport.builder import install_builder
 
   if not isinstance(port, str) and port.install_status == port.ABSENT:
     install_builder(port)
   else:
-    pass
-    # TODO: report error
+    no_port.append(port)
 
 def port_upgrade(port):
+  """Upgrade the port."""
   from pyport.builder import install_builder
 
   if not isinstance(port, str) and port.install_status < port.CURRENT:
     install_builder(port)
   else:
-    pass
-    # TODO: report error
+    no_port.append(port)
 
 def port_force(port):
+  """Reinstall the port."""
   from pyport.builder import install_builder
 
   if not isinstance(port, str):
     install_builder(port)
   else:
-    pass
-    # TODO: report error
+    no_port.append(port)
 
 def main():
   """The main event loop."""
@@ -50,13 +54,14 @@ def main():
       if options.recursive:
         get_port(port, port_force)
       else:
-        get_port(port, upgrade)
+        get_port(port, port_upgrade)
     else:
       get_port(port, port_install)
 
   if not flags["no_op_print"]:
     Top().start()
   run()
+  # TODO: report on failures
 
 def gen_parser():
   """Create the options parser object."""
@@ -106,14 +111,13 @@ def gen_parser():
   parser.add_option("-u", "--upgrade", dest="upgrade", action="store_true",
                     default=False, help="Upgrade port mode.")
 
-  #parser.add_option("-w", dest="stat_mode", type="int", default=0, metavar="SEC"
-                    #, help="Use the stats monitor with SEC delay between lines")
   #parser.add_option("--index", action="store_true", default=False,
                     #help="Create the INDEX file for the ports infrastructure.")
   return parser
 
 def set_options(options):
   """Set all the global options."""
+  from re import match
   from pyport.env import env, flags
 
   # Batch mode
@@ -122,6 +126,8 @@ def set_options(options):
 
   # Add all -D options
   for i in options.make_env:
+    if not match(VAR_NAME, i):
+      options.error("incorrectly formatted variable name: %s" % i)
     env[i] = True
 
   # Fetch only options:
@@ -155,12 +161,14 @@ def set_options(options):
   # Add other make env options (aka variable=value)
   for i in options.args[:]:
     if i.find('=') != -1:
-      # TODO:  Make sure var, val take the correct values
       var, val = i.split('=', 1)
+      if not match(VAR_NAME, var):
+        options.error("incorrectly formatted variable name: %s" % var)
       env[var] = val
       options.args.remove(i)
 
-def parse_config(option, _opt_str, value, parser):
+def parse_config(_option, _opt_str, value, _parser):
+  """Set the config requirements."""
   from pyport.env import flags
 
   if value not in ("none", "all", "newer", "changed"):

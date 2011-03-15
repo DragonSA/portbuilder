@@ -143,7 +143,8 @@ class Top(Monitor):
     msg = "port count: %i" % ports()
     if len(attr_queue):
       if len(attr_queue.queue):
-        msg += "; retrieving %i (of %i)" % (len(attr_queue.active), len(attr_queue.active) + len(attr_queue))
+        msg += "; retrieving %i (of %i)" % (len(attr_queue.active),
+                                      len(attr_queue.active) + len(attr_queue))
       else:
         msg += "; retrieving %i" % len(attr_queue)
     scr.addstr(self._offset, 0, msg)

@@ -189,10 +189,7 @@ def attr_stage2(make, callback):
   from ..make import SUCCESS
 
   if make.wait() is not SUCCESS:
-    # TODO
     callback(None)
-    #log_attr.error("Error in obtaining information for port: %s" % origin)
-    #raise RuntimeError("Error in obtaining information for port: %s" % origin)
     return
 
   attr_map = {}
@@ -208,11 +205,6 @@ def attr_stage2(make, callback):
       try:
         attr_map[name] = i(attr_map[name])
       except BaseException:
-        # TODO
-        #log_attr.exception("Exception applying filter for attribute: %s(%s)" %
-        #                                                (name, attr_map[name]))
-        # Rather fail here than mysteriously later
-        #raise
         callback(None)
         raise
 

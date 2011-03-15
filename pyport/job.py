@@ -74,7 +74,6 @@ class PortJob(Job):
   """A port stage job.  Runs a port stage."""
 
   def __init__(self, port, stage):
-    # TODO
     Job.__init__(self, port.load, None)
     self.port = port
     self.stage = stage

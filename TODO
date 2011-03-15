@@ -7,6 +7,7 @@
 TEMP:
  - cleanup after done
  - cleanup when shutdown (KeyboardInterrupt)
+ - reword DependHandlers to use sets
 
 Future release:
  - Speed up port_version()
