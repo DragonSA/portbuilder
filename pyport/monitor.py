@@ -85,6 +85,7 @@ class Top(Monitor):
     self._failed_only = False
     self._idle = True
     self._skip = 0
+    self._quit = 0
 
   def run(self):
     """Refresh the display."""
@@ -142,7 +143,16 @@ class Top(Monitor):
       elif ch == ord('i') or ch == ord('I'):
         self._idle = not self._idle
       elif ch == ord('q'):
-        exit()
+        from . import stop
+
+        self._quit += 1
+        if self._quit == 1:
+          stop()
+        elif self._quit == 2:
+          stop(kill=True)
+        elif self._quit == 3:
+          stop(kill=True, kill_clean=True)
+          exit(254)
       elif ch == KEY_CLEAR or ch == ascii.FF:
         self._stdscr.clear()
       elif ch == KEY_PPAGE:
@@ -326,6 +336,8 @@ class Statistics(object):
     self.time = time()
 
     seen = set()
+    seen.update(self.clean[self.ACTIVE])
+    seen.update(self.clean[self.QUEUED])
     for stage in ("config", "checksum", "fetch", "build", "install"):
       stats = getattr(self, stage)
       queue = getattr(queues, "%s_queue" % stage)
@@ -341,7 +353,7 @@ class Statistics(object):
       seen.update(stats[self.QUEUED])
 
       for port in builder.ports:
-        if port not in seen:
+        if port not in seen and not port.failed:
           if stage == "install" and port.stage == port.CONFIG:
             continue
           stats[self.PENDING].append(port)
