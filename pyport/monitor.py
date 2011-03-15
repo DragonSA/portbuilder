@@ -231,6 +231,7 @@ class Top(Monitor):
   def _update_rows(self, scr):
     """Update the rows of port information."""
     active, queued, pending, failed = self._stats.summary
+    clean = self._stats.clean
 
     scr.addstr(self._offset + 1, 2, 'STAGE   STATE   TIME PORT (VERSION)')
 
@@ -241,10 +242,11 @@ class Top(Monitor):
     if not self._failed_only:
       if self._idle:
         total = sum(len(i) for i in self._stats.summary)
+        total += sum(len(i) for i in clean)
         if skip > total - lines:
           self._skip = skip = max(0, total - lines)
       else:
-        if skip > len(active) - lines:
+        if skip > len(active) + len(clean[0]) - lines:
           self._skip = skip = max(0, len(active) - lines)
       for port in active:
         if skip:
@@ -262,6 +264,16 @@ class Top(Monitor):
         lines -= 1
         if not lines:
           return
+      for stage, cleaned in (("active", clean[0]),) + ((("queued", clean[1]),) if self._idle else ()):
+        for port in cleaned:
+          if skip:
+            skip -= 1
+            continue
+          scr.addnstr(offset, 0, '  clean %7s        %s' % (stage, get_name(port)), columns)
+          offset += 1
+          lines -= 1
+          if not lines:
+            return
     elif skip > len(failed) - lines:
       self._skip = skip = max(0, len(failed) - lines)
 
@@ -306,6 +318,10 @@ class Statistics(object):
     self.build    = ([], [], [], [])
     self.install  = ([], [], [], [])
     self.summary  = ([], [], [], [])
+    self.clean = ([], [])
+    self.clean[self.ACTIVE].extend(i.port for i in queues.clean_queue.active)
+    self.clean[self.QUEUED].extend(i.port for i in queues.clean_queue.stalled)
+    self.clean[self.QUEUED].extend(i.port for i in queues.clean_queue.queue)
 
     self.time = time()
 
