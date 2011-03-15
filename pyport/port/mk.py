@@ -131,7 +131,7 @@ def status(port, changed=False, cache=dict()):
     while True:
       try:
         cache['mtime'] = path.getmtime(pkg)
-        cache['listdir'] = listdir(pkg)
+        cache['listdir'] = tuple(i for i in listdir(pkg) if path.isdir(path.join(pkg, i)))
         break
       except OSError:
         # May happen on occation, retry
