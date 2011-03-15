@@ -11,7 +11,8 @@ class Signal(object):
 
   def connect(self, slot):
     """Connect a callback function to the signal."""
-    self._slots.append(slot)
+    if slot is not None:
+      self._slots.append(slot)
     return self
 
   def disconnect(self, slot):
