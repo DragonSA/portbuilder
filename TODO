@@ -1,8 +1,13 @@
-Coding standard:
+ - Coding standard:
  - Handle appropriate exceptions
  - Log all relevant events
  - Document all classes, methods, functions and (global|class) variables
  - Specify a public API (via __all___)
+
+TEMP:
+ - cleanup after done
+ - cleanup when shutdown (KeyboardInterrupt)
+ - handle BATCH, PACKAGE_BUILDING, FORCE_PACKAGE
 
 Future release:
  - Speed up port_version()
@@ -33,6 +38,8 @@ Future release:
    - Only require pkgname, not attr (get_status)
  - when pkginstall failes, switch to normal install
  - use kqueue to monitor Makefile changes
+ - move DependHandler to using signals (for status changed)
+ - support DESTDIR...
 
 0.1.9 - Milestone 9 (Sundry modules):
  - modules:
@@ -88,6 +95,7 @@ Future release:
      - Mouse support
      - Improve output when rendering to small screens
      - Remove /[workers] from output
+ - report on failures
  - pypkg:
    - Add -j option (fine tune concurrency)
    - Add force config option
@@ -381,12 +389,4 @@ Future release:
    - Add a port filter (for resolving information and calling dependants to be
      constructed)
  - Add a dependency resolver
- - Merge WorkerPool and Queue
- - WorkerQueue:
-   - Allocate on demand
-   - Terminate when idle
-   - Re-size pool
-   - Terminate if pool oversized
-   - Check if global RLock could be a Lock
-   - Add stats information
  - queue: Provide defaults for queue sizes
