@@ -6,10 +6,11 @@ VAR_NAME = "^[a-zA-Z_][a-zA-Z0-9_]*$"
 class PortDelegate(object):
   """Choose if a port should be build and with which builder."""
 
-  def __init__(self, package, upgrade):
+  def __init__(self, package, upgrade, force):
     """Initialise port delegate."""
     self.package = package
     self.upgrade = upgrade
+    self.force = force
     self.no_port = []
 
   def __call__(self, port):
@@ -19,14 +20,11 @@ class PortDelegate(object):
     if isinstance(port, str):
       self.no_port.append(port)
       return
-    if not flags["mode"] == "recursive":
-      if self.upgrade:
-        if port.install_status >= port.CURRENT:
-          return
-        else:
-          port.dependant.status = port.dependant.UNRESOLV
-      elif port.install_status > port.ABSENT:
-        return
+    if not (flags["mode"] == "recursive" or self.force) and port.install_status > flags["stage"]:
+      return
+    if self.upgrade or self.force:
+      port.dependant.status = port.dependant.UNRESOLV
+      port.force = True
     if self.package:
       from pyport.builder import package_builder
       package_builder(port)
@@ -74,7 +72,7 @@ def main():
   signal(SIGTERM, sigterm)
 
   # Port delegate
-  delegate = PortDelegate(options.package, options.upgrade)
+  delegate = PortDelegate(options.package, options.upgrade, options.force)
 
   # Execute the primary build target
   for port in args:
@@ -150,11 +148,7 @@ def gen_parser():
 
   parser.add_option("-D", dest="make_env", action="append", metavar="variable",
                     default=[], help="Define the given variable for make (i.e."\
-                    " add ``-D variable'' to the make calls.")
-
-  #parser.add_option("-i", "--install", action="store_true", default=True,
-                    #help="Install mode.  Installs the listed ports (and any " \
-                    #"dependancies required [default].")
+                    " add ``-D variable'' to the make calls).")
 
   parser.add_option("-f", "--ports-file", dest="ports_file", action="store",
                     type="string", default=False, help="Use ports from file.")
@@ -162,6 +156,13 @@ def gen_parser():
   parser.add_option("-F", "--fetch-only", dest="fetch", action="store_true",
                     default=False, help="Only fetch the distribution files for"\
                     " the ports")
+
+  parser.add_option("--force", action="store_true", default=False, help="Force"\
+                    " (re)installation of specified ports.")
+
+  parser.add_option("--force-all", dest="forceA", action="store_true",
+                    default=False, help="Force (re)installation of specified "
+                    "ports and all its dependancies.")
 
   parser.add_option("-n", dest="no_opt_print", action="store_true",
                     default=False, help="Display the commands that would have "\
@@ -192,6 +193,7 @@ def set_options(options):
   """Set all the global options."""
   from re import match
   from pyport.env import env, flags
+  from pyport.port.port import Port
 
   # Architecture flag
   if options.arch:
@@ -247,6 +249,15 @@ def set_options(options):
     except IOError:
       options.parser.error("unable to open file: %s" % options.ports_file)
 
+  # Force build and install of ports
+  if options.force and len(options.args) > 1:
+      flags["mode"] = "recursive"
+
+  # Force build and install of all ports
+  if options.forceA:
+    flags["stage"] = max(flags["stage"], Port.NEWER)
+    flags["mode"] = "recursive"
+
   # ! (-n & -N)
   if options.no_opt and options.no_opt_print:
     options.parser.error("-n and -N are mutually exclusive")
@@ -265,13 +276,13 @@ def set_options(options):
     flags["package"] = True
     options.package = True
 
+  # Upgrade ports
+  if options.upgrade and len(options.args) > 1:
+    flags["mode"] = "recursive"
+
   # Upgrade all ports
   if options.upgradeA:
-    flags["upgrade"] = True
-    options.upgrade = True
-
-  # Upgrade ports
-  if options.upgrade:
+    flags["stage"] = max(flags["stage"], Port.OLDER)
     flags["mode"] = "recursive"
 
 def read_port_file(ports_file):
