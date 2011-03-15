@@ -18,9 +18,9 @@ class QueueManager(object):
 
   def add(self, job):
     """Add a job to be run."""
+    from bisect import insort
     assert(job not in self.queue)
-    self.queue.append(job)
-    self.queue.sort(key=lambda x: -x.priority)
+    insort(self.queue, job)
     if self.active_load < self.load:
       self._run()
 
@@ -30,6 +30,10 @@ class QueueManager(object):
     self.active_load -= job.load
     if self.active_load < self.load:
       self._run()
+
+  def reorder(self):
+    """Reorder the queued jobs as their priority may have changed."""
+    self.queue.sort()
 
   def remove(self, job):
     """Remove a job from being run."""
