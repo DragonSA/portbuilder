@@ -130,6 +130,10 @@ def gen_parser():
 
   parser = OptionParser(usage, version="%prog 0.1.0")
 
+  parser.add_option("--arch", action="store", type="string", default="",
+                    help="Set the architecture environment variables (for "\
+                    "cross building)")
+
   parser.add_option("-b", "--batch", dest="batch", action="store_true",
                     default=False, help="Batch mode.  Skips the config stage.")
 
@@ -187,6 +191,13 @@ def set_options(options):
   """Set all the global options."""
   from re import match
   from pyport.env import env, flags
+
+  # Architecture flag
+  if options.arch:
+    from os import environ
+    environ["UNAME_m"] = options.arch
+    environ["UNAME_p"] = options.arch
+    environ["MACHINE"] = options.arch
 
   # Batch mode
   if options.batch:
