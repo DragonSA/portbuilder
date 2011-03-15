@@ -150,12 +150,19 @@ class Dependancy(DependHandler):
     self.port = port  #: The port whom we handle
 
     if not depends:
-      depends = [[]]
+      depends = []
+
+    def adder(field, typ):
+      """Create an adder to place resolved port on dependancy list,"""
+      def do_add(port):
+        """Add port to dependancy list."""
+        self._add(port, field, typ)
+      return do_add
 
     for i in range(len(depends)):
       for j in depends[i]:
         self._loading += 1
-        get_port(j[1], lambda x: self._add(x, j[0], i))
+        get_port(j[1], adder(j[0], i))
     if not self._loading:
       self._update_priority()
       if flags["mode"] == "upgrade" and self.port.install_status >= Port.CURRENT:
@@ -209,8 +216,7 @@ class Dependancy(DependHandler):
     bad = set()
     for i in Dependancy.STAGE2DEPENDS[stage]:
       for j in self._dependancies[i]:
-        status = j.dependant.status
-        if status != Dependant.RESOLV:
+        if j.dependant.status != Dependant.RESOLV:
           bad.add(j)
     return bad
 
