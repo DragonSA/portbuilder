@@ -125,7 +125,7 @@ class StageBuilder(object):
       self._depends[p].add(port)
 
     # Build the previous stage if needed
-    if port.install_status < (port.CURRENT if flags["upgrade"] else port.OLDER) and port.stage < self.stage - 1:
+    if (port.install_status <= flags["stage"] or port.force) and port.stage < self.stage - 1:
       self._pending[port] += 1
       self.prev_builder.add(port).connect(self._stage_resolv)
 
@@ -201,13 +201,9 @@ class StageBuilder(object):
       # Checks for self.stage <= port.INSTALL
       if port.dependant.status == port.dependant.RESOLV:
         # port does not need to build
-        # XXX
-        # TODO: remove assert
-        assert(False)
         self.ports[port].stage_done()
-      elif port.install_status >= (port.CURRENT if flags["upgrade"] else port.OLDER):
+      elif port.install_status > flags["stage"] and not port.force:
         # port already up to date, does not need to build
-        assert(flags["upgrade"] or flags["recursive"])
         port.dependant.status_changed()
         self.ports[port].stage_done()
       else:

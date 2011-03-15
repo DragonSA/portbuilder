@@ -1,6 +1,7 @@
 """Environment variables."""
 
 from os import sysconf as _sysconf
+from .port.port import Port as _P
 
 __all__ = ["cpus", "env", "env_master", "flags"]
 
@@ -24,7 +25,7 @@ flags = {
   "no_op"       : False,         # Do nothing
   "no_op_print" : False,         # Print commands that would have been executed
   "package"     : False,         # Package all installed ports
-  "upgrade"     : False,         # Upgrade ports
+  "stage"       : _P.ABSENT      # The minimum level for build
 }
 
 env_master = {}

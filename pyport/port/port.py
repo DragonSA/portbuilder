@@ -106,6 +106,7 @@ class Port(object):
     self.attr = attr
     self.log_file = None
     self.failed = False
+    self.force = False
     self.load = attr["jobs_number"]
     self.origin = origin
     self.priority = 0
