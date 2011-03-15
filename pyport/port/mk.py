@@ -158,7 +158,7 @@ def status(port, changed=False, cache=dict()):
 def attr(origin, callback, reget=False):
   """Retrieve a ports attributes."""
   from ..job import AttrJob
-  from .. import attr_queue
+  from ..queue import attr_queue
 
   attr_queue.add(AttrJob(origin, callback, reget))
 

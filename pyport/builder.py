@@ -1,7 +1,7 @@
 """Stage building infrastructure."""
 
 from .port.port import Port
-from . import checksum_queue, fetch_queue, build_queue, install_queue
+from .queue import checksum_queue, fetch_queue, build_queue, install_queue
 
 __all__ = ["config_builder", "checksum_builder", "fetch_builder",
            "build_builder", "install_builder"]
@@ -25,7 +25,7 @@ class ConfigBuilder(object):
       self.ports[port].connect(callback)
     else:
       from .job import PortJob
-      from . import config_queue
+      from .queue import config_queue
 
       job = PortJob(port, port.CONFIG)
       job.connect(self._cleanup).connect(callback)

@@ -10,6 +10,9 @@ class PortCache(object):
     self._ports = {}
     self._waiters = {}
 
+  def __len__(self):
+    return len(self._ports)
+
   def get_port(self, origin, callback):
     """Get a port and callback with it."""
     if origin in self._ports:
@@ -39,7 +42,7 @@ class PortCache(object):
       post_event(callback, port)
 
   def _refresh_queues(self, port):
-    from .. import config_queue, checksum_queue, fetch_queue, build_queue, install_queue
+    from ..queue import config_queue, checksum_queue, fetch_queue, build_queue, install_queue
     port.stage_completed.disconnect(self._refresh_queues)
     if port.dependancy is not None:
       for queue in (config_queue, checksum_queue, fetch_queue, build_queue, install_queue):
@@ -47,4 +50,5 @@ class PortCache(object):
 
 _cache = PortCache()
 
+ports = _cache.__len__
 get_port = _cache.get_port

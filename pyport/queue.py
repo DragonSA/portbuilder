@@ -1,5 +1,7 @@
 """Manages jobs."""
 
+from .env import cpus as _cpus
+
 __all__ = ["QueueManager"]
 
 class QueueManager(object):
@@ -79,3 +81,11 @@ class QueueManager(object):
         best_job = job
         best_idx = idx
     return queue.pop(best_idx)
+
+
+attr_queue = QueueManager(_cpus * 2)
+config_queue = QueueManager(max(2, _cpus * 2))
+checksum_queue = QueueManager(1)
+fetch_queue = QueueManager(1)
+build_queue = QueueManager(_cpus * 2)
+install_queue = QueueManager(1)
