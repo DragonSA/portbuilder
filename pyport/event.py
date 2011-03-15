@@ -37,10 +37,16 @@ class EventManager(object):
   def post_event(self, func, *args, **kwargs):
     """Add an event to be called asynchroniously."""
     if not callable(func):
-      assert(len(func) == 3)
+      assert(len(func) == 4)
       self._events.append(func)
     else:
-      self._events.append((func, args, kwargs))
+      from .env import flags
+      if flags["debug"]:
+        from traceback import extract_stack
+        tb = extract_stack()
+      else:
+        tb = None
+      self._events.append((func, args, kwargs, tb))
 
   def run(self):
     """Run the currently queued events."""
@@ -51,18 +57,22 @@ class EventManager(object):
       while True:
         while len(self._events):
           self._alarm()
-          func, args, kwargs = self._events.popleft()
+          func, args, kwargs, tb = self._events.popleft()
           try:
             func(*args, **kwargs)
           except BaseException:
+            if tb is not None:
+              from traceback import format_list
+              print "Traceback from signal caller (most recent call last):"
+              print "".join(format_list(tb[:-1]))
             raise
 
         if not active_popen():
           break
 
-        try:
+        if len(self._alarms):
           sleep_intr = min(i[1] for i in self._alarms) - time()
-        except ValueError:
+        else:
           sleep_intr = 1
 
         if sleep_intr <= 0:
