@@ -106,6 +106,11 @@ class Dependant(DependHandler):
 
   def _update(self, _field, typ):
     """Check if a dependant has been resolved."""
+    from ..env import flags
+
+    if flags["fetch_only"] and self.port.stage >= Port.FETCH:
+      return True
+
     if typ == DependHandler.BUILD:
       pass
     elif typ == DependHandler.EXTRACT:
