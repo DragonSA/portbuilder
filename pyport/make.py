@@ -17,6 +17,7 @@ def env2args(env):
 def make_target(callback, port, targets, pipe=None, **kwargs):
   """Build a make target and call a function when finished."""
   from os.path import join
+  from os import setsid
   from subprocess import PIPE, STDOUT, Popen
   from .env import env as environ, env_master, flags
   from .subprocess import add_popen
@@ -54,7 +55,7 @@ def make_target(callback, port, targets, pipe=None, **kwargs):
   if pipe is None and flags["no_op"]:
     make = PopenNone(args)
   else:
-    make = Popen(args, stdin=stdin, stdout=stdout, stderr=stderr, close_fds=True)
+    make = Popen(args, stdin=stdin, stdout=stdout, stderr=stderr, close_fds=True, preexec_fn=setsid)
     if stdin is not None:
       make.stdin.close()
 
