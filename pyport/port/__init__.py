@@ -36,19 +36,9 @@ class PortCache(object):
       port = None
     else:
       port = Port(origin, attr)
-      port.stage_completed.connect(self._refresh_queues)
     self._ports[origin] = port
     for callback in waiters:
       post_event(callback, port)
-
-  def _refresh_queues(self, port):
-    """Inform all queues that priorities may have changed."""
-    from ..queue import queues
-
-    port.stage_completed.disconnect(self._refresh_queues)
-    if port.dependancy is not None:
-      for queue in queues:
-        queue.reorder()
 
 _cache = PortCache()
 

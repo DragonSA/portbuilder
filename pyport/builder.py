@@ -28,6 +28,7 @@ class ConfigBuilder(object):
       from .job import PortJob
       from .queue import config_queue
 
+      port.stage_completed.connect(self._refresh_queues)
       job = PortJob(port, port.CONFIG)
       job.connect(self._cleanup).connect(callback)
       self.ports[port] = job
@@ -39,12 +40,22 @@ class ConfigBuilder(object):
       self.failed.append(job.port)
     del self.ports[job.port]
 
+  def _refresh_queues(self, port):
+    """Inform all queues that priorities may have changed."""
+    from ..queue import queues
+
+    port.stage_completed.disconnect(self._refresh_queues)
+    if port.dependancy is not None:
+      for queue in queues:
+        queue.reorder()
+
 class StageBuilder(object):
   """General port stage builder."""
 
   def __init__(self, stage, queue, prev_builder=None):
     """Initialise port stage builder."""
     self.ports = {}
+    self.failed = {}
     self._pending = {}
     self._depends = {}
     self.stage = stage
