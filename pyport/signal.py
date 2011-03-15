@@ -43,7 +43,14 @@ class Signal(object):
 
   def __call__(self, *args, **kwargs):
     """Emit a signal."""
+    from .env import flags
     from .event import post_event
 
+    if flags["debug"]:
+      from traceback import extract_stack
+      tb = extract_stack()
+    else:
+      tb = None
+
     for slot in self._slots:
-      post_event((slot, args, kwargs))
+      post_event((slot, args, kwargs, tb))
