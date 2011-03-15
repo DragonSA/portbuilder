@@ -33,8 +33,19 @@ def port_force(port):
   else:
     no_port.append(port)
 
+def sigint(_sig, _frame):
+  from pyport import stop
+  stop(kill=True, kill_clean=True)
+  exit(254)
+
+def sigterm(_sig, _frame):
+  from pyport.event import post_event
+  from pyport import stop
+  post_event(stop)
+
 def main():
   """The main event loop."""
+  from signal import signal, SIGINT, SIGTERM
   from pyport.env import flags
   from pyport.monitor import Top
   from pyport.port import get_port
@@ -51,6 +62,10 @@ def main():
     
   # Make sure log_dir is available
   mkdir(flags["log_dir"])
+
+  # Install signal handlers
+  signal(SIGINT, sigint)
+  signal(SIGTERM, sigterm)
 
   # Execute the primary build target
   for port in args:
