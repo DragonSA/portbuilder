@@ -39,9 +39,9 @@ class Dependant(DependHandler):
     self._dependants = [[], [], [], [], [], []]  #: All dependants
     self.port = port  #: The port whom we handle
     self.priority = port.priority
-    # TODO: Change to actually check if we are resolved
     if flags["mode"] == "install" and port.install_status > Port.ABSENT:
       self.status = Dependant.RESOLV
+      # TODO: Change to actually check if we are resolved
     else:
       self.status = Dependant.UNRESOLV
 
@@ -165,8 +165,6 @@ class Dependancy(DependHandler):
         get_port(j[1], adder(j[0], i))
     if not self._loading:
       self._update_priority()
-      if flags["mode"] == "upgrade" and self.port.install_status >= Port.CURRENT:
-        self.port.dependant.status_changed()
       self.port.dependancy_loaded(True)
 
   def __repr__(self):
