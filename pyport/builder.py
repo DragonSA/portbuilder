@@ -13,12 +13,16 @@ class ConfigBuilder(object):
     """Initialise config builder."""
     self.ports = {}
 
+  def __call__(self, port):
+    """Configure the given port."""
+    self.add(port)
+
   def add(self, port, callback=None):
     """Add a port to be configured."""
     assert port.stage < port.CONFIG
 
     if port in self.ports:
-      return self.ports[port].connect(callback)
+      self.ports[port].connect(callback)
     else:
       from .job import PortJob
       from . import config_queue
@@ -27,7 +31,6 @@ class ConfigBuilder(object):
       job.connect(self._cleanup).connect(callback)
       self.ports[port] = job
       config_queue.add(job)
-      return job
 
   def _cleanup(self, job):
     """Cleanup after the port was configured."""
@@ -45,12 +48,20 @@ class StageBuilder(object):
     self.queue = queue
     self.prev_builder = prev_builder
 
+  def __call__(self, port):
+    """Build the given port to the required stage."""
+    self.add(port)
+
+  def __repr__(self):
+    return "<StageBuilder(stage=%i)>" % self.stage
+
   def add(self, port, callback=None):
     """Add a port to be build for this stage."""
     assert not  port.failed
 
     if port in self.ports:
-      return self.ports[port].connect(callback)
+      self.ports[port].connect(callback)
+      return
     else:
       from .job import PortJob
 
@@ -79,8 +90,8 @@ class StageBuilder(object):
     for p in depends:
       if p not in self._depends:
         self._depends[p] = set()
+        install_builder.add(p, self._depend_resolv)
       self._depends[p].add(port)
-      install_builder.add(p, self._depend_resolv)
 
     if port.stage < self.stage - 1:
       self._pending[port] += 1
@@ -109,10 +120,13 @@ class StageBuilder(object):
 
   def _port_ready(self, port):
     """Add a port to the stage queue."""
-    if port.failed or port.dependancy.check(self.stage):
+    if port.failed or port.dependancy.failed or port.dependancy.check(self.stage):
       self.ports[port].stage_done()
     else:
-      self.queue.add(self.ports[port])
+      if port.stage < self.stage:
+        self.queue.add(self.ports[port])
+      else:
+        self.ports[port].stage_done()
       del self._pending[port]
 
 config_builder   = ConfigBuilder()
