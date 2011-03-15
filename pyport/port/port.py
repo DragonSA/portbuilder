@@ -158,7 +158,9 @@ class Port(object):
 
   def _pre_config(self):
     """Configure the ports options."""
-    if len(self.attr["options"]) and not self._check_config():
+    from ..env import env
+
+    if len(self.attr["options"]) and not env.has_key("BATCH") and not self._check_config():
       if not self._config_lock.acquire():
         from ..job import StalledJob
         raise StalledJob()

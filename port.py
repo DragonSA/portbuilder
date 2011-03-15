@@ -41,8 +41,8 @@ def gen_parser():
   usage = "\t%prog [-nN] [-D variable] [variable=value] port ..."
 
   parser = OptionParser(usage, version="%prog 0.1.0")
-  #parser.add_option("-b", "--batch", action="store_true", default=False,
-                    #help="Batch mode.  Skips the config stage.")
+  parser.add_option("-b", "--batch", action="store_true", default=False,
+                    help="Batch mode.  Skips the config stage.")
   parser.add_option("-D", dest="make_env", action="append", metavar="variable",
                     default=[], help="Define the given variable for make (i.e."\
                     " add ``-D variable'' to the make calls.")
@@ -74,6 +74,10 @@ def gen_parser():
 def set_options(options):
   """Set all the global options."""
   from pyport.env import env, flags
+
+  # Batch mode
+  if options.batch:
+    env["BATCH"] = True
 
   # Add all -D options
   for i in options.make_env:
