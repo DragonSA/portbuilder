@@ -38,28 +38,39 @@ def gen_parser():
   """Create the options parser object."""
   from optparse import OptionParser
 
-  usage = "\t%prog [-nN] [-D variable] [variable=value] port ..."
+  usage = "\t%prog [-nN] [-c config] [-D variable] [variable=value] port ..."
 
   parser = OptionParser(usage, version="%prog 0.1.0")
+
   parser.add_option("-b", "--batch", action="store_true", default=False,
                     help="Batch mode.  Skips the config stage.")
+
+  parser.add_option("-c", "--config", action="callback", callback=parse_config,
+                    type="string", help="Specify which ports to configure "\
+                    "(none, all, newer, changed) [default: changed]")
+
   parser.add_option("-D", dest="make_env", action="append", metavar="variable",
                     default=[], help="Define the given variable for make (i.e."\
                     " add ``-D variable'' to the make calls.")
+
   #parser.add_option("-i", "--install", action="store_true", default=True,
                     #help="Install mode.  Installs the listed ports (and any " \
                     #"dependancies required [default].")
   #parser.add_option("-f", "--fetch-only", dest="fetch", action="store_true",
                     #default=False, help="Only fetch the distribution files for"\
                     #" the ports")
+
   parser.add_option("-n", dest="no_opt_print", action="store_true",
                     default=False, help="Display the commands that would have "\
                     "been executed, but do not actually execute them.")
+
   parser.add_option("-N", dest="no_opt", action="store_true", default=False,
                     help="Do not execute any commands.")
-  #parser.add_option("-p", "--package", action="store_true", default=False,
-                    #help="When installing ports, also generate packages (i.e." \
-                    #" do a ``make package'').")
+
+  parser.add_option("-p", "--package", action="store_true", default=False,
+                    help="When installing ports, also generate packages (i.e." \
+                    " do a ``make package'').")
+
   #parser.add_option("-P", dest="pref_package", action="store_true",
                     #default=False, help="Install packages where possible.")
   #parser.add_option("-u", "--update", dest="install", action="store_false",
@@ -103,4 +114,17 @@ def set_options(options):
   if options.no_opt:
     flags["no_op"] = True
 
-main()
+  # Package installed ports
+  if options.package:
+    flags["package"] = True
+
+def parse_config(option, _opt_str, value, parser):
+  from pyport.env import flags
+
+  if value not in ("none", "all", "newer", "changed"):
+    from optparse import OptionValueError
+    raise OptionValueError("config must be one of (none, all, newer, changed)")
+  flags["config"] = value
+
+if __name__ == "__main__":
+  main()
