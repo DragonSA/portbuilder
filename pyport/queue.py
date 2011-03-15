@@ -25,7 +25,7 @@ class QueueManager(object):
     return self._load
 
   @load.setter
-  def set_load(self, load):
+  def load(self, load):
     """Set the load and start jobs as required."""
     run = load > self._load
     self._load = load
