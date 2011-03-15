@@ -96,10 +96,9 @@ class QueueManager(object):
         best_idx = idx
     return queue.pop(best_idx)
 
-
 attr_queue = QueueManager(_cpus * 2)
 config_queue = QueueManager(max(2, _cpus * 2))
-checksum_queue = QueueManager(1)
+checksum_queue = QueueManager(max(1, _cpus // 2))
 fetch_queue = QueueManager(1)
 build_queue = QueueManager(_cpus * 2)
 install_queue = QueueManager(1)
