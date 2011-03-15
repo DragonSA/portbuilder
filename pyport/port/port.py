@@ -5,17 +5,9 @@ from contextlib import contextmanager
 __all__ = ["Port"]
 
 # TODO:
-# No_opt
 # Non-privleged mode
-# Package install (or separate stage)
 # remove NO_DEPENDS once thoroughly tested???
 # handle IS_INTERACTIVE
-
-# - config
-# * checksum
-# * fetch
-# * build
-# - install
 
 class Lock(object):
   """A simple Uniprocessor lock."""
@@ -158,9 +150,7 @@ class Port(object):
 
   def _pre_config(self):
     """Configure the ports options."""
-    from ..env import env
-
-    if len(self.attr["options"]) and not env.has_key("BATCH") and not self._check_config():
+    if len(self.attr["options"]) and not self._check_config():
       if not self._config_lock.acquire():
         from ..job import StalledJob
         raise StalledJob()
@@ -266,7 +256,6 @@ class Port(object):
 
   def _pre_build(self):
     """Build the port."""
-    # TODO: interactive port
     self._make_target(["clean","all"], BATCH=True, NOCLEANDEPENDS=True, NO_DEPENDS=True)
 
   def _post_build(self, _make, status):
@@ -275,11 +264,14 @@ class Port(object):
 
   def _pre_install(self):
     """Install the port."""
+    from ..env import flags
+
     if self.install_status == Port.ABSENT:
-      target = "install"
+      target = ("install",)
     else:
       target = ("deinstall", "reinstall")
-    # TODO: package
+    if env["package"]:
+      target += ("package",)
     self._make_target(target, BATCH=True, NO_DEPENDS=True)
 
   def _post_install(self, _make, status):
@@ -327,8 +319,14 @@ class Port(object):
   def _check_config(self):
     """Check the options file to see if it is up-to-date."""
     from os.path import isfile
+    from ..env import env, flags
+    from .mk import pkg_version
 
-    # TODO: make this understand about options set, changes and versioning...
+    if "BATCH" in env or flags["config"] == "none":
+      return True
+    elif flags["config"] == "all":
+      return False
+
     optionfile = self.attr["optionsfile"]
     pkgname = self.attr["pkgname"]
     options = set()
@@ -339,10 +337,10 @@ class Port(object):
           config_pkgname = i[14:-1]
         elif i.startswith('WITH'):
           options.add(i.split('_', 1)[1].split('=', 1)[0])
-    if options != set(self.attr["options"]):
+    if flags["config"] == "changed" and options != set(self.attr["options"]):
       return False
-    # if diff_version:
-    #   return config_pkgname == pkgname
+    if flags["config"] == "newer" and pkg_version(pkgname, config_pkgname) == Port.OLDER:
+      return False
     return True
 
   def _get_priority(self):
