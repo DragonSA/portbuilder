@@ -2,7 +2,8 @@
 
 from .env import cpus as _cpus
 
-__all__ = ["QueueManager"]
+__all__ = ["QueueManager", "queues", "attr_queue", "config_queue",
+           "checksum_queue", "fetch_queue", "build_queue", "install_queue"]
 
 class QueueManager(object):
   """Manages jobs and runs them as resources come available."""
@@ -89,3 +90,4 @@ checksum_queue = QueueManager(1)
 fetch_queue = QueueManager(1)
 build_queue = QueueManager(_cpus * 2)
 install_queue = QueueManager(1)
+queues = (config_queue, checksum_queue, fetch_queue, build_queue, install_queue)

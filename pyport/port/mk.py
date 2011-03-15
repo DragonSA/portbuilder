@@ -69,7 +69,6 @@ def parse_options(optionstr):
   # TODO: make ordered dict
   options = {}
   order = 0
-  origin = optionstr
   while len(optionstr):
     # Get the name component
     name, optionstr = optionstr.split(None, 1)

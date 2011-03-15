@@ -42,10 +42,12 @@ class PortCache(object):
       post_event(callback, port)
 
   def _refresh_queues(self, port):
-    from ..queue import config_queue, checksum_queue, fetch_queue, build_queue, install_queue
+    """Inform all queues that priorities may have changed."""
+    from ..queue import queues
+
     port.stage_completed.disconnect(self._refresh_queues)
     if port.dependancy is not None:
-      for queue in (config_queue, checksum_queue, fetch_queue, build_queue, install_queue):
+      for queue in queues:
         queue.reorder()
 
 _cache = PortCache()

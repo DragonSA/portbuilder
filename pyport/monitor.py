@@ -7,7 +7,9 @@ __all__ = ["Monitor", "Top"]
 class Monitor(object):
   """The monitor abstract super class."""
 
-  def __init__(self, name="Monitor"):
+  __metaclass__ = ABCMeta
+
+  def __init__(self):
     """Initialise the monitor"""
     from .event import alarm
 
@@ -45,6 +47,7 @@ class Monitor(object):
     self._stopped = True
     self._deinit()
 
+  @abstractmethod
   def run(self):
     """Refresh the display."""
     pass
@@ -75,6 +78,7 @@ class Top(Monitor):
     self._offset = 0
     self._time = time()
     self._stdscr = None
+    self._stats = None
 
   def run(self):
     """Refresh the display."""
