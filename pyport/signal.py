@@ -16,16 +16,11 @@ class Signal(object):
 
   def connect(self, slot):
     """Connect a callback function to the signal."""
-    from .env import flags
+    from .debug import get_tb
 
     if slot is not None:
-      if flags["debug"]:
-        from traceback import extract_stack
-        tb = extract_stack()[:-1]
-      else:
-        tb = None
       self._slots.append(slot)
-      self._tb[slot] =  tb
+      self._tb[slot] =  get_tb()
     return self
 
   def disconnect(self, slot):
@@ -39,19 +34,14 @@ class Signal(object):
 
   def replace(self, oldslot, newslot):
     """Replace a slot with a different one (to maintain calling order)."""
-    from .env import flags
+    from .debug import get_tb
 
     if oldslot not in self._slots:
       raise RuntimeError("%s: Slot not connected to this signal, cannot be "\
                         "replaced: %s" % (repr(self), str(oldslot)))
-    if flags["debug"]:
-      from traceback import extract_stack
-      tb = extract_stack()[:-1]
-    else:
-      tb = None
     self._slots[self._slots.index(oldslot)] = newslot
     self._tb.pop(oldslot)
-    self._tb[newslot] = tb
+    self._tb[newslot] = get_tb()
     return self
 
   reconnect = replace
