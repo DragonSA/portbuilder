@@ -123,7 +123,23 @@ class Port(object):
 
   def clean(self):
     """Clean the ports working directory any log file."""
-    pass
+    assert not self.working
+    if self.stage >= Port.BUILD:
+      from ..make import make_target
+      make_target(self._cleaned, self, "clean", NOCLEANDEPENDS=True)
+    else:
+      self._cleaned()
+
+  def _cleaned(self, make=None):
+    """Make the port as clean."""
+    self.failed = False
+    self.stage = Port.CONFIG
+    if not self.failed:
+      from os import unlink
+      try:
+        unlink(self.log_file)
+      except OSError:
+        pass
 
   def build_stage(self, stage):
     """Build the requested stage."""
