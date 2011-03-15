@@ -125,6 +125,14 @@ class Port(object):
     self.dependancy = None
     self.dependant = Dependant(self)
 
+    if not attr["jobs_unsafe"] and not attr["jobs_disable"]:
+      if attr["jobs_safe"] or attr["jobs_force"]:
+        try:
+          self.load = int(attr["jobs_number"])
+        except ValueError:
+          from ..env import cpus
+          self.load = cpus
+
   def __repr__(self):
     return "<Port(origin=%s)>" % (self.origin)
 
@@ -277,7 +285,7 @@ class Port(object):
     else:
       target = ("deinstall", "reinstall")
     # TODO: package
-    self._make_target(target, NO_DEPENDS=True)
+    self._make_target(target, BATCH=True, NO_DEPENDS=True)
 
   def _post_install(self, _make, status):
     """Update the install status."""
