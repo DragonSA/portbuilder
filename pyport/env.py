@@ -23,7 +23,8 @@ flags = {
   "mode"        : "install",     # Mode of operation
   "no_op"       : False,         # Do nothing
   "no_op_print" : False,         # Print commands that would have been executed
-  "package"     : False,         # Package installed ports
+  "package"     : False,         # Package all installed ports
+  "upgrade"     : False,         # Upgrade ports
 }
 
 env_master = {}
