@@ -159,7 +159,7 @@ class Top(Monitor):
           stop(kill=True, kill_clean=True)
           exit(254)
         continue
-      elif ch == KEY_CLEAR or ch == ascii.FF:      # Redraw window 
+      elif ch == KEY_CLEAR or ch == ascii.FF:      # Redraw window
         self._stdscr.clear()
       elif ch == KEY_PPAGE:                        # Page up display
         self._skip -= self._stdscr.getmaxyx()[0] - self._offset - 2
@@ -375,7 +375,9 @@ class Statistics(object):
       self.summary[self.QUEUED].extend(reversed(stats[self.QUEUED]))
       seen.update(stats[self.QUEUED])
 
-      for port in builder.ports:
+      ports = list(builder.ports)
+      ports.sort(key=lambda x: -x.dependant.priority)
+      for port in ports:
         if port not in seen and not port.failed:
           if stage == "install" and port.stage == port.CONFIG:
             continue
