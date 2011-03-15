@@ -44,7 +44,7 @@ class EventManager(object):
       tb = None
     if not callable(func):
       assert(len(func) == 4)
-      self._events.append(func + (tb[:-1],))
+      self._events.append(func + (tb,))
     else:
       self._events.append((func, args, kwargs, None, tb))
 
