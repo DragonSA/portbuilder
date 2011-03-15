@@ -18,6 +18,9 @@ class ConfigBuilder(object):
     """Configure the given port."""
     self.add(port)
 
+  def __repr__(self):
+    return "<ConfigBuilder()>"
+
   def add(self, port, callback=None):
     """Add a port to be configured."""
     assert port.stage < port.CONFIG
@@ -69,6 +72,9 @@ class StageBuilder(object):
     self.add(port, callback)
 
   def __repr__(self):
+    return "<StageBuilder(%i)>" % self.stage
+
+  def __repr__(self):
     return "<StageBuilder(stage=%i)>" % self.stage
 
   def add(self, port, callback):
@@ -92,6 +98,8 @@ class StageBuilder(object):
 
   def _add(self, job):
     """Add a ports dependancies and prior stage to be built."""
+    from .env import flags
+
     port = job.port
 
     if port.failed or port.dependancy.failed:
@@ -109,7 +117,10 @@ class StageBuilder(object):
         install_builder(p, self._depend_resolv)
       self._depends[p].add(port)
 
-    if port.stage < self.stage - 1:
+    if flags["mode"] == "upgrade" and port.install_status >= port.CURRENT:
+      if not self._pending[port]:
+        self._port_ready(port)
+    elif port.stage < self.stage - 1:
       self._pending[port] += 1
       self.prev_builder.add(port, self._stage_resolv)
 
@@ -118,8 +129,8 @@ class StageBuilder(object):
     if job.port.failed or job.port.dependancy.failed:
       self.failed.append(job.port)
     if job.port in self.cleanup:
-      job.port.clean()
       self.cleanup.remove(job.port)
+      job.port.clean()
     del self.ports[job.port]
 
   def _depend_resolv(self, job):
@@ -141,9 +152,14 @@ class StageBuilder(object):
 
   def _port_ready(self, port):
     """Add a port to the stage queue."""
+    from .env import flags
+
     if port.failed or port.dependancy.failed or port.dependancy.check(self.stage):
       self.ports[port].stage_done()
     elif port.dependant.status == port.dependant.RESOLV:
+      self.ports[port].stage_done()
+    elif flags["mode"] == "upgrade" and port.install_status >= port.CURRENT:
+      port.dependant.status_changed()
       self.ports[port].stage_done()
     else:
       assert port.stage >= self.stage - 1
