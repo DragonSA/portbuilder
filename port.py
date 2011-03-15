@@ -36,7 +36,6 @@ def port_force(port):
 def main():
   """The main event loop."""
   from pyport.env import flags
-  from pyport.event import run
   from pyport.monitor import Top
   from pyport.port import get_port
 
@@ -48,6 +47,9 @@ def main():
   if len(args) == 0:
     print parser.get_usage()
     return
+    
+  # Make sure log_dir is available
+  mkdir(flags["log_dir"])
 
   # Execute the primary build target
   for port in args:
@@ -61,29 +63,45 @@ def main():
 
   if not flags["no_op_print"]:
     Top().start()
-  run()
+  run_loop()
 
-def report_bad():
-  from pyport import builder as builders
+def mkdir(directory):
+  """Make a given directory if needed."""
+  from os.path import exists, isdir
+  from os import mkdir
 
-  report_depend = []
-  report_failed = []
-  seen = set()
-  for stage in ("config", "fetch", "build", "install"):
-    builder = getattr(builders, "%s_builder" % stage)
-    for port in builder.failed:
-      if port in seen:
-        continue
-      if port.failed:
-        report_failed.append("Port '%s' failed to %s" % (port.origin, stage))
-      seen.add(port)
-  return report_failed + ["Port '%s' does not exist" % i for i in no_port]
+  if exists(directory):
+    if not isdir(directory):
+      print "%s: not a directory" % directory
+      exit(1)
+  else:
+    try:
+      mkdir(directory)
+    except OSError, e:
+      print "%s: unable to create directory (%s)" % (directory, e)
+      exit(2)
+
+def run_loop():
+  """Run the main event loop, print nice messages if something goes wrong."""
+  from pyport.event import run
+
+  try:
+    run()
+  except BaseException:
+    from traceback import format_list, print_exc
+    from pyport.event import traceback
+
+    for tb, name in traceback():
+      print "Traceback from %s (most recent call last):" % name
+      print "".join(format_list(tb))
+    print_exc()
+    exit(255)
 
 def gen_parser():
   """Create the options parser object."""
   from optparse import OptionParser
 
-  usage = "\t%prog [-bnNp] [-c config] [-D variable] [-f file] "\
+  usage = "\t%prog [-bnpruFN] [-c config] [-D variable] [-f file] "\
           "[variable=value] port ..."
 
   parser = OptionParser(usage, version="%prog 0.1.0")
