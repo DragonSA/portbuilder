@@ -4,6 +4,8 @@
  * Cleanup after port completion
  * Allow program to be terminated prematurely
  * Add support for building ports in a chroot environment
+ * Add internal support for cross building (convenience)
+ * Add package building
 
 0.1.0 - 2011 February 15:
  *  Rewrite of pypkg (now pyport) to remove need for threads
