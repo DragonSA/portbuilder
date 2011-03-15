@@ -82,13 +82,13 @@ class Port(object):
   NEWER   = 3
 
   # Build stage status flags
-  ZERO       = 0
-  CONFIG     = 1
-  CHECKSUM   = 2
-  FETCH      = 3
-  BUILD      = 4
-  INSTALL    = 5
-  PKGINSTALL = 6
+  ZERO     = 0
+  CONFIG   = 1
+  CHECKSUM = 2
+  FETCH    = 3
+  BUILD    = 4
+  INSTALL  = 5
+  PACKAGE  = 6
 
   _config_lock = Lock()
   _checksum_lock = FileLock()
@@ -148,7 +148,7 @@ class Port(object):
     from ..job import StalledJob
 
     pre_map = (self._pre_config, self._pre_checksum, self._pre_fetch,
-                self._pre_build, self._pre_install)
+                self._pre_build, self._pre_install, self._pre_package)
 
     if self.working or self.stage != stage - 1 or self.failed:
       # Don't do stage if not able to
@@ -283,7 +283,8 @@ class Port(object):
     """Build the port."""
     self._make_target(["clean","all"], BATCH=True, NOCLEANDEPENDS=True, NO_DEPENDS=True)
 
-  def _post_build(self, _make, status):
+  @staticmethod
+  def _post_build(_make, status):
     """Indicate build status."""
     return status
 
@@ -295,8 +296,6 @@ class Port(object):
       target = ("install",)
     else:
       target = ("deinstall", "reinstall")
-    if flags["package"]:
-      target += ("package",)
     self._make_target(target, BATCH=True, NO_DEPENDS=True)
 
   def _post_install(self, _make, status):
@@ -314,6 +313,15 @@ class Port(object):
       self.install_status = Port.ABSENT
     return status
 
+  def _pre_package(self):
+    """Package the port,"""
+    self._make_target("package", BATCH=True)
+
+  @staticmethod
+  def _post_package(_make, status):
+    """Indicate package status."""
+    return status
+
   def _make_target(self, targets, **kwargs):
     """Build the requested targets."""
     from ..make import make_target
@@ -325,7 +333,7 @@ class Port(object):
     from ..make import SUCCESS
 
     post_map = (self._post_config, self._post_checksum, self._post_fetch,
-                self._post_build, self._post_install)
+                self._post_build, self._post_install, self._post_package)
     stage = self.stage
     status = post_map[stage](make, make.wait() is SUCCESS)
     if status is not None:
