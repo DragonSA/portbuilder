@@ -53,7 +53,7 @@ class AttrJob(Job):
   """A port attributes job."""
 
   def __init__(self, origin, callback, reget):
-    Job.__init__(self, 2 if reget else 1)
+    Job.__init__(self, priority=2 if reget else 1)
     self.origin = origin
     self.callback = callback
 
@@ -68,6 +68,28 @@ class AttrJob(Job):
   def _attr(self, attr):
     """Callback special function with origin and attributes."""
     self.callback(self.origin, attr)
+    self.done()
+
+class CleanJob(Job):
+  """Clean a port job."""
+
+  def __init__(self, port):
+    Job.__init__(self)
+    self.port = port
+    self.status = None
+
+  def __repr__(self):
+    return "<CleanJob(%s)>" % self.port
+
+  def work(self):
+    """Clean a port."""
+    from .make import make_target
+    make_target(self._cleaned, self.port, "clean", NOCLEANDEPENDS=True)
+
+  def _cleaned(self, popen):
+    """Mark job as finished."""
+    from .make import SUCCESS
+    self.status = popen.wait() is SUCCESS
     self.done()
 
 class PortJob(Job):
