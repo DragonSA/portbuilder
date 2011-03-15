@@ -1,37 +1,40 @@
 #!/usr/bin/env python
 """Controller for various ports operations."""
 
-no_port = []
-
 VAR_NAME = "^[a-zA-Z_][a-zA-Z0-9_]*$"
 
-def port_install(port):
-  """Install the port,"""
-  from pyport.builder import install_builder
+class PortDelegate(object):
+  """Choose if a port should be build and with which builder."""
 
-  if not isinstance(port, str) and port.install_status == port.ABSENT:
-    install_builder(port)
-  else:
-    no_port.append(port)
+  def __init__(self, package, upgrade):
+    """Initialise port delegate."""
+    self.package = package
+    self.upgrade = upgrade
+    self.no_port = []
 
-def port_upgrade(port):
-  """Upgrade the port."""
-  from pyport.builder import install_builder
+  def __call__(self, port):
+    """Add a port to the required builder."""
+    from pyport.env import flags
 
-  if not isinstance(port, str) and port.install_status < port.CURRENT:
-    port.dependant.status = port.dependant.UNRESOLV
-    install_builder(port)
-  else:
-    no_port.append(port)
-
-def port_force(port):
-  """Reinstall the port."""
-  from pyport.builder import install_builder
-
-  if not isinstance(port, str):
-    install_builder(port)
-  else:
-    no_port.append(port)
+    if isinstance(port, str):
+      self.no_port.append(port)
+      return
+    if not flags["mode"] == "upgrade":
+      if self.upgrade:
+        if port.install_status >= port.CURRENT:
+          return
+        else:
+          # NOTE: A trivial attempt to resolve indirect dependancies in non-
+          # recursive mode, to be fixed
+          port.dependant.status = port.dependant.UNRESOLV
+      elif port.install_status >= port.ABSENT:
+        return
+    if self.package:
+      from pyport.builder import package_builder
+      package_builder(port)
+    else:
+      from pyport.builder import install_builder
+      install_builder(port)
 
 def sigterm(_sig, _frame):
   """Kill subprocesses and die."""
@@ -72,19 +75,16 @@ def main():
   signal(SIGINT, sigint)
   signal(SIGTERM, sigterm)
 
+  # Port delegate
+  delegate = PortDelegate(options.package, options.upgrade)
+
   # Execute the primary build target
   for port in args:
-    if options.upgrade:
-      if options.recursive:
-        get_port(port, port_force)
-      else:
-        get_port(port, port_upgrade)
-    else:
-      get_port(port, port_install)
+    get_port(port, delegate)
 
   if not flags["no_op_print"]:
     Top().start()
-  run_loop()
+  run_loop(delegate.no_port)
 
 def mkdir(directory):
   """Make a given directory if needed."""
@@ -102,12 +102,15 @@ def mkdir(directory):
       print "%s: unable to create directory (%s)" % (directory, e)
       exit(2)
 
-def run_loop():
+def run_loop(no_port):
   """Run the main event loop, print nice messages if something goes wrong."""
   from pyport.event import run
 
   try:
     run()
+
+    if no_port:
+      print "Unable to locate ports: %s" % no_port
   except SystemExit:
     raise
   except BaseException:
@@ -177,8 +180,8 @@ def gen_parser():
                     #default=False, help="Install packages where possible.")
 
   parser.add_option("-r", "--recursive", dest="recursive", action="store_true",
-                    default=False, help="Update ports and their dependancies"\
-                    "(requires -u)")
+                    default=False, help="Recursively apply -p or -u to "\
+                    "all dependancies")
 
   parser.add_option("-u", "--upgrade", dest="upgrade", action="store_true",
                     default=False, help="Upgrade port mode.")
@@ -254,15 +257,15 @@ def set_options(options):
     flags["no_op"] = True
 
   # Package installed ports
-  if options.package:
+  if options.package and options.recursive:
     flags["package"] = True
 
   # -r requires -u
-  if options.recursive and not options.upgrade:
-    options.parser.error("-r requires -u")
+  if options.recursive and not (options.upgrade or options.package):
+    options.parser.error("-r requires -u or -p")
 
   # Upgrade mode
-  if options.recursive and options.upgrade:
+  if options.upgrade and options.recursive:
     flags["mode"] = "upgrade"
 
 def read_port_file(ports_file):
