@@ -91,7 +91,7 @@ class EventManager(object):
 
     now = time()
     for item in reversed(self._alarms):
-      if item[1] <= now or end:
+      if item[1] <= now or end is not False:
         try:
           trigger = item[0](end)
         except BaseException:

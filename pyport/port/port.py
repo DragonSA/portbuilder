@@ -270,7 +270,7 @@ class Port(object):
       target = ("install",)
     else:
       target = ("deinstall", "reinstall")
-    if env["package"]:
+    if flags["package"]:
       target += ("package",)
     self._make_target(target, BATCH=True, NO_DEPENDS=True)
 

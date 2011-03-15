@@ -39,6 +39,7 @@ class Monitor(object):
   def start(self):
     """Start the monitor."""
     self._started = True
+    self._stopped = False
     self._init()
     self.run()
 
