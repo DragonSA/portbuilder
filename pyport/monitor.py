@@ -84,6 +84,7 @@ class Top(Monitor):
 
     self._failed_only = False
     self._idle = True
+    self._skip = 0
 
   def run(self):
     """Refresh the display."""
@@ -129,7 +130,7 @@ class Top(Monitor):
 
   def _userinput(self):
     """Gte user input and change display options."""
-    from curses import KEY_CLEAR, ascii
+    from curses import KEY_CLEAR, KEY_NPAGE, KEY_PPAGE, ascii
 
     run = False
     while True:
@@ -144,6 +145,11 @@ class Top(Monitor):
         exit()
       elif ch == KEY_CLEAR or ch == ascii.FF:
         self._stdscr.clear()
+      elif ch == KEY_PPAGE:
+        self._skip -= self._stdscr.getmaxyx()[0] - self._offset - 2
+        self._skip = max(0, self._skip)
+      elif ch == KEY_NPAGE:
+        self._skip += self._stdscr.getmaxyx()[0] - self._offset - 2
       else:
         continue
       run = True
@@ -225,11 +231,22 @@ class Top(Monitor):
 
     scr.addstr(self._offset + 1, 2, 'STAGE   STATE   TIME PORT (VERSION)')
 
+    skip = self._skip
     lines, columns = scr.getmaxyx()
     offset = self._offset + 2
     lines -= offset
     if not self._failed_only:
+      if self._idle:
+        total = sum(len(i) for i in self._stats.summary)
+        if skip > total - lines:
+          self._skip = skip = max(0, total - lines)
+      else:
+        if skip > len(active) - lines:
+          self._skip = skip = max(0, len(active) - lines)
       for port in active:
+        if skip:
+          skip -= 1
+          continue
         time = port.working
         if time:
           offtime = self._stats.time - time
@@ -242,14 +259,23 @@ class Top(Monitor):
         lines -= 1
         if not lines:
           return
+    elif skip > len(failed) - lines:
+        self._skip = skip = max(0, len(failed) - lines)
 
     if self._idle or self._failed_only:
       for stage, name in ((queued, "queued"), (pending, "pending"), (failed, "failed")):
-        if self._failed_only and name != "failed":
-          continue
+        if name != "failed":
+          stg = 1
+          if self._failed_only:
+            continue
+        else:
+          stg = 0
         for port in stage:
+          if skip:
+            skip -= 1
+            continue
           scr.addnstr(offset, 0, ' %6s  %6s        %s' %
-                      (STAGE_NAME[port.stage + 1], name, get_name(port)), columns)
+                      (STAGE_NAME[port.stage + stg], name, get_name(port)), columns)
           offset += 1
           lines -= 1
           if not lines:
@@ -302,7 +328,10 @@ class Statistics(object):
 
       for port in builder.failed:
         if port not in seen:
-          stats[self.FAILED].append(port)
+          if port.failed:
+            stats[self.FAILED].append(port)
+          else:
+            seen.add(port)
       self.summary[self.FAILED].extend(reversed(stats[self.FAILED]))
       seen.update(stats[self.FAILED])
 
