@@ -75,7 +75,9 @@ class PortJob(Job):
     Job.__init__(self, port.load, None)
     self.port = port
     self.stage = stage
-    self.port.stage_completed.connect(self.stage_done)
+
+  def __repr__(self):
+    return "<PortJob(port=%s, stage=%i)>" % (self.port.origin, self.stage)
 
   @property
   def priority(self):
@@ -84,12 +86,18 @@ class PortJob(Job):
 
   def work(self):
     """Run the required port stage."""
-    if not self.port.build_stage(self.stage):
-      raise
-      #self.stage_done(self.port)
+    self.port.stage_completed.connect(self.stage_done)
+    try:
+      if not self.port.build_stage(self.stage):
+        raise
+        #self.stage_done(self.port)
+    except StalledJob:
+      self.port.stage_completed.disconnect(self.stage_done)
 
-  def stage_done(self, port):
+  def stage_done(self, port=None):
     """Handle the completion of a port stage."""
-    if port.stage >= self.stage:
+    if port is None:
+      self.done()
+    elif port.stage >= self.stage:
       self.port.stage_completed.disconnect(self.stage_done)
       self.done()
