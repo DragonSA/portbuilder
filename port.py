@@ -125,7 +125,7 @@ def gen_parser():
   """Create the options parser object."""
   from optparse import OptionParser
 
-  usage = "\t%prog [-bnpruFN] [-c config] [-D variable] [-f file] "\
+  usage = "\t%prog [-bdnpruFN] [-c config] [-D variable] [-f file] "\
           "[variable=value] port ..."
 
   parser = OptionParser(usage, version="%prog 0.1.0")
@@ -136,6 +136,9 @@ def gen_parser():
   parser.add_option("-c", "--config", action="callback", callback=parse_config,
                     type="string", help="Specify which ports to configure "\
                     "(none, all, newer, changed) [default: changed]")
+
+  parser.add_option("-C", dest="chroot", action="store", type="string",
+                    default="", help="Build ports in chroot environment.")
 
   parser.add_option("-d", "--debug", action="store_true", default=True,
                     help="Turn on extra diagnostic information (slower)")
@@ -188,6 +191,9 @@ def set_options(options):
   # Batch mode
   if options.batch:
     env["BATCH"] = True
+
+  # Set chroot environment
+  flags["chroot"] = options.chroot
 
   # Debug mode
   if options.debug:

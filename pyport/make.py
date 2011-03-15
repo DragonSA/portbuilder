@@ -44,6 +44,9 @@ def make_target(callback, port, targets, pipe=None, **kwargs):
       del env[key]
   args += tuple(env2args(env))
 
+  if flags["chroot"]:
+    args = ("chroot", flags["chroot"]) + args
+
   if pipe is True:
     # Give access to subprocess output
     stdin, stdout, stderr = PIPE, PIPE, STDOUT

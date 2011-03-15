@@ -122,10 +122,10 @@ def status(port, changed=False, cache=dict()):
   """Get the current status of the port."""
   from os import path
   from os import listdir
-
+  from ..env import flags
   from .port import Port
 
-  pkg = env["PKG_DBDIR"]
+  pkg = path.join(flags["chroot"], env["PKG_DBDIR"])
   if changed or not cache.has_key('mtime') or path.getmtime(pkg) != cache['mtime']:
     count = 5
     while True:

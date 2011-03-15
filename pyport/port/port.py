@@ -231,7 +231,7 @@ class Port(object):
       return True
     distdir = self.attr["distdir"]
     for i in distfiles:
-      if not isfile(join(distdir, i)):
+      if not isfile(join(flags["chroot"], distdir, i)):
         # If file does not exist then it failed
         self._bad_checksum.add(i)
         return True
@@ -345,7 +345,7 @@ class Port(object):
 
   def _check_config(self):
     """Check the options file to see if it is up-to-date."""
-    from os.path import isfile
+    from os.path import isfile, join
     from ..env import env, flags
     from .mk import pkg_version
 
@@ -354,7 +354,7 @@ class Port(object):
     elif flags["config"] == "all":
       return False
 
-    optionfile = self.attr["optionsfile"]
+    optionfile = join(flags["chroot"], self.attr["optionsfile"])
     pkgname = self.attr["pkgname"]
     options = set()
     if isfile(optionfile):
@@ -372,13 +372,15 @@ class Port(object):
 
   def _get_priority(self):
     """Get the priority of this port, based on the distfiles size."""
-    from os.path import isfile
+    from os.path import isfile, join
+    from ..env import flags
 
     distfiles = self.attr["distfiles"]
-    if not len(distfiles) or not isfile(self.attr["distinfo"]):
+    distinfo = join(flags["chroot"], self.attr["distinfo"])
+    if not len(distfiles) or not isfile(distinfo):
       return 0
     priority = 0
-    for i in open(self.attr["distinfo"], 'r'):
+    for i in open(distinfo, 'r'):
       if i.startswith("SIZE"):
         i = i.split()
         name, size = i[1], i[-1]

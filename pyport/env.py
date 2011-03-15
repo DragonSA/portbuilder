@@ -15,6 +15,7 @@ env = {
 }
 
 flags = {
+  "chroot"      : "",            # Chroot directory of system
   "config"      : "changed",     # Configure ports based on criteria
   "debug"       : False,         # Print extra debug messages
   "fetch_only"  : False,         # Only fetch ports
