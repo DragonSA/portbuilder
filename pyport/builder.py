@@ -56,20 +56,22 @@ class StageBuilder(object):
     """Initialise port stage builder."""
     self.ports = {}
     self.failed = []
+    self.cleanup = set()
     self._pending = {}
     self._depends = {}
     self.stage = stage
     self.queue = queue
     self.prev_builder = prev_builder
 
-  def __call__(self, port):
+  def __call__(self, port, callback=None):
     """Build the given port to the required stage."""
-    self.add(port)
+    self.cleanup.add(port)
+    self.add(port, callback)
 
   def __repr__(self):
     return "<StageBuilder(stage=%i)>" % self.stage
 
-  def add(self, port, callback=None):
+  def add(self, port, callback):
     """Add a port to be build for this stage."""
     assert not  port.failed
 
@@ -104,7 +106,7 @@ class StageBuilder(object):
     for p in depends:
       if p not in self._depends:
         self._depends[p] = set()
-        install_builder.add(p, self._depend_resolv)
+        install_builder(p, self._depend_resolv)
       self._depends[p].add(port)
 
     if port.stage < self.stage - 1:
@@ -115,6 +117,9 @@ class StageBuilder(object):
     """Cleanup after the port has completed its stage."""
     if job.port.failed or job.port.dependancy.failed:
       self.failed.append(job.port)
+    if job.port in self.cleanup:
+      job.port.clean()
+      self.cleanup.remove(job.port)
     del self.ports[job.port]
 
   def _depend_resolv(self, job):
@@ -137,6 +142,8 @@ class StageBuilder(object):
   def _port_ready(self, port):
     """Add a port to the stage queue."""
     if port.failed or port.dependancy.failed or port.dependancy.check(self.stage):
+      self.ports[port].stage_done()
+    elif port.dependant.status == port.dependant.RESOLV:
       self.ports[port].stage_done()
     else:
       assert port.stage >= self.stage - 1
