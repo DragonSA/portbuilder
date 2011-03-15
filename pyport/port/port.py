@@ -204,6 +204,10 @@ class Port(object):
   def _pre_checksum(self):
     """Check if distfiles are available."""
     from os.path import join, isfile
+    from ..env import flags
+
+    if flags["no_op"]:
+      return True
 
     distfiles = self.attr["distfiles"]
     if self._fetched.issuperset(distfiles):
@@ -278,9 +282,13 @@ class Port(object):
   def _post_install(self, _make, status):
     """Update the install status."""
     if status:
+      from ..env import flags
       from .mk import status
 
-      self.install_status = status(self, True)
+      if flags["no_op"]:
+        self.install_status = Port.CURRENT
+      else:
+        self.install_status = status(self, True)
     else:
       # TODO???
       self.install_status = Port.ABSENT
