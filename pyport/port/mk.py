@@ -1,5 +1,7 @@
 """FreeBSD specific module to get port information."""
 
+from ..env import env
+
 __all__ = ["attr", "status"]
 
 ports_attr = {
@@ -56,14 +58,44 @@ ports_attr = {
 } #: The attributes of the given port
 
 # The following are 'fixes' for various attributes
-PORTSDIR = "/usr/ports"
-ports_attr["depends"].append(lambda x: [i[len(PORTSDIR) + 1:] for i in x])
+ports_attr["depends"].append(lambda x: [i[len(env["PORTSDIR"]) + 1:] for i in x])
 ports_attr["depends"].append(lambda x: ([x.remove(i) for i in x
                                          if x.count(i) > 1], x)[1])
 ports_attr["distfiles"].append(lambda x: [i.split(':', 1)[0] for i in x])
 
+def parse_options(optionstr):
+  # TODO: make ordered dict
+  options = {}
+  order = 0
+  origin = optionstr
+  while len(optionstr):
+    # Get the name component
+    name, optionstr = optionstr.split(None, 1)
+
+    # Get the description component
+    start = optionstr.index('"')
+    end = start
+    while True:
+      end = optionstr.index('"', end + 1)
+      if optionstr[end - 1] != '\\':
+        break
+    descr, optionstr = optionstr[start + 1:end], optionstr[end + 1:]
+
+    # Get the default component
+    optionstr = optionstr.split(None, 1)
+    if len(optionstr) > 1:
+      dflt, optionstr = optionstr
+    else:
+      dflt, optionstr = optionstr[0], ""
+    #dflt = dflt == "on"
+
+    options[name] = (descr, dflt, order)
+    order += 1
+  return options
+ports_attr["options"].append(parse_options)
+
 strip_depends = lambda x: [(i.split(':', 1)[0].strip(),
-                  i.split(':', 1)[1][len(PORTSDIR) + 1:].strip()) for i in x]
+                  i.split(':', 1)[1][len(env["PORTSDIR"]) + 1:].strip()) for i in x]
 ports_attr["depend_build"].append(strip_depends)
 ports_attr["depend_extract"].append(strip_depends)
 ports_attr["depend_fetch"].append(strip_depends)
@@ -81,7 +113,7 @@ def status(port, changed=False, cache=dict()):
 
   from .port import Port
 
-  pkg = "/var/db/pkg"  #: The path to the pkg database
+  pkg = env["PKG_DBDIR"]
   if changed or not cache.has_key('mtime') or path.getmtime(pkg) != cache['mtime']:
     count = 5
     while True:
@@ -168,6 +200,7 @@ def attr_stage2(make, origin, callback):
         # Rather fail here than mysteriously later
         #raise
         callback(None)
+        raise
 
   callback(attr_map)
 
