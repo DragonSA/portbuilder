@@ -36,9 +36,10 @@ class Job(Signal):
     self.__manager = manager
     self.work()
 
-  def _done(self):
+  def done(self):
     """Utility method to indicate the work has completed."""
-    self.__manager.done(self)
+    if self.__manager:
+      self.__manager.done(self)
     self(self)
 
   @abstractmethod
@@ -62,8 +63,9 @@ class AttrJob(Job):
     attr(self.origin, self._attr)
 
   def _attr(self, attr):
+    """Callback special function with origin and attributes."""
     self.callback(self.origin, attr)
-    self._done()
+    self.done()
 
 class PortJob(Job):
   """A port stage job.  Runs a port stage."""
@@ -73,7 +75,7 @@ class PortJob(Job):
     Job.__init__(self, port.load, None)
     self.port = port
     self.stage = stage
-    self.port.stage_completed.connect(self._stage_done)
+    self.port.stage_completed.connect(self.stage_done)
 
   @property
   def priority(self):
@@ -83,10 +85,11 @@ class PortJob(Job):
   def work(self):
     """Run the required port stage."""
     if not self.port.build_stage(self.stage):
-      self._stage_done(self.port)
+      raise
+      #self.stage_done(self.port)
 
-  def _stage_done(self, port):
+  def stage_done(self, port):
     """Handle the completion of a port stage."""
     if port.stage >= self.stage:
-      self._done()
-      self.port.stage_completed.disconnect(self._stage_done)
+      self.port.stage_completed.disconnect(self.stage_done)
+      self.done()
