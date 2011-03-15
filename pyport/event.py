@@ -36,29 +36,30 @@ class EventManager(object):
     from time import time, sleep
     from .subprocess import active_popen
 
-    while True:
-      while len(self._events):
-        self._alarm
-        func, args, kwargs = self._events.popleft()
+    try:
+      while True:
+        while len(self._events):
+          self._alarm()
+          func, args, kwargs = self._events.popleft()
+          try:
+            func(*args, **kwargs)
+          except BaseException:
+            raise
+
+        if not active_popen():
+          break
+
         try:
-          func(*args, **kwargs)
-        except BaseException:
-          raise
+          sleep_intr = min(i[1] for i in self._alarms) - time()
+        except ValueError:
+          sleep_intr = 1
 
-      if not active_popen():
-        break
-
-      try:
-        sleep_intr = min(i[1] for i in self._alarms) - time()
-      except ValueError:
-        sleep_intr = 1
-
-      if sleep_intr <= 0:
-        self._alarm()
-      else:
-        sleep(min(sleep_intr, 1))
-
-    self._alarm(True)
+        if sleep_intr <= 0:
+          self._alarm()
+        else:
+          sleep(min(sleep_intr, 1))
+    finally:
+      self._alarm(True)
 
   def _alarm(self, end=False):
     """Run all outstanding alarms."""
@@ -66,11 +67,12 @@ class EventManager(object):
 
     now = time()
     for item in reversed(self._alarms):
-      if item[1] <= time or end:
+      if item[1] <= now or end:
         try:
           trigger = item[0](end)
         except BaseException:
-          raise
+          if not end:
+            raise
         if trigger:
           item[1] = now + trigger
         else:
