@@ -248,22 +248,24 @@ class Statistics(object):
       builder = getattr(builders, "%s_builder" % stage)
 
       stats[self.ACTIVE].extend((i.port for i in queue.active))
-      self.summary[self.ACTIVE].extend(stats[self.ACTIVE])
+      self.summary[self.ACTIVE].extend(reversed(stats[self.ACTIVE]))
       seen.update(stats[self.ACTIVE])
 
       stats[self.QUEUED].extend((i.port for i in queue.stalled))
       stats[self.QUEUED].extend((i.port for i in queue.queue))
-      self.summary[self.QUEUED].extend(stats[self.QUEUED])
+      self.summary[self.QUEUED].extend(reversed(stats[self.QUEUED]))
       seen.update(stats[self.QUEUED])
 
       for port in builder.ports:
         if port not in seen:
           stats[self.PENDING].append(port)
-      self.summary[self.PENDING].extend(stats[self.PENDING])
+      self.summary[self.PENDING].extend(reversed(stats[self.PENDING]))
       seen.update(stats[self.PENDING])
 
-      stats[self.FAILED].extend(builder.failed)
-      self.summary[self.FAILED].extend(stats[self.FAILED])
+      for port in builder.failed:
+        if port not in seen:
+          stats[self.FAILED].append(port)
+      self.summary[self.FAILED].extend(reversed(stats[self.FAILED]))
       seen.update(stats[self.FAILED])
 
     for i in self.summary:
