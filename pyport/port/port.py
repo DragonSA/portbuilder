@@ -8,6 +8,7 @@ __all__ = ["Port"]
 # No_opt
 # Non-privleged mode
 # Package install (or separate stage)
+# remove NO_DEPENDS once thoroughly tested???
 
 # - config
 # * checksum
@@ -117,6 +118,9 @@ class Port(object):
 
     self.dependancy = None
     self.dependant = Dependant(self)
+
+  def __repr__(self):
+    return "<Port(origin=%s)>" % (self.origin)
 
   def clean(self):
     """Clean the ports working directory any log file."""
@@ -233,7 +237,7 @@ class Port(object):
       from ..job import StalledJob
       raise StalledJob()
     else:
-      self._make_target("checksum", BATCH=True)
+      self._make_target("checksum", BATCH=True, NO_DEPENDS=True)
 
   def _post_fetch(self, _make, status):
     """Register fetched files if fetch succeeded."""
@@ -250,7 +254,7 @@ class Port(object):
   def _pre_build(self):
     """Build the port."""
     # TODO: interactive port
-    self._make_target(["clean","all"], BATCH=True, NOCLEANDEPENDS=True)
+    self._make_target(["clean","all"], BATCH=True, NOCLEANDEPENDS=True, NO_DEPENDS=True)
 
   def _post_build(self, _make, status):
     """Indicate build status."""
@@ -263,7 +267,7 @@ class Port(object):
     else:
       target = ("deinstall", "reinstall")
     # TODO: package
-    self._make_target(target)
+    self._make_target(target, NO_DEPENDS=True)
 
   def _post_install(self, _make, status):
     """Update the install status."""
@@ -300,6 +304,8 @@ class Port(object):
     self.working = False
     self.stage = max(stage + 1, self.stage)
     self.stage_completed(self)
+    if self.failed or self.stage >= Port.INSTALL:
+      self.dependant.status_changed()
 
   def _check_config(self):
     """Check the options file to see if it is up-to-date."""
