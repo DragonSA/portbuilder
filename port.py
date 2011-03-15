@@ -67,7 +67,7 @@ def main():
   if len(args) == 0:
     print parser.get_usage()
     return
-    
+
   # Make sure log_dir is available
   mkdir(flags["log_dir"])
 
@@ -172,12 +172,12 @@ def gen_parser():
   parser.add_option("-N", dest="no_opt", action="store_true", default=False,
                     help="Do not execute any commands.")
 
-  parser.add_option("-p", "--package", dest="package", action="store_true",
-                    default=False, help="When installing ports, also generate "\
-                    "packages (i.e. do a ``make package'').")
+  parser.add_option("-p", "--package", action="store_true", default=False,
+                    help="Create packages for all specified ports.")
 
-  #parser.add_option("-P", dest="pref_package", action="store_true",
-                    #default=False, help="Install packages where possible.")
+  parser.add_option("-P", "--package-all", action="store_true", dest="packageA",
+                    default=False, help="Create packages for all installed "\
+                    "ports")
 
   parser.add_option("-r", "--recursive", dest="recursive", action="store_true",
                     default=False, help="Recursively apply -p or -u to "\
@@ -256,12 +256,13 @@ def set_options(options):
   if options.no_opt:
     flags["no_op"] = True
 
-  # Package installed ports
-  if options.package and options.recursive:
+  # Package all installed ports
+  if options.packageA:
     flags["package"] = True
+    options.package = True
 
   # -r requires -u
-  if options.recursive and not (options.upgrade or options.package):
+  if options.recursive and not (options.upgrade):
     options.parser.error("-r requires -u or -p")
 
   # Upgrade mode
