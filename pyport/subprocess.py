@@ -20,7 +20,13 @@ class ChildrenMonitor(object):
 
   def add_popen(self, popen, callback):
     """Add a popen instance to be monitored, with callback function."""
-    self._pid_map[popen.pid] = (popen, callback)
+    from subprocess import Popen
+
+    if isinstance(popen, Popen):
+      self._pid_map[popen.pid] = (popen, callback)
+    else:
+      from .event import post_event
+      post_event(callback, popen)
 
   def _signal(self, _signum, _frame):
     """Handle a signal from child process."""
