@@ -233,7 +233,7 @@ class Port(object):
       from ..job import StalledJob
       raise StalledJob()
     else:
-      self._make_target("checksum", BATCH=True, FETCH_REGET=0)
+      self._make_target("checksum", BATCH=True, DISABLE_CONFLICTS=True, FETCH_REGET=0)
 
   def _post_checksum(self, _make, status):
     """Advance to build stage if checksum passed."""
@@ -256,7 +256,7 @@ class Port(object):
       from ..job import StalledJob
       raise StalledJob()
     else:
-      self._make_target("checksum", BATCH=True, NO_DEPENDS=True)
+      self._make_target("checksum", BATCH=True, DISABLE_CONFLICTS=True, NO_DEPENDS=True)
 
   def _post_fetch(self, _make, status):
     """Register fetched files if fetch succeeded."""
