@@ -2,7 +2,7 @@
 
 from ..env import env
 
-__all__ = ["attr", "status"]
+__all__ = ["attr", "status", "pkg_version"]
 
 ports_attr = {
 # Port naming
@@ -162,7 +162,7 @@ def status(port, changed=False, cache=dict()):
 
       # If the pkg has the same origin get the maximum of the install status
       if porigin == port.origin:
-        pstatus = max(pstatus, cmp_status(port.attr['pkgname'], i))
+        pstatus = max(pstatus, pkg_version(port.attr['pkgname'], i))
   return pstatus
 
 def attr(origin, callback, reget=False):
@@ -217,7 +217,7 @@ def attr_stage2(make, origin, callback):
 
   callback(attr_map)
 
-def cmp_status(old, new):
+def pkg_version(old, new):
   """Compare two package names and indicates the difference."""
   from .port import Port
 
