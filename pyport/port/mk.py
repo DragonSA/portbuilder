@@ -96,6 +96,7 @@ def parse_options(optionstr):
 ports_attr["options"].append(parse_options)
 
 def parse_jobs_number(jobs_number):
+  """Convert jobs number into a number."""
   if not jobs_number:
     return 1
   try:

@@ -43,7 +43,6 @@ class Signal(object):
 
   def __call__(self, *args, **kwargs):
     """Emit a signal."""
-    from .env import flags
     from .event import post_event
 
     for slot in self._slots:

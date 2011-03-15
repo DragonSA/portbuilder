@@ -55,7 +55,7 @@ class StageBuilder(object):
   def __init__(self, stage, queue, prev_builder=None):
     """Initialise port stage builder."""
     self.ports = {}
-    self.failed = {}
+    self.failed = []
     self._pending = {}
     self._depends = {}
     self.stage = stage

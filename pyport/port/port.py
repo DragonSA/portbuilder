@@ -9,11 +9,12 @@ __all__ = ["Port"]
 # Non-privleged mode
 # Package install (or separate stage)
 # remove NO_DEPENDS once thoroughly tested???
+# handle IS_INTERACTIVE
 
 # - config
 # * checksum
 # * fetch
-# - build
+# * build
 # - install
 
 class Lock(object):

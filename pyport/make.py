@@ -84,4 +84,5 @@ class PopenNone(object):
       print " ".join(argstr)
 
   def wait(self):
+    """Simulate Popen.wait()."""
     return self.returncode
