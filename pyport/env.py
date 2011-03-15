@@ -2,7 +2,7 @@
 
 from os import sysconf as _sysconf
 
-__all__ = ["cpus", "env", "env_master"]
+__all__ = ["cpus", "env", "env_master", "flags"]
 
 cpus = _sysconf("SC_NPROCESSORS_ONLN")
 
@@ -10,8 +10,14 @@ PKG_DBDIR = "/var/db/pkg"
 PORTSDIR = "/usr/ports"
 
 env = {
-"PKG_DBDIR" : PKG_DBDIR,
-"PORTSDIR"  : PORTSDIR
+  "PKG_DBDIR" : PKG_DBDIR,
+  "PORTSDIR"  : PORTSDIR
+}
+
+flags = {
+  "debug" : False,        # Print extra debug messages
+  "no_op" : False,        # Do nothing
+  "no_op_print" : False,  # Print commands that would have been executed
 }
 
 env_master = {}
