@@ -106,9 +106,6 @@ class StageBuilder(object):
       self.ports[port].stage_done()
 
     depends = port.dependancy.check(self.stage)
-    if not depends and port.stage == self.stage - 1:
-      self.queue.add(self.ports[port])
-      return
 
     self._pending[port] = len(depends)
     for p in depends:
@@ -117,12 +114,13 @@ class StageBuilder(object):
         install_builder(p, self._depend_resolv)
       self._depends[p].add(port)
 
-    if flags["mode"] == "upgrade" and port.install_status >= port.CURRENT:
-      if not self._pending[port]:
-        self._port_ready(port)
-    elif port.stage < self.stage - 1:
-      self._pending[port] += 1
-      self.prev_builder.add(port, self._stage_resolv)
+    if not (flags["mode"] == "upgrade" and port.install_status >= port.CURRENT):
+      if port.stage < self.stage - 1:
+        self._pending[port] += 1
+        self.prev_builder.add(port, self._stage_resolv)
+
+    if not self._pending[port]:
+      self._port_ready(port)
 
   def _cleanup(self, job):
     """Cleanup after the port has completed its stage."""
