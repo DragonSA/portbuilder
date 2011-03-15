@@ -78,7 +78,7 @@ class QueueManager(object):
           stalled.append(job)
     if len(stalled):
       self.stalled.extend(stalled)
-      self.stalled.sort(key=lambda x: -x.priority)
+      self.stalled.sort()
 
   @staticmethod
   def _find_job(load, queue):
