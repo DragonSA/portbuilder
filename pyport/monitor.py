@@ -89,7 +89,12 @@ class Top(Monitor):
 
   def run(self):
     """Refresh the display."""
-    self._stats = Statistics()
+    from .env import flags
+
+    if flags["fetch_only"]:
+      self._stats = Statistics(("config", "checksum", "fetch"))
+    else:
+      self._stats = Statistics()
 
     self._stdscr.erase()
     self._update_header(self._stdscr)
@@ -329,11 +334,13 @@ class Statistics(object):
   PENDING = 2
   FAILED  = 3
 
-  def __init__(self):
+  def __init__(self, stages=None):
     """Collect the statistics."""
     from time import time
     from . import builder as builders
     from . import queue as queues
+
+    self.time = time()
 
     self.config   = ([], [], [], [])
     self.checksum = ([], [], [], [])
@@ -346,12 +353,13 @@ class Statistics(object):
     self.clean[self.QUEUED].extend(i.port for i in queues.clean_queue.stalled)
     self.clean[self.QUEUED].extend(i.port for i in queues.clean_queue.queue)
 
-    self.time = time()
+    if not stages:
+      stages = ("config", "checksum", "fetch", "build", "install")
 
     seen = set()
     seen.update(self.clean[self.ACTIVE])
     seen.update(self.clean[self.QUEUED])
-    for stage in ("config", "checksum", "fetch", "build", "install"):
+    for stage in stages:
       stats = getattr(self, stage)
       queue = getattr(queues, "%s_queue" % stage)
       builder = getattr(builders, "%s_builder" % stage)
