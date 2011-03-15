@@ -57,6 +57,9 @@ class AttrJob(Job):
     self.origin = origin
     self.callback = callback
 
+  def __repr__(self):
+    return "<AttrJob(origin=%s)>" % self.origin
+
   def work(self):
     """Fetch a ports attributes."""
     from .port.mk import attr_stage1 as attr
