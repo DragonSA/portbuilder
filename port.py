@@ -33,15 +33,19 @@ def port_force(port):
   else:
     no_port.append(port)
 
-def sigint(_sig, _frame):
+def sigterm(_sig, _frame):
+  """Kill subprocesses and die."""
   from pyport import stop
   stop(kill=True, kill_clean=True)
   exit(254)
 
-def sigterm(_sig, _frame):
+def sigint(_sig, _frame):
+  """Ask politely for everything to stop at a convenient time."""
+  from signal import signal, SIGINT
   from pyport.event import post_event
   from pyport import stop
   post_event(stop)
+  signal(SIGINT, sigterm)
 
 def main():
   """The main event loop."""
