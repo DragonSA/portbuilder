@@ -1,7 +1,8 @@
 """Event management utilities.
 
 Provides a framework for calling functions asynchroniously."""
-__all__ = ["pending_events", "post_event", "run"]
+__all__ = ["pending_events", "post_event", "pending_events" "run", "alarm",
+           "suspend_alarm", "resume_alarm"]
 
 class EventManager(object):
   """Handles Events that need to be called asynchroniously."""
@@ -14,6 +15,7 @@ class EventManager(object):
 
     self._events = deque()
     self._alarms = []
+    self._alarm_active = True
 
   def __len__(self):
     return len(self._events)
@@ -22,6 +24,15 @@ class EventManager(object):
     """Add a function for period callback."""
     from time import time
     self._alarms.append([callback, time() + interval])
+
+  def suspend_alarm(self):
+    """Suspend issuing of alarms."""
+    self._alarm(None)
+    self._alarm_active = False
+
+  def resume_alarm(self):
+    """Resume issuing of alarms."""
+    self._alarm_active = True
 
   def post_event(self, func, *args, **kwargs):
     """Add an event to be called asynchroniously."""
@@ -65,6 +76,9 @@ class EventManager(object):
     """Run all outstanding alarms."""
     from time import time
 
+    if not self._alarm_active:
+      return
+
     now = time()
     for item in reversed(self._alarms):
       if item[1] <= now or end:
@@ -80,7 +94,9 @@ class EventManager(object):
 
 _manager = EventManager()
 
-alarm = _manager.alarm
+alarm          = _manager.alarm
+suspend_alarm  = _manager.suspend_alarm
+resume_alarm   = _manager.resume_alarm
 pending_events = _manager.__len__
-post_event = _manager.post_event
-run = _manager.run
+post_event     = _manager.post_event
+run            = _manager.run
