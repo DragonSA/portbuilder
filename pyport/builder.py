@@ -3,7 +3,7 @@
 from .port.port import Port
 from .queue import checksum_queue, fetch_queue, build_queue, install_queue
 
-__all__ = ["config_builder", "checksum_builder", "fetch_builder",
+__all__ = ["builders", "config_builder", "checksum_builder", "fetch_builder",
            "build_builder", "install_builder"]
 
 class ConfigBuilder(object):
@@ -146,7 +146,9 @@ class StageBuilder(object):
 
   def _port_failed(self, port):
     """Handle a failing port."""
-    if port in self.failed:
+    from .env import flags
+
+    if port in self.failed or flags["mode"] == "clean":
       return True
     elif port.failed or port.dependancy.failed:
       from .event import post_event
@@ -187,3 +189,4 @@ checksum_builder = StageBuilder(Port.CHECKSUM, checksum_queue, config_builder)
 fetch_builder    = StageBuilder(Port.FETCH,    fetch_queue,    checksum_builder)
 build_builder    = StageBuilder(Port.BUILD,    build_queue,    fetch_builder)
 install_builder  = StageBuilder(Port.INSTALL,  install_queue,  build_builder)
+builders = (config_builder, checksum_builder, fetch_builder, build_builder, install_builder)
