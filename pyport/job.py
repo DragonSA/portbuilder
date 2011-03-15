@@ -76,6 +76,7 @@ class CleanJob(Job):
   def __init__(self, port):
     Job.__init__(self)
     self.port = port
+    self.pid = None
     self.status = None
 
   def __repr__(self):
@@ -84,11 +85,13 @@ class CleanJob(Job):
   def work(self):
     """Clean a port."""
     from .make import make_target
-    make_target(self._cleaned, self.port, "clean", NOCLEANDEPENDS=True)
+    make = make_target(self._cleaned, self.port, "clean", NOCLEANDEPENDS=True)
+    self.pid = make.pid
 
   def _cleaned(self, popen):
     """Mark job as finished."""
     from .make import SUCCESS
+    self.pid = None
     self.status = popen.wait() is SUCCESS
     self.done()
 
