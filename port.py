@@ -4,7 +4,25 @@
 def port_install(port):
   from pyport.builder import install_builder
 
-  if str(port) != str:
+  if not isinstance(port, str) and port.install_status == port.ABSENT:
+    install_builder(port)
+  else:
+    pass
+    # TODO: report error
+
+def port_upgrade(port):
+  from pyport.builder import install_builder
+
+  if not isinstance(port, str) and port.install_status < port.CURRENT:
+    install_builder(port)
+  else:
+    pass
+    # TODO: report error
+
+def port_force(port):
+  from pyport.builder import install_builder
+
+  if not isinstance(port, str):
     install_builder(port)
   else:
     pass
@@ -28,7 +46,13 @@ def main():
 
   # Execute the primary build target
   for port in args:
-    get_port(port, port_install)
+    if options.upgrade:
+      if options.recursive:
+        get_port(port, port_force)
+      else:
+        get_port(port, upgrade)
+    else:
+      get_port(port, port_install)
 
   if not flags["no_op_print"]:
     Top().start()
@@ -38,7 +62,7 @@ def gen_parser():
   """Create the options parser object."""
   from optparse import OptionParser
 
-  usage = "\t%prog [-nN] [-c config] [-D variable] [variable=value] port ..."
+  usage = "\t%prog [-bnNp] [-c config] [-D variable] [variable=value] port ..."
 
   parser = OptionParser(usage, version="%prog 0.1.0")
 
@@ -56,9 +80,10 @@ def gen_parser():
   #parser.add_option("-i", "--install", action="store_true", default=True,
                     #help="Install mode.  Installs the listed ports (and any " \
                     #"dependancies required [default].")
-  #parser.add_option("-f", "--fetch-only", dest="fetch", action="store_true",
-                    #default=False, help="Only fetch the distribution files for"\
-                    #" the ports")
+
+  parser.add_option("-F", "--fetch-only", dest="fetch", action="store_true",
+                    default=False, help="Only fetch the distribution files for"\
+                    " the ports")
 
   parser.add_option("-n", dest="no_opt_print", action="store_true",
                     default=False, help="Display the commands that would have "\
@@ -73,9 +98,14 @@ def gen_parser():
 
   #parser.add_option("-P", dest="pref_package", action="store_true",
                     #default=False, help="Install packages where possible.")
-  #parser.add_option("-u", "--update", dest="install", action="store_false",
-                    #default=True, help="Update mode.  Updates the given port." \
-                    #"  The last -i or -u will be the determining one.")
+
+  parser.add_option("-r", "--recursive", dest="recursive", action="store_true",
+                    default=False, help="Update ports and their dependancies"\
+                    "(requires -u)")
+
+  parser.add_option("-u", "--upgrade", dest="upgrade", action="store_true",
+                    default=False, help="Upgrade port mode.")
+
   #parser.add_option("-w", dest="stat_mode", type="int", default=0, metavar="SEC"
                     #, help="Use the stats monitor with SEC delay between lines")
   #parser.add_option("--index", action="store_true", default=False,
@@ -94,13 +124,9 @@ def set_options(options):
   for i in options.make_env:
     env[i] = True
 
-  # Add other make env options (aka variable=value)
-  for i in options.args[:]:
-    if i.find('=') != -1:
-      # TODO:  Make sure var, val take the correct values
-      var, val = i.split('=', 1)
-      env[var] = val
-      options.args.remove(i)
+  # Fetch only options:
+  if options.fetch:
+    flags["fetch_only"] = True
 
   if options.no_opt and options.no_opt_print:
     options.error("-n and -N are mutually exclusive")
@@ -117,6 +143,22 @@ def set_options(options):
   # Package installed ports
   if options.package:
     flags["package"] = True
+
+  # -r requires -u
+  if options.recursive and not options.upgrade:
+    options.error("-r requires -u")
+
+  # Upgrade mode
+  if options.recursive and options.upgrade:
+    flags["mode"] = "upgrade"
+
+  # Add other make env options (aka variable=value)
+  for i in options.args[:]:
+    if i.find('=') != -1:
+      # TODO:  Make sure var, val take the correct values
+      var, val = i.split('=', 1)
+      env[var] = val
+      options.args.remove(i)
 
 def parse_config(option, _opt_str, value, parser):
   from pyport.env import flags
