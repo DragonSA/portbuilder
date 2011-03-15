@@ -95,17 +95,18 @@ class EventManager(object):
     """Add extra tracebacks for debugging perposes."""
     if self.traceback is not None:
       self._no_tb = True
+      return
     self.traceback = []
     for tb, name in args:
       if tb is not None:
-        self.traceback.append(tb, name)
+        self.traceback.append((tb, name))
 
   def _clear_tb(self):
     """Clear any pending tracebacks."""
     if self._no_tb:
       self._no_tb = False
     else:
-      self.traceback = False
+      self.traceback = None
 
   def _alarm(self, end=False):
     """Run all outstanding alarms."""
