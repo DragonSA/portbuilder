@@ -1,5 +1,9 @@
 0.1.1 - 2011 Februaru:
- * 
+ * Add support for fetch_only mode
+ * Add support for (recursive) update mode
+ * Cleanup after port completion
+ * Allow program to be terminated prematurely
+ * Add support for building ports in a chroot environment
 
 0.1.0 - 2011 February 15:
  *  Rewrite of pypkg (now pyport) to remove need for threads
