@@ -67,12 +67,13 @@ def gen_parser():
   """Create the options parser object."""
   from optparse import OptionParser
 
-  usage = "\t%prog [-bnNp] [-c config] [-D variable] [variable=value] port ..."
+  usage = "\t%prog [-bnNp] [-c config] [-D variable] [-f file] "\
+          "[variable=value] port ..."
 
   parser = OptionParser(usage, version="%prog 0.1.0")
 
-  parser.add_option("-b", "--batch", action="store_true", default=False,
-                    help="Batch mode.  Skips the config stage.")
+  parser.add_option("-b", "--batch", dest="batch", action="store_true",
+                    default=False, help="Batch mode.  Skips the config stage.")
 
   parser.add_option("-c", "--config", action="callback", callback=parse_config,
                     type="string", help="Specify which ports to configure "\
@@ -86,6 +87,9 @@ def gen_parser():
                     #help="Install mode.  Installs the listed ports (and any " \
                     #"dependancies required [default].")
 
+  parser.add_option("-f", "--ports-file", dest="ports_file", action="store",
+                    type="string", default=False, help="Use ports from file.")
+
   parser.add_option("-F", "--fetch-only", dest="fetch", action="store_true",
                     default=False, help="Only fetch the distribution files for"\
                     " the ports")
@@ -97,9 +101,9 @@ def gen_parser():
   parser.add_option("-N", dest="no_opt", action="store_true", default=False,
                     help="Do not execute any commands.")
 
-  parser.add_option("-p", "--package", action="store_true", default=False,
-                    help="When installing ports, also generate packages (i.e." \
-                    " do a ``make package'').")
+  parser.add_option("-p", "--package", dest="package", action="store_true",
+                    default=False, help="When installing ports, also generate "\
+                    "packages (i.e. do a ``make package'').")
 
   #parser.add_option("-P", dest="pref_package", action="store_true",
                     #default=False, help="Install packages where possible.")
@@ -130,10 +134,26 @@ def set_options(options):
       options.error("incorrectly formatted variable name: %s" % i)
     env[i] = True
 
+  # Add other make env options (aka variable=value)
+  for i in options.args[:]:
+    if i.find('=') != -1:
+      var, val = i.split('=', 1)
+      if not match(VAR_NAME, var):
+        options.error("incorrectly formatted variable name: %s" % var)
+      env[var] = val
+      options.args.remove(i)
+
   # Fetch only options:
   if options.fetch:
     flags["fetch_only"] = True
 
+  if options.ports_file:
+    try:
+      options.args.extend(read_port_file(options.ports_file))
+    except IOError:
+      options.error("unable to ope file: %s" % options.ports_file)
+
+  # ! (-n & -N)
   if options.no_opt and options.no_opt_print:
     options.error("-n and -N are mutually exclusive")
 
@@ -158,14 +178,16 @@ def set_options(options):
   if options.recursive and options.upgrade:
     flags["mode"] = "upgrade"
 
-  # Add other make env options (aka variable=value)
-  for i in options.args[:]:
-    if i.find('=') != -1:
-      var, val = i.split('=', 1)
-      if not match(VAR_NAME, var):
-        options.error("incorrectly formatted variable name: %s" % var)
-      env[var] = val
-      options.args.remove(i)
+def read_port_file(ports_file):
+  """Get ports from a file."""
+  ports = []
+  for i in open(ports_file, "r"):
+    try:
+      i = i[:i.index('#')]
+    except ValueError:
+      pass
+    ports.extend(i.split())
+  return ports
 
 def parse_config(_option, _opt_str, value, _parser):
   """Set the config requirements."""
