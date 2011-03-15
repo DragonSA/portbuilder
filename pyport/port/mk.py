@@ -140,25 +140,21 @@ def status(port, changed=False, cache=dict()):
           raise
 
   pstatus = Port.ABSENT  #: Default status of the port
-  name = port.attr['pkgname'].rsplit('-', 1)[0]  #: The ports name
+  name = port.attr['name']
+  pkgname = port.attr['pkgname'].rsplit('-', 1)[0]  #: The ports name
 
   for i in cache['listdir']:
     # If the port's name matches that of a database
-    if i.rsplit('-', 1)[0] == name:
+    if i.rsplit('-', 1)[0] == pkgname or name in i:
       content = path.join(pkg, i, '+CONTENTS') #: The pkg's content file
       porigin = None  #: Origin of the package
-      try:
-        for j in open(content, 'r'):
-          if j.startswith('@comment ORIGIN:'):
-            porigin = j[16:-1].strip()
-            break
-          elif j.startswith('@name ') and j[6:-1].strip() != i:
-            porigin = None
-            break
-      except (IOError, OSError):
-        # TODO
-        raise
-        #log_status.error("Package has corrupted: %s" % i)
+      for j in open(content, 'r'):
+        if j.startswith('@comment ORIGIN:'):
+          porigin = j[16:-1].strip()
+          break
+        elif j.startswith('@name ') and j[6:-1].strip() != i:
+          porigin = None
+          break
 
       # If the pkg has the same origin get the maximum of the install status
       if porigin == port.origin:
@@ -216,10 +212,6 @@ def pkg_version(old, new):
 
   oname, old = old.rsplit('-', 1)  # Name and version components of the old pkg
   nname, new = new.rsplit('-', 1)  # Name and version components of the new pkg
-
-  if oname != nname:
-    # The packages are not comparable
-    return Port.ABSENT
 
   if old == new:
     # The packages are the same
