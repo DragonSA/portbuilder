@@ -42,6 +42,7 @@ def main():
   parser = gen_parser()
   options, args = parser.parse_args()
   options.args = args
+  options.parser = parser
   set_options(options)
 
   if len(args) == 0:
@@ -165,7 +166,7 @@ def set_options(options):
   # Add all -D options
   for i in options.make_env:
     if not match(VAR_NAME, i):
-      options.error("incorrectly formatted variable name: %s" % i)
+      options.parser.error("incorrectly formatted variable name: %s" % i)
     env[i] = True
 
   # Add other make env options (aka variable=value)
@@ -173,7 +174,7 @@ def set_options(options):
     if i.find('=') != -1:
       var, val = i.split('=', 1)
       if not match(VAR_NAME, var):
-        options.error("incorrectly formatted variable name: %s" % var)
+        options.parser.error("incorrectly formatted variable name: %s" % var)
       env[var] = val
       options.args.remove(i)
 
@@ -190,11 +191,11 @@ def set_options(options):
     try:
       options.args.extend(read_port_file(options.ports_file))
     except IOError:
-      options.error("unable to ope file: %s" % options.ports_file)
+      options.parser.error("unable to open file: %s" % options.ports_file)
 
   # ! (-n & -N)
   if options.no_opt and options.no_opt_print:
-    options.error("-n and -N are mutually exclusive")
+    options.parser.error("-n and -N are mutually exclusive")
 
   # No operations and print (-n)
   if options.no_opt_print:
@@ -211,7 +212,7 @@ def set_options(options):
 
   # -r requires -u
   if options.recursive and not options.upgrade:
-    options.error("-r requires -u")
+    options.parser.error("-r requires -u")
 
   # Upgrade mode
   if options.recursive and options.upgrade:
