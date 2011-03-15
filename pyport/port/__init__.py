@@ -29,10 +29,21 @@ class PortCache(object):
     from .port import Port
 
     waiters = self._waiters.pop(origin)
-    port = None if attr is None else Port(origin, attr)
+    if attr is None:
+      port = None
+    else:
+      port = Port(origin, attr)
+      port.stage_completed.connect(self._refresh_queues)
     self._ports[origin] = port
     for callback in waiters:
       post_event(callback, port)
+
+  def _refresh_queues(self, port):
+    from .. import config_queue, checksum_queue, fetch_queue, build_queue, install_queue
+    port.stage_completed.disconnect(self._refresh_queues)
+    if port.dependancy is not None:
+      for queue in (config_queue, checksum_queue, fetch_queue, build_queue, install_queue):
+        queue.reorder()
 
 _cache = PortCache()
 
