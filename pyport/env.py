@@ -17,6 +17,8 @@ env = {
 flags = {
   "config"      : "changed",  # Configure ports based on criteria
   "debug"       : False,      # Print extra debug messages
+  "fetch_only"  : False,      # Only fetch ports
+  "mode":       : "install",  # Mode of operation
   "no_op"       : False,      # Do nothing
   "no_op_print" : False,      # Print commands that would have been executed
   "package"     : False,      # Package installed ports
