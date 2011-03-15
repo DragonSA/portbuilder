@@ -1,10 +1,9 @@
 """Stage building infrastructure."""
 
 from .port.port import Port
-from .queue import checksum_queue, fetch_queue, build_queue, install_queue
 
 __all__ = ["builders", "config_builder", "checksum_builder", "fetch_builder",
-           "build_builder", "install_builder"]
+           "build_builder", "install_builder", "package_builder"]
 
 class ConfigBuilder(object):
   """Configure ports."""
@@ -57,15 +56,17 @@ class ConfigBuilder(object):
 class StageBuilder(object):
   """General port stage builder."""
 
-  def __init__(self, stage, queue, prev_builder=None):
+  def __init__(self, stage, prev_builder=None):
     """Initialise port stage builder."""
+    from .queue import queues
+
     self.ports = {}
     self.failed = []
     self.cleanup = set()
     self._pending = {}
     self._depends = {}
     self.stage = stage
-    self.queue = queue
+    self.queue = queues[stage - 1]
     self.prev_builder = prev_builder
 
   def __call__(self, port):
@@ -115,7 +116,12 @@ class StageBuilder(object):
     for p in depends:
       if p not in self._depends:
         self._depends[p] = set()
-        install_builder(p).connect(self._depend_resolv)
+        if flags["package"]:
+          # Connect to install job and give package_builder ownership (cleanup)
+          install_builder.add(p).connect(self._depend_resolv)
+          package_builder(p)
+        else:
+          install_builder(p).connect(self._depend_resolv)
       self._depends[p].add(port)
 
     # Build the previous stage if needed (or we are in upgrade mode)
@@ -197,8 +203,9 @@ class StageBuilder(object):
         self.ports[port].stage_done()
 
 config_builder   = ConfigBuilder()
-checksum_builder = StageBuilder(Port.CHECKSUM, checksum_queue, config_builder)
-fetch_builder    = StageBuilder(Port.FETCH,    fetch_queue,    checksum_builder)
-build_builder    = StageBuilder(Port.BUILD,    build_queue,    fetch_builder)
-install_builder  = StageBuilder(Port.INSTALL,  install_queue,  build_builder)
-builders = (config_builder, checksum_builder, fetch_builder, build_builder, install_builder)
+checksum_builder = StageBuilder(Port.CHECKSUM, config_builder)
+fetch_builder    = StageBuilder(Port.FETCH,    checksum_builder)
+build_builder    = StageBuilder(Port.BUILD,    fetch_builder)
+install_builder  = StageBuilder(Port.INSTALL,  build_builder)
+package_builder  = StageBuilder(Port.PACKAGE,  install_builder)
+builders = (config_builder, checksum_builder, fetch_builder, build_builder, install_builder, package_builder)
