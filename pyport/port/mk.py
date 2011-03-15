@@ -44,7 +44,7 @@ ports_attr = {
 "jobs_unsafe":  ["MAKE_JOBS_UNSAFE",  bool], # Port doesn't support make jobs
 "jobs_force":   ["FORCE_MAKE_JOBS",   bool], # Force make jobs
 "jobs_disable": ["DISABLE_MAKE_JOBS", bool], # Disable make jobs
-"jobs_number":  ["MAKE_JOBS_NUMBER",  str],  # Number of make jobs requested
+"jobs_number":  ["_MAKE_JOBS",        str],  # Number of make jobs requested
 
 # Various restrictions
 "conflict":   ["CONFLICTS",  tuple],  # Ports this one conflicts with
@@ -94,6 +94,16 @@ def parse_options(optionstr):
     order += 1
   return options
 ports_attr["options"].append(parse_options)
+
+def parse_jobs_number(jobs_number):
+  if not jobs_number:
+    return 1
+  try:
+    return int(jobs_number[2:])
+  except ValueError:
+    from ..env import cpus
+    return cpus
+ports_attr["jobs_number"].append(parse_jobs_number)
 
 strip_depends = lambda x: [(i.split(':', 1)[0].strip(),
                   i.split(':', 1)[1][len(env["PORTSDIR"]) + 1:].strip()) for i in x]
