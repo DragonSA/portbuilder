@@ -6,8 +6,8 @@ __all__ = ["SUCCESS", "make_target"]
 
 SUCCESS = 0
 
-def kwargs2str(kwargs):
-  for key, value in kwargs.items():
+def env2args(env):
+  for key, value in env.items():
     if value is True:
       yield "-D%s" % key
     else:
@@ -17,6 +17,7 @@ def make_target(callback, port, targets, pipe=None, **kwargs):
   """Build a make target and call a function when finished."""
   from os.path import join
   from subprocess import PIPE, STDOUT, Popen
+  from .env import env as environ, env_master
   from .subprocess import add_popen
 
   if type(port) is str:
@@ -30,9 +31,15 @@ def make_target(callback, port, targets, pipe=None, **kwargs):
   if type(targets) != tuple:
     targets = tuple(targets)
 
-  PORTSDIR = "/usr/ports"
-  args = ("make", "-C", join(PORTSDIR, origin)) + targets
-  args += tuple(kwargs2str(kwargs))
+  env = {}
+  env.update(environ)
+  env.update(kwargs)
+
+  args = ("make", "-C", join(env["PORTSDIR"], origin)) + targets
+  for key, value in env_master.items():
+    if env[key] == value:
+      del env[key]
+  args += tuple(env2args(env))
 
   if pipe is True:
     stdin, stdout, stderr = PIPE, PIPE, STDOUT
