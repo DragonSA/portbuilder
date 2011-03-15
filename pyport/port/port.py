@@ -113,7 +113,7 @@ class Port(object):
     self.attr = attr
     self.log_file = None
     self.failed = False
-    self.load = 1
+    self.load = attr["jobs_number"]
     self.origin = origin
     self.priority = 0
     self.working = False
@@ -124,14 +124,6 @@ class Port(object):
 
     self.dependancy = None
     self.dependant = Dependant(self)
-
-    if not attr["jobs_unsafe"] and not attr["jobs_disable"]:
-      if attr["jobs_safe"] or attr["jobs_force"]:
-        try:
-          self.load = int(attr["jobs_number"])
-        except ValueError:
-          from ..env import cpus
-          self.load = cpus
 
   def __repr__(self):
     return "<Port(origin=%s)>" % (self.origin)
