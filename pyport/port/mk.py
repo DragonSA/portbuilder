@@ -162,7 +162,7 @@ def status(port, changed=False, cache=dict()):
 
       # If the pkg has the same origin get the maximum of the install status
       if porigin == port.origin:
-        pstatus = max(pstatus, pkg_version(port.attr['pkgname'], i))
+        pstatus = max(pstatus, pkg_version(i, port.attr['pkgname']))
   return pstatus
 
 def attr(origin, callback, reget=False):
@@ -182,17 +182,18 @@ def attr_stage1(origin, callback):
     args.append('-V')
     args.append(i[0])
 
-  make_target(lambda x: attr_stage2(x, origin, callback), origin, args, True)
+  make_target(lambda x: attr_stage2(x, callback), origin, args, True)
 
-def attr_stage2(make, origin, callback):
+def attr_stage2(make, callback):
   """Parse the attributes from a port and call the requested function."""
   from ..make import SUCCESS
 
   if make.wait() is not SUCCESS:
     # TODO
-    callback(origin, None)
+    callback(None)
     #log_attr.error("Error in obtaining information for port: %s" % origin)
     #raise RuntimeError("Error in obtaining information for port: %s" % origin)
+    return
 
   attr_map = {}
   for name, value in ports_attr.iteritems():
@@ -250,23 +251,23 @@ def pkg_version(old, new):
     try:
       pstatus = cmp(int(old[i]), int(new[i]))
     except ValueError:
-      pstatus = cmp(old[i], new[i])
+      pstatus = -cmp(old[i], new[i])
     # If there is a difference is leveled version
     if pstatus:
       return Port.CURRENT + pstatus
 
   # The difference between the number of leveled versioning
-  return Port.CURRENT + cmp(len(old), len(new))
+  return Port.CURRENT - cmp(len(old), len(new))
 
 def cmp_attr(old, new, sym):
   """Compare the two attributes of the port."""
   old = old.rsplit(sym, 1)  # The value of the old pkg
   new = new.rsplit(sym, 1)  # The value of the new pkg
   if len(old) > len(new):  # If old has versioning and new does not
-    return (old[0], new[0], 1)
-  elif len(old) < len(new): # If new has versioning and old does not
     return (old[0], new[0], -1)
+  elif len(old) < len(new): # If new has versioning and old does not
+    return (old[0], new[0], 1)
   elif len(old) == len(new) == 1:  # If neither has versioning
     return (old[0], new[0], 0)
   else: #if len(old) == 2 and len(new) == 2 # Both have versioning
-    return (old[0], new[0], cmp(int(old[1]), int(new[1])))
+    return (old[0], new[0], -cmp(int(old[1]), int(new[1])))
