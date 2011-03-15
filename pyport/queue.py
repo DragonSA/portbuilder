@@ -10,7 +10,7 @@ class QueueManager(object):
 
   def __init__(self, load=1):
     """Initialise the manager with an indication of load available."""
-    self.load = load
+    self._load = load
     self.queue = []
     self.active = []
     self.stalled = []
@@ -19,19 +19,31 @@ class QueueManager(object):
   def __len__(self):
     return len(self.queue) + len(self.active) + len(self.stalled)
 
+  @property
+  def load(self):
+    """Returns the current allowed load."""
+    return self._load
+
+  @load.setter
+  def load(self, load):
+    run = load > self._load
+    self._load = load
+    if run:
+      self._run()
+
   def add(self, job):
     """Add a job to be run."""
     from bisect import insort
     assert(job not in self.queue)
     insort(self.queue, job)
-    if self.active_load < self.load:
+    if self.active_load < self._load:
       self._run()
 
   def done(self, job):
     """Indicates a job has completed."""
     self.active.remove(job)
     self.active_load -= job.load
-    if self.active_load < self.load:
+    if self.active_load < self._load:
       self._run()
 
   def reorder(self):
@@ -49,12 +61,12 @@ class QueueManager(object):
   def _run(self):
     """Fills up the remaining load with jobs"""
     from .job import StalledJob
-    assert(self.active_load < self.load)
+    assert(self.active_load < self._load)
 
     stalled = []
     for queue in (self.stalled, self.queue):
-      while self.active_load < self.load and len(queue):
-        job = self._find_job(self.load - self.active_load, queue)
+      while self.active_load < self._load and len(queue):
+        job = self._find_job(self._load - self.active_load, queue)
         try:
           self.active_load += job.load
           self.active.append(job)
