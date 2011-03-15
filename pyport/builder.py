@@ -74,9 +74,6 @@ class StageBuilder(object):
   def __repr__(self):
     return "<StageBuilder(%i)>" % self.stage
 
-  def __repr__(self):
-    return "<StageBuilder(stage=%i)>" % self.stage
-
   def add(self, port, callback):
     """Add a port to be build for this stage."""
     assert not port.failed
@@ -135,9 +132,10 @@ class StageBuilder(object):
     """Update dependancy structures for resolved dependancy."""
     if not self._port_failed(job.port):
       for port in self._depends.pop(job.port):
-        self._pending[port] -= 1
-        if not self._pending[port]:
-          self._port_ready(port)
+        if port not in self.failed:
+          self._pending[port] -= 1
+          if not self._pending[port]:
+            self._port_ready(port)
 
   def _stage_resolv(self, job):
     """Update pending structures for resolved prior stage."""
@@ -147,17 +145,18 @@ class StageBuilder(object):
         self._port_ready(job.port)
 
   def _port_failed(self, port):
+    """Handle a failing port."""
     if port in self.failed:
       return True
     elif port.failed or port.dependancy.failed:
       from .event import post_event
 
+      if port in self._depends:
+        for deps in self._depends.pop(port):
+          if deps not in self.prev_builder.ports and deps not in self.failed:
+            post_event(self._port_failed, deps)
       if port not in self.prev_builder.ports:
         self.failed.append(port)
-        if port in self._depends:
-          for deps in self._depends.pop(port):
-            if deps not in self.prev_builder.ports:
-              post_event(self._port_failed, deps)
         if port in self.ports:
           del self._pending[port]
           self.ports[port].stage_done()
