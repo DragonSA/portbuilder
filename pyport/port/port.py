@@ -132,12 +132,12 @@ class Port(object):
 
   def _cleaned(self, _make=None):
     """Make the port as clean."""
-    if not self.failed:
+    if not self.failed and self.stage > Port.CONFIG:
+      from os.path import isfile
       from os import unlink
-      try:
+
+      if isfile(self.log_file):
         unlink(self.log_file)
-      except OSError:
-        pass
 
   def build_stage(self, stage):
     """Build the requested stage."""
@@ -194,10 +194,10 @@ class Port(object):
   def _load_dependancy(self):
     """Create a dependancy object for this port."""
     from os.path import join
+    from ..env import flags
     from .dependhandler import Dependancy
 
-    LOG_DIR = "/tmp/pypkg"
-    self.log_file = join(LOG_DIR, self.attr["uniquename"])
+    self.log_file = join(flags["log_dir"], self.attr["uniquename"])
     self.priority = self._get_priority()
     self.dependant.priority += self.priority
     depends = ('depend_build', 'depend_extract', 'depend_fetch', 'depend_lib',
