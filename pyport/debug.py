@@ -8,6 +8,6 @@ def get_tb(offset=0):
 
   if flags["debug"]:
     from traceback import extract_stack
-    return extract_stack()[:-1 - offset]
+    return extract_stack()[:-(offset + 2)]
   else:
     return None
