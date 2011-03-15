@@ -88,13 +88,16 @@ def run_loop():
 
   try:
     run()
+  except SystemExit:
+    raise
   except BaseException:
+    from sys import stderr
     from traceback import format_list, print_exc
     from pyport.event import traceback
 
     for tb, name in traceback():
-      print "Traceback from %s (most recent call last):" % name
-      print "".join(format_list(tb))
+      stderr.write("Traceback from %s (most recent call last):\n" % name)
+      stderr.write("%s\n" % "".join(format_list(tb)))
     print_exc()
     exit(255)
 
@@ -113,6 +116,9 @@ def gen_parser():
   parser.add_option("-c", "--config", action="callback", callback=parse_config,
                     type="string", help="Specify which ports to configure "\
                     "(none, all, newer, changed) [default: changed]")
+
+  parser.add_option("-d", "--debug", action="store_true", default=True,
+                    help="Turn on extra diagnostic information (slower)")
 
   parser.add_option("-D", dest="make_env", action="append", metavar="variable",
                     default=[], help="Define the given variable for make (i.e."\
@@ -162,6 +168,10 @@ def set_options(options):
   # Batch mode
   if options.batch:
     env["BATCH"] = True
+
+  # Debug mode
+  if options.debug:
+    flags["debug"] = True
 
   # Add all -D options
   for i in options.make_env:
