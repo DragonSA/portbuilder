@@ -15,11 +15,11 @@ env = {
 }
 
 flags = {
-  "config"      : "changed"  # Configure ports based on criteria
-  "debug"       : False,     # Print extra debug messages
-  "no_op"       : False,     # Do nothing
-  "no_op_print" : False,     # Print commands that would have been executed
-  "package"     : False,     # Package installed ports
+  "config"      : "changed",  # Configure ports based on criteria
+  "debug"       : False,      # Print extra debug messages
+  "no_op"       : False,      # Do nothing
+  "no_op_print" : False,      # Print commands that would have been executed
+  "package"     : False,      # Package installed ports
 }
 
 env_master = {}
@@ -33,4 +33,7 @@ def _check():
     if i in environ:
       env[i] = environ[i]
   # TODO: set env_master from make -V ...
+
+  if env["PORTSDIR"][-1] == '/':
+    env["PORTSDIR"] = env["PORTSDIR"][:-1]
 _check()
