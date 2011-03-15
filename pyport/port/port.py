@@ -132,8 +132,6 @@ class Port(object):
 
   def _cleaned(self, _make=None):
     """Make the port as clean."""
-    self.failed = False
-    self.stage = Port.CONFIG
     if not self.failed:
       from os import unlink
       try:

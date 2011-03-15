@@ -232,7 +232,7 @@ def pkg_version(old, new):
 
   # Check the ports revision
   old, new, pstatus = cmp_attr(old, new, '_')
-  if pstatus:
+  if old == new and pstatus:
     return Port.CURRENT + pstatus
 
   # Check the ports version from left to right
@@ -243,7 +243,7 @@ def pkg_version(old, new):
     try:
       pstatus = cmp(int(old[i]), int(new[i]))
     except ValueError:
-      pstatus = -cmp(old[i], new[i])
+      pstatus = cmp(old[i], new[i])
     # If there is a difference is leveled version
     if pstatus:
       return Port.CURRENT + pstatus
@@ -256,10 +256,10 @@ def cmp_attr(old, new, sym):
   old = old.rsplit(sym, 1)  # The value of the old pkg
   new = new.rsplit(sym, 1)  # The value of the new pkg
   if len(old) > len(new):  # If old has versioning and new does not
-    return (old[0], new[0], -1)
-  elif len(old) < len(new): # If new has versioning and old does not
     return (old[0], new[0], 1)
+  elif len(old) < len(new): # If new has versioning and old does not
+    return (old[0], new[0], -1)
   elif len(old) == len(new) == 1:  # If neither has versioning
     return (old[0], new[0], 0)
   else: #if len(old) == 2 and len(new) == 2 # Both have versioning
-    return (old[0], new[0], -cmp(int(old[1]), int(new[1])))
+    return (old[0], new[0], cmp(int(old[1]), int(new[1])))

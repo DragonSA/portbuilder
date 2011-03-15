@@ -79,7 +79,7 @@ class StageBuilder(object):
 
   def add(self, port, callback):
     """Add a port to be build for this stage."""
-    assert not  port.failed
+    assert not port.failed
 
     if port in self.ports:
       self.ports[port].connect(callback)
@@ -141,9 +141,6 @@ class StageBuilder(object):
 
   def _stage_resolv(self, job):
     """Update pending structures for resolved prior stage."""
-    if job.port.stage >= self.stage:
-      # something
-      pass
     self._pending[job.port] -= 1
     if not self._pending[job.port]:
       self._port_ready(job.port)
@@ -152,6 +149,7 @@ class StageBuilder(object):
     """Add a port to the stage queue."""
     from .env import flags
 
+    del self._pending[port]
     if port.failed or port.dependancy.failed or port.dependancy.check(self.stage):
       self.ports[port].stage_done()
     elif port.dependant.status == port.dependant.RESOLV:
@@ -165,7 +163,6 @@ class StageBuilder(object):
         self.queue.add(self.ports[port])
       else:
         self.ports[port].stage_done()
-      del self._pending[port]
 
 config_builder   = ConfigBuilder()
 checksum_builder = StageBuilder(Port.CHECKSUM, checksum_queue)
