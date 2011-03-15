@@ -10,7 +10,7 @@ ports_attr = {
 "version":    ["PORTVERSION",  str], # The port's version
 "revision":   ["PORTREVISION", str], # The port's revision
 "epoch":      ["PORTEPOCH",    str], # The port's epoch
-"uniquename": ["UNIQUENAME", str], # The port's unique name
+"uniquename": ["UNIQUENAME",   str], # The port's unique name
 
 # Port's package naming
 "pkgname":   ["PKGNAME",       str], # The port's package name
@@ -35,8 +35,9 @@ ports_attr = {
 "prefix":     ["PREFIX",     str],   # The port's install prefix
 
 # Distribution information
-"distfiles": ["_DISTFILES",   tuple], # The port's distfiles
-"distdir":   ["_DISTDIR", str],       # The port's distfile's sub-directory
+"distfiles": ["DISTFILES",    tuple], # The port's distfiles
+"distdir":   ["_DISTDIR",      str],   # The port's distfile's sub-directory
+"distinfo":  ["DISTINFO_FILE", str],   # The port's distinfo file
 
 # MAKE_JOBS flags
 "jobs_safe":    ["MAKE_JOBS_SAFE",    bool], # Port supports make jobs
