@@ -99,12 +99,9 @@ class Port(object):
 
   def __init__(self, origin, attr):
     """Itialise the port with the required information."""
-    from os.path import join
     from ..signal import Signal
     from .mk import status
     from .dependhandler import Dependant
-
-    LOG_DIR = "/tmp/pypkg"
 
     self.attr = attr
     self.log_file = None
@@ -135,7 +132,7 @@ class Port(object):
 
     if self.working or self.stage != stage - 1 or self.failed:
       return False
-    if self.stage >= Port.CONFIG and not self.dependancy.check(stage):
+    if self.stage >= Port.CONFIG and self.dependancy.check(stage):
       return False
 
     self.working = time()
@@ -326,6 +323,7 @@ class Port(object):
     return True
 
   def _get_priority(self):
+    """Get the priority of this port, based on the distfiles size."""
     from os.path import isfile
 
     distfiles = self.attr["distfiles"]
