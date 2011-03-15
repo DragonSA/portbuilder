@@ -65,6 +65,7 @@ ports_attr["depends"].append(lambda x: ([x.remove(i) for i in x
 ports_attr["distfiles"].append(lambda x: [i.split(':', 1)[0] for i in x])
 
 def parse_options(optionstr):
+  """Convert options string into something easier to use."""
   # TODO: make ordered dict
   options = {}
   order = 0
@@ -155,6 +156,7 @@ def status(port, changed=False, cache=dict()):
   return pstatus
 
 def attr(origin, callback, reget=False):
+  """Retrieve a ports attributes."""
   from ..job import AttrJob
   from .. import attr_queue
 

@@ -18,6 +18,7 @@ env_master = {}
 env_master.update(env)
 
 def _check():
+  """Update the env dictonary based on this programs environment flags."""
   from os import environ
 
   for i in env:
