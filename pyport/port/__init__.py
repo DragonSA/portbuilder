@@ -33,7 +33,7 @@ class PortCache(object):
 
     waiters = self._waiters.pop(origin)
     if attr is None:
-      port = None
+      port = origin
     else:
       port = Port(origin, attr)
     self._ports[origin] = port
