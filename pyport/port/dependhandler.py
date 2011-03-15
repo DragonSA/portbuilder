@@ -162,7 +162,6 @@ class Dependancy(DependHandler):
           self._count += 1
 
     if port is None or status == Dependant.FAILURE:
-      from sys import stderr
       self.failed = True
       if not self.port.dependant.failed:
         self.port.dependant.status_changed()
@@ -188,12 +187,13 @@ class Dependancy(DependHandler):
   def check(self, stage):
     """Check the dependancy status for a given stage."""
     # DependHandler status might change without Port's changing
+    bad = set()
     for i in Dependancy.STAGE2DEPENDS[stage]:
       for j in self._dependancies[i]:
         status = j.dependant.status
         if status != Dependant.RESOLV:
-          return False
-    return True
+          bad.add(j)
+    return bad
 
   def update(self, depend):
     """Called when a dependancy has changes status."""
