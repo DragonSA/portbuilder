@@ -39,14 +39,14 @@ class EventManager(object):
     from .env import flags
     if flags["debug"]:
       from traceback import extract_stack
-      tb = extract_stack()
+      tb = extract_stack()[:-1]
     else:
       tb = None
     if not callable(func):
-      assert(len(func) == 3)
-      self._events.append(func + (tb,))
+      assert(len(func) == 4)
+      self._events.append(func + (tb[:-1],))
     else:
-      self._events.append((func, args, kwargs, tb))
+      self._events.append((func, args, kwargs, None, tb))
 
   def run(self):
     """Run the currently queued events."""
@@ -57,14 +57,15 @@ class EventManager(object):
       while True:
         while len(self._events):
           self._alarm()
-          func, args, kwargs, tb = self._events.popleft()
+          func, args, kwargs, tb_slot, tb_call = self._events.popleft()
           try:
             func(*args, **kwargs)
           except BaseException:
-            if tb is not None:
-              from traceback import format_list
-              print "Traceback from signal caller (most recent call last):"
-              print "".join(format_list(tb[:-1]))
+            for tb, name in ((tb_slot, "connect"), (tb_call, "caller")):
+              if tb is not None:
+                from traceback import format_list
+                print "Traceback from signal %s (most recent call last):" % name
+                print "".join(format_list(tb))
             raise
 
         if not active_popen():
