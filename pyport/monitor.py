@@ -31,7 +31,8 @@ class Monitor(object):
         self.start()
       else:
         self.run()
-    else:
+    elif not self._stopped:
+      self.run()
       self.stop()
     return self.delay
 
@@ -199,7 +200,7 @@ class Top(Monitor):
       else:
         continue
       scr.addnstr(offset, 0, ' %6s  active %s %s' %
-                  (STAGE_NAME[port.stage], time, get_name(port)), columns)
+                  (STAGE_NAME[port.stage + 1], time, get_name(port)), columns)
       offset += 1
       lines -= 1
       if not lines:
