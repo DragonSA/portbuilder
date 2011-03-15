@@ -7,9 +7,10 @@ __all__ = ["Port"]
 # TODO:
 # No_opt
 # Non-privleged mode
+# Package install (or separate stage)
 
 # - config
-# - checksum
+# * checksum
 # * fetch
 # - build
 # - install
@@ -149,7 +150,7 @@ class Port(object):
 
   def _pre_config(self):
     """Configure the ports options."""
-    if len(self.attr["options"]):
+    if len(self.attr["options"]) and not self._check_config():
       if not self._config_lock.acquire():
         from ..job import StalledJob
         raise StalledJob()
@@ -301,3 +302,24 @@ class Port(object):
     self.working = False
     self.stage = max(stage + 1, self.stage)
     self.stage_completed(self)
+
+  def _check_config(self):
+    """Check the options file to see if it is up-to-date."""
+    from os.path import isfile
+
+    # TODO: make this understand about options set, changes and versioning...
+    optionfile = self.attr["optionsfile"]
+    pkgname = self.attr["pkgname"]
+    options = set()
+    if isfile(optionfile):
+      for i in open(optionfile, 'r'):
+        if i.startswith('_OPTIONS_READ='):
+          # The option set to the last pkgname this config file was set for
+          config_pkgname = i[14:-1]
+        elif i.startswith('WITH'):
+          options.add(i.split('_', 1)[1].split('=', 1)[0])
+    if options != set(self.attr["options"]):
+      return False
+    # if diff_version:
+    #   return config_pkgname == pkgname
+    return True
