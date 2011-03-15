@@ -2,7 +2,7 @@
 
 from __future__ import absolute_import
 
-__all__ = ["active_popen", "add_popen"]
+__all__ = ["active_popen", "add_popen", "children"]
 
 class ChildrenMonitor(object):
   """Monitor subprocesses."""
@@ -27,6 +27,10 @@ class ChildrenMonitor(object):
     else:
       from .event import post_event
       post_event(callback, popen)
+
+  def children(self):
+    """Returns all the current children."""
+    return self._pid_map.keys()
 
   def _signal(self, _signum, _frame):
     """Handle a signal from child process."""
@@ -61,4 +65,5 @@ class ChildrenMonitor(object):
 _monitor = ChildrenMonitor()
 
 active_popen = _monitor.__len__
-add_popen = _monitor.add_popen
+add_popen    = _monitor.add_popen
+children     = _monitor.children
