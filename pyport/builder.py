@@ -123,6 +123,7 @@ class StageBuilder(object):
     if port.failed or port.dependancy.failed or port.dependancy.check(self.stage):
       self.ports[port].stage_done()
     else:
+      assert port.stage >= self.stage - 1
       if port.stage < self.stage:
         self.queue.add(self.ports[port])
       else:
