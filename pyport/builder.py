@@ -124,11 +124,10 @@ class StageBuilder(object):
           install_builder(p).connect(self._depend_resolv)
       self._depends[p].add(port)
 
-    # Build the previous stage if needed (or we are in upgrade mode)
-    if not (flags["mode"] == "upgrade" and port.install_status >= port.CURRENT):
-      if port.stage < self.stage - 1:
-        self._pending[port] += 1
-        self.prev_builder.add(port).connect(self._stage_resolv)
+    # Build the previous stage if needed
+    if port.install_status < (port.CURRENT if flags["upgrade"] else port.OLDER) and port.stage < self.stage - 1:
+      self._pending[port] += 1
+      self.prev_builder.add(port).connect(self._stage_resolv)
 
     # Build stage if port is ready
     if not self._pending[port]:
@@ -189,18 +188,38 @@ class StageBuilder(object):
 
     del self._pending[port]
     if port.failed or port.dependancy.failed or port.dependancy.check(self.stage):
+      # port cannot build
       self.ports[port].stage_done()
-    elif port.dependant.status == port.dependant.RESOLV:
-      self.ports[port].stage_done()
-    elif flags["mode"] == "upgrade" and port.install_status >= port.CURRENT:
-      port.dependant.status_changed()
-      self.ports[port].stage_done()
-    else:
-      assert port.stage >= self.stage - 1
-      if port.stage < self.stage:
-        self.queue.add(self.ports[port])
-      else:
+    elif self.stage == port.PACKAGE:
+      # Checks specific for package building
+      if port.stage < port.INSTALL:
         self.ports[port].stage_done()
+      else:
+        assert(port.stage == port.INSTALL)
+        self._build_port(port)
+    else:
+      # Checks for self.stage <= port.INSTALL
+      if port.dependant.status == port.dependant.RESOLV:
+        # port does not need to build
+        # XXX
+        # TODO: remove assert
+        assert(False)
+        self.ports[port].stage_done()
+      elif port.install_status >= (port.CURRENT if flags["upgrade"] else port.OLDER):
+        # port already up to date, does not need to build
+        assert(flags["upgrade"] or flags["recursive"])
+        port.dependant.status_changed()
+        self.ports[port].stage_done()
+      else:
+        self._build_port(port)
+
+  def _build_port(self, port):
+    """Actually build the port."""
+    assert port.stage >= self.stage - 1
+    if port.stage < self.stage:
+      self.queue.add(self.ports[port])
+    else:
+      self.ports[port].stage_done()
 
 config_builder   = ConfigBuilder()
 checksum_builder = StageBuilder(Port.CHECKSUM, config_builder)
