@@ -120,18 +120,17 @@ del strip_depends
 
 def status(port, changed=False, cache=dict()):
   """Get the current status of the port."""
-  from os import path
-  from os import listdir
+  from os import listdir, path
   from ..env import flags
   from .port import Port
 
-  pkg = path.join(flags["chroot"], env["PKG_DBDIR"])
-  if changed or not cache.has_key('mtime') or path.getmtime(pkg) != cache['mtime']:
+  pkg_dbdir = flags["chroot"] + env["PKG_DBDIR"]
+  if changed or not cache.has_key('mtime') or path.getmtime(pkg_dbdir) != cache['mtime']:
     count = 5
     while True:
       try:
-        cache['mtime'] = path.getmtime(pkg)
-        cache['listdir'] = tuple(i for i in listdir(pkg) if path.isdir(path.join(pkg, i)))
+        cache['mtime'] = path.getmtime(pkg_dbdir)
+        cache['listdir'] = tuple(i for i in listdir(pkg_dbdir) if path.isdir(path.join(pkg_dbdir, i)))
         break
       except OSError:
         # May happen on occation, retry
@@ -146,7 +145,7 @@ def status(port, changed=False, cache=dict()):
   for i in cache['listdir']:
     # If the port's name matches that of a database
     if i.rsplit('-', 1)[0] == pkgname or name in i:
-      content = path.join(pkg, i, '+CONTENTS') #: The pkg's content file
+      content = path.join(pkg_dbdir, i, '+CONTENTS') #: The pkg's content file
       porigin = None  #: Origin of the package
       for j in open(content, 'r'):
         if j.startswith('@comment ORIGIN:'):
