@@ -138,11 +138,11 @@ class Top(Monitor):
       ch = self._stdscr.getch()
       if ch == -1:
         break
-      elif ch == ord('f'):
+      elif ch == ord('f'):                         # Toggle fetch only display
         self._failed_only = not self._failed_only
-      elif ch == ord('i') or ch == ord('I'):
+      elif ch == ord('i') or ch == ord('I'):       # Toggle showing idle
         self._idle = not self._idle
-      elif ch == ord('q'):
+      elif ch == ord('q'):                         # Quit
         from . import stop
 
         self._quit += 1
@@ -153,17 +153,19 @@ class Top(Monitor):
         elif self._quit == 3:
           stop(kill=True, kill_clean=True)
           exit(254)
-      elif ch == KEY_CLEAR or ch == ascii.FF:
+        continue
+      elif ch == KEY_CLEAR or ch == ascii.FF:      # Redraw window 
         self._stdscr.clear()
-      elif ch == KEY_PPAGE:
+      elif ch == KEY_PPAGE:                        # Page up display
         self._skip -= self._stdscr.getmaxyx()[0] - self._offset - 2
         self._skip = max(0, self._skip)
-      elif ch == KEY_NPAGE:
+      elif ch == KEY_NPAGE:                        # Page down display
         self._skip += self._stdscr.getmaxyx()[0] - self._offset - 2
-      else:
+      else:                                        # Unknown input
         continue
       run = True
     if run:
+      # Redraw display if required
       self.run()
 
   def _update_header(self, scr):
@@ -182,9 +184,12 @@ class Top(Monitor):
     offset = self._stats.time - self._time
     secs, mins, hours = offset % 60, offset / 60 % 60, offset / 60 / 60 % 60
     days = offset / 60 / 60 / 24
+    # Display running time
     running = "running %i+%02i:%02i:%02i  " % (days, hours, mins, secs)
+    # Display current time
     running += strftime("%H:%M:%S")
     if pending_events():
+      # Display pending events
       running = "events %i  " % pending_events() + running
     scr.addstr(0, scr.getmaxyx()[1] - len(running) - 1, running)
 
@@ -250,6 +255,7 @@ class Top(Monitor):
     offset = self._offset + 2
     lines -= offset
     if not self._failed_only:
+      # Show at least one window of ports
       if self._idle:
         total = sum(len(i) for i in self._stats.summary)
         total += sum(len(i) for i in clean)
@@ -258,6 +264,8 @@ class Top(Monitor):
       else:
         if skip > len(active) + len(clean[0]) - lines:
           self._skip = skip = max(0, len(active) - lines)
+
+      # Display all active ports (and time active)
       for port in active:
         if skip:
           skip -= 1
@@ -274,6 +282,8 @@ class Top(Monitor):
         lines -= 1
         if not lines:
           return
+
+      # Display ports cleaning and queued to be cleaned
       for stage, cleaned in (("active", clean[0]),) + ((("queued", clean[1]),) if self._idle else ()):
         for port in cleaned:
           if skip:
@@ -285,13 +295,16 @@ class Top(Monitor):
           if not lines:
             return
     elif skip > len(failed) - lines:
+      # Show at least one window of ports
       self._skip = skip = max(0, len(failed) - lines)
 
     if self._idle or self._failed_only:
+      # Show queued, pending and failed processes
       for stage, name in ((queued, "queued"), (pending, "pending"), (failed, "failed")):
         if name != "failed":
           stg = 1
           if self._failed_only:
+            # Skip if showing only failed
             continue
         else:
           stg = 0

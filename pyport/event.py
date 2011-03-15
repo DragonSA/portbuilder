@@ -75,15 +75,17 @@ class EventManager(object):
     try:
       while True:
         while len(self._events):
+          # Process outstanding alarm and selects before next event
           self._alarm()
           self._select()
-          func, args, kwargs, tb_slot, tb_call = self._events.popleft()
 
+          func, args, kwargs, tb_slot, tb_call = self._events.popleft()
           self._construct_tb((tb_slot, "signal connect"), (tb_call, "signal caller"))
           func(*args, **kwargs)
           self._clear_tb()
 
         if not active_popen():
+          # Die if no events or outstanding processes
           break
 
         self._sleep()
@@ -124,6 +126,7 @@ class EventManager(object):
           self._clear_tb()
         except BaseException:
           if end is not True:
+            self._alarms.remove(item)
             raise
           else:
             self._clear_tb()

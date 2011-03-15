@@ -127,7 +127,8 @@ class PortJob(Job):
   def stage_done(self, port=None):
     """Handle the completion of a port stage."""
     if port is None:
-      self.done()
+      from .event import post_event
+      post_event(self.done)
     elif port.stage >= self.stage:
       self.port.stage_completed.disconnect(self.stage_done)
       self.done()

@@ -54,6 +54,7 @@ def main():
   from pyport.monitor import Top
   from pyport.port import get_port
 
+  # Process arguments
   parser = gen_parser()
   options, args = parser.parse_args()
   options.args = args

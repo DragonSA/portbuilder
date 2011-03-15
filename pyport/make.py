@@ -39,15 +39,19 @@ def make_target(callback, port, targets, pipe=None, **kwargs):
 
   args = ("make", "-C", join(env["PORTSDIR"], origin)) + targets
   for key, value in env_master.items():
+    # Remove default environment variables
     if env[key] == value:
       del env[key]
   args += tuple(env2args(env))
 
   if pipe is True:
+    # Give access to subprocess output
     stdin, stdout, stderr = PIPE, PIPE, STDOUT
   elif pipe is False:
+    # No piping of output (i.e. interactive)
     stdin, stdout, stderr = None, None, None
   elif not flags["no_op"]:
+    # Pipe output to log_file
     stdin = PIPE
     stdout = open(port.log_file, 'a')
     stderr = stdout

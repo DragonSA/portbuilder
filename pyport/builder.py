@@ -21,21 +21,23 @@ class ConfigBuilder(object):
   def __repr__(self):
     return "<ConfigBuilder()>"
 
-  def add(self, port, callback=None):
+  def add(self, port):
     """Add a port to be configured."""
     assert port.stage < port.CONFIG
 
     if port in self.ports:
-      self.ports[port].connect(callback)
+      return self.ports[port]
     else:
       from .job import PortJob
       from .queue import config_queue
 
+      # Create a config stage job and add it to the queue
       port.stage_completed.connect(self._refresh_queues)
       job = PortJob(port, port.CONFIG)
-      job.connect(self._cleanup).connect(callback)
+      job.connect(self._cleanup)
       self.ports[port] = job
       config_queue.add(job)
+      return job
 
   def _cleanup(self, job):
     """Cleanup after the port was configured."""
@@ -66,32 +68,34 @@ class StageBuilder(object):
     self.queue = queue
     self.prev_builder = prev_builder
 
-  def __call__(self, port, callback=None):
+  def __call__(self, port):
     """Build the given port to the required stage."""
     self.cleanup.add(port)
-    self.add(port, callback)
+    return self.add(port)
 
   def __repr__(self):
     return "<StageBuilder(%i)>" % self.stage
 
-  def add(self, port, callback):
+  def add(self, port):
     """Add a port to be build for this stage."""
     assert not port.failed
 
     if port in self.ports:
-      self.ports[port].connect(callback)
-      return
+      return self.ports[port]
     else:
       from .job import PortJob
 
+      # Create stage job
       job = PortJob(port, self.stage)
-      job.connect(self._cleanup).connect(callback)
+      job.connect(self._cleanup)
       self.ports[port] = job
 
-    if port.stage < port.CONFIG:
-      config_builder.add(port, self._add)
-    else:
-      self._add(job)
+      # Configure port then process it
+      if port.stage < port.CONFIG:
+        config_builder.add(port).connect(self._add)
+      else:
+        self._add(job)
+      return job
 
   def _add(self, job):
     """Add a ports dependancies and prior stage to be built."""
@@ -99,32 +103,38 @@ class StageBuilder(object):
 
     port = job.port
 
+    # Don't try and build a port that has already failed (or cannot be built)
     if port.failed or port.dependancy.failed:
       self.ports[port].stage_done()
       return
 
     depends = port.dependancy.check(self.stage)
 
+    # Add all outstanding ports to be installed
     self._pending[port] = len(depends)
     for p in depends:
       if p not in self._depends:
         self._depends[p] = set()
-        install_builder(p, self._depend_resolv)
+        install_builder(p).connect(self._depend_resolv)
       self._depends[p].add(port)
 
+    # Build the previous stage if needed (or we are in upgrade mode)
     if not (flags["mode"] == "upgrade" and port.install_status >= port.CURRENT):
       if port.stage < self.stage - 1:
         self._pending[port] += 1
-        self.prev_builder.add(port, self._stage_resolv)
+        self.prev_builder.add(port).connect(self._stage_resolv)
 
+    # Build stage if port is ready
     if not self._pending[port]:
       self._port_ready(port)
 
   def _cleanup(self, job):
     """Cleanup after the port has completed its stage."""
+    from .env import flags
+
     del self.ports[job.port]
     self._port_failed(job.port)
-    if job.port in self.cleanup:
+    if job.port in self.cleanup and not flags["mode"] == "clean":
       self.cleanup.remove(job.port)
       job.port.clean()
 
@@ -154,10 +164,12 @@ class StageBuilder(object):
       from .event import post_event
 
       if port in self._depends:
+        # Inform all dependants that they have failed (because of us)
         for deps in self._depends.pop(port):
           if deps not in self.prev_builder.ports and deps not in self.failed:
             post_event(self._port_failed, deps)
       if port not in self.prev_builder.ports:
+        # We only fail on at this stage if previous stage knowns about failure
         self.failed.append(port)
         if port in self.ports:
           del self._pending[port]

@@ -151,8 +151,10 @@ class Port(object):
                 self._pre_build, self._pre_install)
 
     if self.working or self.stage != stage - 1 or self.failed:
+      # Don't do stage if not able to
       return False
     if self.stage >= Port.CONFIG and self.dependancy.check(stage):
+      # Don't do stage if not configured
       return False
 
     self.working = time()
@@ -221,13 +223,16 @@ class Port(object):
 
     distfiles = self.attr["distfiles"]
     if self._fetched.issuperset(distfiles):
+      # If files are already fetched
       self.stage = Port.FETCH
       return True
     if not self._bad_checksum.isdisjoint(distfiles):
+      # If some files have already failed
       return True
     distdir = self.attr["distdir"]
     for i in distfiles:
       if not isfile(join(distdir, i)):
+        # If file does not exist then it failed
         self._bad_checksum.add(i)
         return True
     if not self._checksum_lock.acquire(distfiles):
@@ -241,6 +246,7 @@ class Port(object):
     distfiles = self.attr["distfiles"]
     self._checksum_lock.release(distfiles)
     if status:
+      self._fetched.update(distfiles)
       self.stage = Port.FETCH
     else:
       self._bad_checksum.update(distfiles)
@@ -250,8 +256,10 @@ class Port(object):
     """Fetch the ports files."""
     distfiles = self.attr["distfiles"]
     if self._fetched.issuperset(distfiles):
+      # If files are already fetched
       return True
     if self._fetch_failed.issuperset(distfiles):
+      # If filfes have failed to fetch
       return False
     if not self._fetch_lock.acquire(distfiles):
       from ..job import StalledJob
