@@ -42,7 +42,9 @@ class Dependant(DependHandler):
       self.status = Dependant.RESOLV
     else:
       self.status = Dependant.UNRESOLV
-    self.port.stage_completed.connect(self.status_changed)
+
+  def __repr__(self):
+    return "<Dependant(port=%s)>" % self.port.origin
 
   def add(self, field, port, typ):
     """Add a dependant to our list."""
@@ -73,10 +75,8 @@ class Dependant(DependHandler):
     """Shorthand for self.status() == Dependant.FAILURE."""
     return self.status == Dependant.FAILURE
 
-  def status_changed(self, stage=None):
+  def status_changed(self):
     """Indicates that our port's status has changed."""
-    if stage is not None and (not self.port.failed or stage < Port.INSTALL):
-      return
     if self.port.failed or (self.port.dependancy and self.port.dependancy.failed):
       status = Dependant.FAILURE
       # TODO: We might have failed and yet still satisfy our dependants
@@ -147,6 +147,9 @@ class Dependancy(DependHandler):
     if not self._loading:
       self._update_priority()
       self.port.dependancy_loaded(True)
+
+  def __repr__(self):
+    return "<Dependancy(port=%s)>" % self.port.origin
 
   def _add(self, port, field, typ):
     """Add a port to our dependancy list."""
