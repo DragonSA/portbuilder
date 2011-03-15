@@ -173,18 +173,18 @@ def gen_parser():
                     help="Do not execute any commands.")
 
   parser.add_option("-p", "--package", action="store_true", default=False,
-                    help="Create packages for all specified ports.")
+                    help="Create packages for specified ports.")
 
-  parser.add_option("-P", "--package-all", action="store_true", dest="packageA",
+  parser.add_option("-P", "--package-all", dest="packageA", action="store_true",
                     default=False, help="Create packages for all installed "\
                     "ports")
 
-  parser.add_option("-r", "--recursive", dest="recursive", action="store_true",
-                    default=False, help="Recursively apply -p or -u to "\
-                    "all dependancies")
+  parser.add_option("-u", "--upgrade", action="store_true", default=False,
+                    help="Upgrade specified ports.")
 
-  parser.add_option("-u", "--upgrade", dest="upgrade", action="store_true",
-                    default=False, help="Upgrade port mode.")
+  parser.add_option("-U", "--upgrade-all", dest="upgradeA", action="store_true",
+                    default=False, help="Upgrade specified ports and all its "\
+                    "dependancies.")
 
   #parser.add_option("--index", action="store_true", default=False,
                     #help="Create the INDEX file for the ports infrastructure.")
@@ -261,13 +261,10 @@ def set_options(options):
     flags["package"] = True
     options.package = True
 
-  # -r requires -u
-  if options.recursive and not (options.upgrade):
-    options.parser.error("-r requires -u or -p")
-
   # Upgrade mode
-  if options.upgrade and options.recursive:
+  if options.upgradeA:
     flags["mode"] = "upgrade"
+    options.upgrade = True
 
 def read_port_file(ports_file):
   """Get ports from a file."""
