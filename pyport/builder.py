@@ -42,7 +42,7 @@ class ConfigBuilder(object):
 
   def _refresh_queues(self, port):
     """Inform all queues that priorities may have changed."""
-    from ..queue import queues
+    from .queue import queues
 
     port.stage_completed.disconnect(self._refresh_queues)
     if port.dependancy is not None:
