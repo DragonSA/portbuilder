@@ -260,5 +260,9 @@ class Statistics(object):
       self.summary[self.PENDING].extend(stats[self.PENDING])
       seen.update(stats[self.PENDING])
 
+      stats[self.FAILED].extend(builder.failed)
+      self.summary[self.FAILED].extend(stats[self.FAILED])
+      seen.update(stats[self.FAILED])
+
     for i in self.summary:
       i.reverse()
