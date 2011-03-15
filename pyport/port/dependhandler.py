@@ -15,12 +15,12 @@ class DependHandler(object):
   PATCH   = 5  #: Patch dependants
 
   STAGE2DEPENDS = {
-    Port.CONFIG:     (),                           # The config dependancies
-    Port.CHECKSUM:   (),                           # The checksum dependancies
-    Port.FETCH:      (FETCH,),                     # The fetch dependancies
-    Port.BUILD:      (EXTRACT, PATCH, LIB, BUILD), # The build dependancies
-    Port.INSTALL:    (LIB, RUN),                   # The install dependancies
-    Port.PKGINSTALL: (LIB, RUN),                   # The pkginstall dependencies
+    Port.CONFIG:   (),                           # The config dependancies
+    Port.CHECKSUM: (),                           # The checksum dependancies
+    Port.FETCH:    (FETCH,),                     # The fetch dependancies
+    Port.BUILD:    (EXTRACT, PATCH, LIB, BUILD), # The build dependancies
+    Port.INSTALL:  (LIB, RUN),                   # The install dependancies
+    Port.PACKAGE:  (),                           # The package dependencies
   } #: The dependancies for a given stage
 
 class Dependant(DependHandler):
