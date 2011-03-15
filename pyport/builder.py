@@ -12,6 +12,7 @@ class ConfigBuilder(object):
   def __init__(self):
     """Initialise config builder."""
     self.ports = {}
+    self.failed = []
 
   def __call__(self, port):
     """Configure the given port."""
@@ -34,6 +35,8 @@ class ConfigBuilder(object):
 
   def _cleanup(self, job):
     """Cleanup after the port was configured."""
+    if job.port.failed:
+      self.failed.append(job.port)
     del self.ports[job.port]
 
 class StageBuilder(object):
@@ -99,6 +102,8 @@ class StageBuilder(object):
 
   def _cleanup(self, job):
     """Cleanup after the port has completed its stage."""
+    if job.port.failed or job.port.dependancy.failed:
+      self.failed.append(job.port)
     del self.ports[job.port]
 
   def _depend_resolv(self, job):
