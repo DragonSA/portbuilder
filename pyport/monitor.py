@@ -63,7 +63,7 @@ class Monitor(object):
     pass
 
 
-STAGE_NAME = ["config", "config", "chcksm", "fetch", "build", "instal", "error"]
+STAGE_NAME = ["config", "config", "chcksm", "fetch", "build", "install", "package", "error"]
 
 def get_name(port):
   """Get the ports name."""
@@ -185,6 +185,7 @@ class Top(Monitor):
     self._update_stage(scr, "Fetch", self._stats.fetch)
     self._update_stage(scr, "Build", self._stats.build)
     self._update_stage(scr, "Install", self._stats.install)
+    self._update_stage(scr, "Package", self._stats.package)
 
     offset = self._stats.time - self._time
     secs, mins, hours = offset % 60, offset / 60 % 60, offset / 60 / 60 % 60
@@ -253,7 +254,7 @@ class Top(Monitor):
     active, queued, pending, failed = self._stats.summary
     clean = self._stats.clean
 
-    scr.addstr(self._offset + 1, 2, 'STAGE   STATE   TIME PORT (VERSION)')
+    scr.addstr(self._offset + 1, 2, ' STAGE   STATE   TIME PORT (VERSION)')
 
     skip = self._skip
     lines, columns = scr.getmaxyx()
@@ -281,7 +282,7 @@ class Top(Monitor):
           time = '%3i:%02i' % (offtime / 60, offtime % 60)
         else:
           continue
-        scr.addnstr(offset, 0, ' %6s  active %s %s' %
+        scr.addnstr(offset, 0, ' %7s  active %s %s' %
                     (STAGE_NAME[port.stage + 1], time, get_name(port)), columns)
         offset += 1
         lines -= 1
@@ -294,7 +295,7 @@ class Top(Monitor):
           if skip:
             skip -= 1
             continue
-          scr.addnstr(offset, 0, '  clean %7s        %s' % (stage, get_name(port)), columns)
+          scr.addnstr(offset, 0, '   clean %7s        %s' % (stage, get_name(port)), columns)
           offset += 1
           lines -= 1
           if not lines:
@@ -318,7 +319,7 @@ class Top(Monitor):
             skip -= 1
             continue
           stage = STAGE_NAME[port.stage + stg]
-          scr.addnstr(offset, 0, ' %6s %7s        %s' %
+          scr.addnstr(offset, 0, ' %7s %7s        %s' %
                       (STAGE_NAME[port.stage + stg], name, get_name(port)), columns)
           offset += 1
           lines -= 1
@@ -347,6 +348,7 @@ class Statistics(object):
     self.fetch    = ([], [], [], [])
     self.build    = ([], [], [], [])
     self.install  = ([], [], [], [])
+    self.package  = ([], [], [], [])
     self.summary  = ([], [], [], [])
     self.clean = ([], [])
     self.clean[self.ACTIVE].extend(i.port for i in queues.clean_queue.active)
@@ -354,7 +356,7 @@ class Statistics(object):
     self.clean[self.QUEUED].extend(i.port for i in queues.clean_queue.queue)
 
     if not stages:
-      stages = ("config", "checksum", "fetch", "build", "install")
+      stages = ("config", "checksum", "fetch", "build", "install", "package")
 
     seen = set()
     seen.update(self.clean[self.ACTIVE])
