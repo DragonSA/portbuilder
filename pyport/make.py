@@ -7,6 +7,7 @@ __all__ = ["SUCCESS", "make_target"]
 SUCCESS = 0
 
 def env2args(env):
+  """Convert environment variables into make arguments."""
   for key, value in env.items():
     if value is True:
       yield "-D%s" % key
@@ -17,7 +18,7 @@ def make_target(callback, port, targets, pipe=None, **kwargs):
   """Build a make target and call a function when finished."""
   from os.path import join
   from subprocess import PIPE, STDOUT, Popen
-  from .env import env as environ, env_master
+  from .env import env as environ, env_master, flags
   from .subprocess import add_popen
 
   if type(port) is str:
@@ -45,15 +46,42 @@ def make_target(callback, port, targets, pipe=None, **kwargs):
     stdin, stdout, stderr = PIPE, PIPE, STDOUT
   elif pipe is False:
     stdin, stdout, stderr = None, None, None
-  else:
+  elif not flags["no_op"]:
     stdin = PIPE
     stdout = open(port.log_file, 'a')
     stderr = stdout
 
-  make = Popen(args, stdin=stdin, stdout=stdout, stderr=stderr, close_fds=True)
-  if stdin is not None:
-    make.stdin.close()
+  if pipe is None and flags["no_op"]:
+    make = PopenNone(args)
+  else:
+    make = Popen(args, stdin=stdin, stdout=stdout, stderr=stderr, close_fds=True)
+    if stdin is not None:
+      make.stdin.close()
 
   add_popen(make, callback)
 
   return make
+
+class PopenNone(object):
+  """An empty replacement for Popen."""
+
+  returncode = SUCCESS  #: Return code for the dummy processes
+  pid = -1              #: PID of the dummy processes
+
+  stdin  = None  #: Stdin stream
+  stdout = None  #: Stdout stream
+  stderr = None  #: Stderr stream
+
+  def __init__(self, args):
+    from .env import flags
+    if flags["no_op_print"]:
+      argstr = []
+      for i in args:
+        argstr.append(i.replace("\\", "\\\\").replace('"', '\\"').\
+                        replace("'", "\\'").replace('\n', '\\\n'))
+        if ' ' in i or '\t' in i or '\n' in i:
+          argstr[-1] = '"%s"' % argstr[-1]
+      print " ".join(argstr)
+
+  def wait(self):
+    return self.returncode
