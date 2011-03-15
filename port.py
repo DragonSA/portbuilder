@@ -19,6 +19,7 @@ def port_upgrade(port):
   from pyport.builder import install_builder
 
   if not isinstance(port, str) and port.install_status < port.CURRENT:
+    port.dependant.status = port.dependant.UNRESOLV
     install_builder(port)
   else:
     no_port.append(port)
@@ -61,7 +62,22 @@ def main():
   if not flags["no_op_print"]:
     Top().start()
   run()
-  # TODO: report on failures
+
+def report_bad():
+  from pyport import builder as builders
+
+  report_depend = []
+  report_failed = []
+  seen = set()
+  for stage in ("config", "fetch", "build", "install"):
+    builder = getattr(builders, "%s_builder" % stage)
+    for port in builder.failed:
+      if port in seen:
+        continue
+      if port.failed:
+        report_failed.append("Port '%s' failed to %s" % (port.origin, stage))
+      seen.add(port)
+  return report_failed + ["Port '%s' does not exist" % i for i in no_port]
 
 def gen_parser():
   """Create the options parser object."""
@@ -145,8 +161,13 @@ def set_options(options):
 
   # Fetch only options:
   if options.fetch:
-    flags["fetch_only"] = True
+    from pyport.env import cpus
+    from pyport.queue import checksum_queue
 
+    flags["fetch_only"] = True
+    checksum_queue.load = cpus
+
+  # Fetch ports list from file
   if options.ports_file:
     try:
       options.args.extend(read_port_file(options.ports_file))
