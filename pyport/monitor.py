@@ -82,6 +82,9 @@ class Top(Monitor):
     self._stdscr = None
     self._stats = None
 
+    self._failed_only = False
+    self._idle = True
+
   def run(self):
     """Refresh the display."""
     self._stats = Statistics()
@@ -95,6 +98,8 @@ class Top(Monitor):
   def _init(self):
     """Initialise the curses library."""
     from curses import initscr, cbreak, noecho
+    from sys import stdin
+    from .event import select
 
     self._stdscr = initscr()
     self._stdscr.keypad(1)
@@ -103,9 +108,13 @@ class Top(Monitor):
     cbreak()
     noecho()
 
+    select(self._userinput, rlist=stdin)
+
   def _deinit(self):
     """Shutdown the curses library."""
     from curses import nocbreak, echo, endwin
+    from sys import stdin
+    from .event import unselect
 
     self._stdscr.move(self._stdscr.getmaxyx()[0] - 1, 0)
     self._stdscr.clrtoeol()
@@ -115,6 +124,31 @@ class Top(Monitor):
     nocbreak()
     echo()
     endwin()
+
+    unselect(self._userinput, rlist=stdin)
+
+  def _userinput(self):
+    """Gte user input and change display options."""
+    from curses import KEY_CLEAR, ascii
+
+    run = False
+    while True:
+      ch = self._stdscr.getch()
+      if ch == -1:
+        break
+      elif ch == ord('f'):
+        self._failed_only = not self._failed_only
+      elif ch == ord('i') or ch == ord('I'):
+        self._idle = not self._idle
+      elif ch == ord('q'):
+        exit()
+      elif ch == KEY_CLEAR or ch == ascii.FF:
+        self._stdscr.clear()
+      else:
+        continue
+      run = True
+    if run:
+      self.run()
 
   def _update_header(self, scr):
     """Update the header details."""
@@ -157,7 +191,7 @@ class Top(Monitor):
 
     ports = sum((len(i) for i in summary)) - len(summary[Statistics.FAILED])
     if ports:
-      msg = "%i port(s) remaining: " % ports
+      msg = "%i port%s remaining: " % (ports, "s" if ports > 1 else " ")
 
       msgv = []
       stages = ["active", "queued", "pending", "failed"]
@@ -194,28 +228,32 @@ class Top(Monitor):
     lines, columns = scr.getmaxyx()
     offset = self._offset + 2
     lines -= offset
-    for port in active:
-      time = port.working
-      if time:
-        offtime = self._stats.time - time
-        time = '%3i:%02i' % (offtime / 60, offtime % 60)
-      else:
-        continue
-      scr.addnstr(offset, 0, ' %6s  active %s %s' %
-                  (STAGE_NAME[port.stage + 1], time, get_name(port)), columns)
-      offset += 1
-      lines -= 1
-      if not lines:
-        return
-
-    for stage, name in ((queued, "queued"), (pending, "pending"), (failed, "failed")):
-      for port in stage:
-        scr.addnstr(offset, 0, ' %6s  %6s        %s' %
-                    (STAGE_NAME[port.stage + 1], name, get_name(port)), columns)
+    if not self._failed_only:
+      for port in active:
+        time = port.working
+        if time:
+          offtime = self._stats.time - time
+          time = '%3i:%02i' % (offtime / 60, offtime % 60)
+        else:
+          continue
+        scr.addnstr(offset, 0, ' %6s  active %s %s' %
+                    (STAGE_NAME[port.stage + 1], time, get_name(port)), columns)
         offset += 1
         lines -= 1
         if not lines:
           return
+
+    if self._idle or self._failed_only:
+      for stage, name in ((queued, "queued"), (pending, "pending"), (failed, "failed")):
+        if self._failed_only and name != "failed":
+          continue
+        for port in stage:
+          scr.addnstr(offset, 0, ' %6s  %6s        %s' %
+                      (STAGE_NAME[port.stage + 1], name, get_name(port)), columns)
+          offset += 1
+          lines -= 1
+          if not lines:
+            return
 
 
 class Statistics(object):
