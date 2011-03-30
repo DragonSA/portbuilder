@@ -127,7 +127,7 @@ def gen_parser():
   usage = "\t%prog [-bdnpruFN] [-c config] [-D variable] [-f file] "\
           "[variable=value] port ..."
 
-  parser = OptionParser(usage, version="%prog 0.1.1")
+  parser = OptionParser(usage, version="%prog 0.1.2")
 
   parser.add_option("--arch", action="store", type="string", default="",
                     help="Set the architecture environment variables (for "\
