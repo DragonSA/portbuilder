@@ -8,16 +8,10 @@ match /trunk/pypkg/
   branch master
 end match
 
-# Match "old" SMP branch
-match /branches/pypkg-smp/
+# Match branches
+match /branches/pypkg-([^/]+)/
   repository portbuilder
-  branch portbuilder-smp
-end match
-
-# Match "new" UP branch
-match /branches/pypkg-up/
-  repository portbuilder
-  branch portbuilder-up
+  branch \1
 end match
 
 # Match tagged releases
