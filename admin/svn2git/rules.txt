@@ -1,0 +1,32 @@
+# Create the new git repository
+create repository portbuilder
+end repository
+
+# Match trunk->master
+match /trunk/pypkg/
+  repository portbuilder
+  branch master
+end match
+
+# Match "old" SMP branch
+match /branches/pypkg-smp/
+  repository portbuilder
+  branch portbuilder-smp
+end match
+
+# Match "new" UP branch
+match /branches/pypkg-up/
+  repository portbuilder
+  branch portbuilder-up
+end match
+
+# Match tagged releases
+match /tags/([^/]+)/pypkg/
+  repository portbuilder
+  branch refs/tags/\1
+  annotated true
+end match
+
+# Ignore everything else (but there should not be anything else)
+match /
+end match
