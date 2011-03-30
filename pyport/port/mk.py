@@ -209,8 +209,8 @@ def pkg_version(old, new):
   """Compare two package names and indicates the difference."""
   from .port import Port
 
-  oname, old = old.rsplit('-', 1)  # Name and version components of the old pkg
-  nname, new = new.rsplit('-', 1)  # Name and version components of the new pkg
+  old = old.rsplit('-', 1)[1]  # Name and version components of the old pkg
+  new = new.rsplit('-', 1)[1]  # Name and version components of the new pkg
 
   if old == new:
     # The packages are the same

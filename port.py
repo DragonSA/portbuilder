@@ -127,7 +127,7 @@ def gen_parser():
   usage = "\t%prog [-bdnpruFN] [-c config] [-D variable] [-f file] "\
           "[variable=value] port ..."
 
-  parser = OptionParser(usage, version="%prog 0.1.0")
+  parser = OptionParser(usage, version="%prog 0.1.1")
 
   parser.add_option("--arch", action="store", type="string", default="",
                     help="Set the architecture environment variables (for "\
@@ -251,7 +251,7 @@ def set_options(options):
 
   # Force build and install of ports
   if options.force and len(options.args) > 1:
-      flags["mode"] = "recursive"
+    flags["mode"] = "recursive"
 
   # Force build and install of all ports
   if options.forceA:

@@ -291,8 +291,6 @@ class Port(object):
 
   def _pre_install(self):
     """Install the port."""
-    from ..env import flags
-
     if self.install_status == Port.ABSENT:
       target = ("install",)
     else:

@@ -139,7 +139,6 @@ class Dependancy(DependHandler):
 
   def __init__(self, port, depends=None):
     """Initialise the databases of dependancies."""
-    from ..env import flags
     from . import get_port
 
     DependHandler.__init__(self)

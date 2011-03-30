@@ -19,24 +19,16 @@ Future release:
  - Implement proper recording of ports installation (i.e. when they fail)
  * Check if KeyboardInterrupt is appropriate
  * All BaseExceptions need to be preceeded by KeyboardInterrupt (and call term)
- - Rename env to path?
  - Refactor:
    - Break ports into its own libraries
    - Try isolate system and ports dependant code
- - Port:
-   - Handle common makefiles (make caching more efficient)
- - DBProxy:
-   - Implement remainder of DictMixin
-   - Properly handle basis and bsddb (with above)
- - CacheDB:
-   - Handle when cached data changes version...
-   - Improve DictMixin implementation
  - PortCache:
    - Move to DictMixin
- - when pkginstall failes, switch to normal install
  - use kqueue to monitor Makefile changes
  - move DependHandler to using signals (for status changed)
  - support DESTDIR...
+ - profile (and make it easy to do so)
+ - speed up port.mk.attr (reduce subcalls from make -V)
 
 0.1.9 - Milestone 9 (Sundry modules):
  - modules:
@@ -46,9 +38,6 @@ Future release:
  - Refine and condense code
  - Implement proper and complete logging (and comments)
  - Add all assertions
- - Offline caching:
-   - Handle recovery on request
-   - Ensure user database co-operates with root
  - Logging infrastructure (for messages for user)
  - Rename logging files for ports based on their unique-name
 
@@ -66,12 +55,11 @@ Future release:
    - Add appropriate checks for duplicate port names...
    - Do we need to sort per category, overall, if at all?
    - Check for 100% compatibility
- - monitor:
-   - Converge common functionality into Monitor (such as start time)
-   - Make statistics global and integrate into Stat
+ + monitor:
+   * Converge common functionality into Monitor (such as start time)
+   * Make statistics global and integrate into Stat
    - Show information about failed ports
    - Split into separate modules
-   - Make the sleep more interruptable (perhaps with a Condition wait???)
    - Stat:
      - Make options a class variable
    - Top:
@@ -86,13 +74,11 @@ Future release:
      - Improve output when rendering to small screens
      - Remove /[workers] from output
  - report on failures
- - pypkg:
+ + pypkg:
    - Add -j option (fine tune concurrency)
-   - Add force config option
+   * Add force config option
    - Allow fuzzy port specification
    - Implement most of portupgrade
-   - Do not use cache when make env is used (WITH- or NO- options passed only)
-   - Add --no-cache option
    - Handle passwords properly
    - Allow option for no-interactive
    - Add no cache option
@@ -105,11 +91,11 @@ Future release:
  - Implement proper and complete logging (and comments)
  - Add all assertions
  * Use relative imports
- - Add recursive command:
+ + Add recursive command:
    - config
-   - fetch
-   - install
-   - package
+   * fetch
+   * install
+   * package
  + Port:
    - Separate package building?
    - No auto-cleaning?
@@ -137,7 +123,7 @@ Future release:
  - Refine and condense code
  - Implement proper and complete logging (and comments)
  - Move to collections (from DictMixin)
- - Add documentation FetchLock (and move into threads?)
+ * Add documentation FetchLock
  - Increase callback hardiness
  * Make sure ports configured before creating DependHandler
  + DependHandler:
@@ -185,16 +171,11 @@ Future release:
    * Use batch mode for all stages except config
    * Precleaning
    * Only clean port (don't do recursive cleaning)
-   - Handles ports that do not exist
+   * Handles ports that do not exist
    - Add logging of port targets
    - Handle pkg-message
    - Check need for status
    * Move prepare/finalise to a private method?
-   - Offline cache of ports data
-     - Handle changes in port config
-     - Handle changes in port
-       - date stamps
-       - included Makefiles
    * Efficient version of pkg_version
    - Attributes:
      - Check for a need of PATCHFILES
@@ -209,12 +190,11 @@ Future release:
      - etc
    - Handlers:
      - Provide output stream (as work in progress)
-     - config:
-       - Check for caching of options
-       - Allow forcing of config options
-     + fetch:
+     * config:
+       * Allow forcing of config options
+     * fetch:
        * Add a cache for fetching
-       - Check the -distfiles- and subdirs are correct
+       * Check the -distfiles- and subdirs are correct
        * Add cache across ports (on a per file basis)
        * Handle fetching of the same source files (concurrency)
      * install:
@@ -235,11 +215,11 @@ Future release:
    - Develop proper API for the library
 
 0.1.4 - Milestone 4 (Command line controller):
- + pypkg:
+ * pypkg:
    * Add ability to update/install ports (basic)
-   - Add package ability
+   * Add package ability
    * Allow environment variables to be settable (like ports_dir)
-   - Add fetch only option
+   * Add fetch only option
    * Add -n option (only display commands, don't execute anything)
  - Create target to build INDEX
  + Port:
