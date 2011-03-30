@@ -3,10 +3,10 @@
 
 REPO=${REPO:-/home/DragonSA/archive/projects/pypkg/}
 
-cd `dirname $0`
+BASE=`dirname $0`
 
 # Convert to git
-if svn2git --identity-map=authors.txt --rules=rules.txt --stats ${REPO}
+if svn2git --identity-map=$BASE/authors.txt --rules=$BASE/rules.txt --stats ${REPO}
 then
   rm log-portbuilder
 else
