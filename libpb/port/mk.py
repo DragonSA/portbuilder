@@ -1,5 +1,7 @@
 """FreeBSD specific module to get port information."""
 
+from __future__ import absolute_import
+
 from ..env import env
 
 __all__ = ["attr", "status", "pkg_version"]
@@ -184,6 +186,8 @@ def attr_stage2(make, callback):
   from ..make import SUCCESS
 
   if make.wait() is not SUCCESS:
+    from ..debug import error
+    error("libpb/port/mk/attr_stage2", make.stdout.readlines())
     callback(None)
     return
 
