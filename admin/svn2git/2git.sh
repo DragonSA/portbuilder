@@ -8,9 +8,9 @@ BASE=`dirname $0`
 # Convert to git
 if svn2git --identity-map=$BASE/authors.txt --rules=$BASE/rules.txt --stats ${REPO}
 then
-  rm log-portbuilder
+	rm log-portbuilder
 else
-  exit 1
+	exit 1
 fi
 
 (cd portbuilder;
