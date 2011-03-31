@@ -15,7 +15,7 @@ class PortDelegate(object):
 
   def __call__(self, port):
     """Add a port to the required builder."""
-    from pyport.env import flags
+    from libpb.env import flags
 
     if isinstance(port, str):
       self.no_port.append(port)
@@ -26,32 +26,32 @@ class PortDelegate(object):
       port.dependant.status = port.dependant.UNRESOLV
       port.force = True
     if self.package:
-      from pyport.builder import package_builder
+      from libpb.builder import package_builder
       package_builder(port)
     else:
-      from pyport.builder import install_builder
+      from libpb.builder import install_builder
       install_builder(port)
 
 def sigterm(_sig, _frame):
   """Kill subprocesses and die."""
-  from pyport import stop
+  from libpb import stop
   stop(kill=True, kill_clean=True)
   exit(254)
 
 def sigint(_sig, _frame):
   """Ask politely for everything to stop at a convenient time."""
   from signal import signal, SIGINT
-  from pyport.event import post_event
-  from pyport import stop
+  from libpb.event import post_event
+  from libpb import stop
   post_event(stop)
   signal(SIGINT, sigterm)
 
 def main():
   """The main event loop."""
   from signal import signal, SIGINT, SIGTERM
-  from pyport.env import flags
-  from pyport.monitor import Top
-  from pyport.port import get_port
+  from libpb.env import flags
+  from libpb.monitor import Top
+  from libpb.port import get_port
 
   # Process arguments
   parser = gen_parser()
@@ -100,7 +100,7 @@ def mkdir(directory):
 
 def run_loop(no_port):
   """Run the main event loop, print nice messages if something goes wrong."""
-  from pyport.event import run
+  from libpb.event import run
 
   try:
     run()
@@ -112,7 +112,7 @@ def run_loop(no_port):
   except BaseException:
     from sys import stderr
     from traceback import format_list, print_exc
-    from pyport.event import traceback
+    from libpb.event import traceback
 
     for tb, name in traceback():
       stderr.write("Traceback from %s (most recent call last):\n" % name)
@@ -192,8 +192,8 @@ def gen_parser():
 def set_options(options):
   """Set all the global options."""
   from re import match
-  from pyport.env import env, flags
-  from pyport.port.port import Port
+  from libpb.env import env, flags
+  from libpb.port.port import Port
 
   # Architecture flag
   if options.arch:
@@ -236,8 +236,8 @@ def set_options(options):
 
   # Fetch only options:
   if options.fetch:
-    from pyport.env import cpus
-    from pyport.queue import checksum_queue
+    from libpb.env import cpus
+    from libpb.queue import checksum_queue
 
     flags["fetch_only"] = True
     checksum_queue.load = cpus
@@ -298,7 +298,7 @@ def read_port_file(ports_file):
 
 def parse_config(_option, _opt_str, value, _parser):
   """Set the config requirements."""
-  from pyport.env import flags
+  from libpb.env import flags
 
   if value not in ("none", "all", "newer", "changed"):
     from optparse import OptionValueError
