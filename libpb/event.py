@@ -1,6 +1,8 @@
 """Event management utilities.
 
 Provides a framework for calling functions asynchroniously."""
+from __future__ import absolute_import
+
 __all__ = ["pending_events", "post_event", "pending_events" "run", "alarm",
            "select", "unselect", "suspend_alarm", "resume_alarm", "traceback"]
 

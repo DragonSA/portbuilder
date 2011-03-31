@@ -1,5 +1,7 @@
 """Displays about activity."""
 
+from __future__ import absolute_import
+
 from abc import ABCMeta, abstractmethod
 
 __all__ = ["Monitor", "Top"]

@@ -1,5 +1,7 @@
 """Callback infrastructure."""
 
+from __future__ import absolute_import
+
 __all__ = ["Signal"]
 
 class Signal(object):

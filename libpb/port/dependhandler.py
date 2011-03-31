@@ -1,4 +1,7 @@
 """Dependancy handling for ports."""
+
+from __future__ import absolute_import
+
 from .port import Port
 
 __all__ = ['Dependant', 'Dependancy']

@@ -1,5 +1,7 @@
 """Manages jobs."""
 
+from __future__ import absolute_import
+
 from .env import cpus as _cpus
 
 __all__ = ["QueueManager", "queues", "attr_queue", "config_queue",

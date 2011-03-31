@@ -1,5 +1,7 @@
 """Job handling for queue managers."""
 
+from __future__ import absolute_import
+
 from abc import abstractmethod, ABCMeta
 from .signal import Signal
 
