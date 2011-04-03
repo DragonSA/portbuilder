@@ -301,6 +301,7 @@ Future release:
  * python based setup/build script
  * FreeBSD port
  - add `-a` options (aka `pkg_info -aoq`)
+ - describe top interface
 
 0.1.1 - Milestone 1 (Basic Port infrastructure):
  * Expand documentation for ports library

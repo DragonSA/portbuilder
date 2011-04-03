@@ -205,7 +205,7 @@ class Port(object):
     from ..env import flags
     from .dependhandler import Dependancy
 
-    self.log_file = join(flags["log_dir"], self.attr["uniquename"])
+    self.log_file = join(flags["log_dir"], self.attr["pkgname"])
     self.priority = self._get_priority()
     self.dependant.priority += self.priority
     depends = ('depend_build', 'depend_extract', 'depend_fetch', 'depend_lib',

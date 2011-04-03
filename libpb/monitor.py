@@ -69,7 +69,7 @@ STAGE_NAME = ["config", "config", "chcksm", "fetch", "build", "install", "packag
 
 def get_name(port):
   """Get the ports name."""
-  return '%s (%s)' % (port.origin, port.attr['pkgname'].rsplit('-', 1)[1])
+  return port.attr["pkgname"]
 
 class Top(Monitor):
   """A monitor modelled after the top(1) utility."""
@@ -256,7 +256,7 @@ class Top(Monitor):
     active, queued, pending, failed = self._stats.summary
     clean = self._stats.clean
 
-    scr.addstr(self._offset + 1, 2, ' STAGE   STATE   TIME PORT (VERSION)')
+    scr.addstr(self._offset + 1, 2, ' STAGE   STATE   TIME PACKAGE')
 
     skip = self._skip
     lines, columns = scr.getmaxyx()
