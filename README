@@ -16,7 +16,9 @@ python >= 2.6
 
 INSTALLATION
 ------------
-Does not install currently, run from pypkg/ directory
+Unpack (or clone) the source files and in the portbuilder directory do:
+# python setup.py build
+# python setup.py install
 
 USAGE
 -----
