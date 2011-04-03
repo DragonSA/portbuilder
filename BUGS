@@ -1,0 +1,3 @@
+ - broken config screen with `-n` option
+ - display skipped ports (with toggle)
+ - log name = pkgname
