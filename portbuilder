@@ -133,6 +133,10 @@ def gen_parser():
 
   parser = OptionParser(usage, version="%prog 0.1.2")
 
+  parser.add_option("-a", "--all", action="store_true", default=False,
+                    help="Add all installed ports to the list (aka `pkg_info" \
+                    "-aoq`)")
+
   parser.add_option("--arch", action="store", type="string", default="",
                     help="Set the architecture environment variables (for "\
                     "cross building)")
@@ -198,6 +202,16 @@ def set_options(options):
   from re import match
   from libpb.env import env, flags
   from libpb.port.port import Port
+
+  # Add all installed ports to port list
+  if options.all:
+    from subprocess import Popen, PIPE, STDOUT
+    pkg_info = Popen(["pkg_info", "-aoq"], stdin=None, stdout=PIPE, stderr=STDOUT, close_fds=True)
+    if pkg_info.wait() != 0:
+      from sys import stderr
+      stderr.write("%s\nerror: portbuilder: Unable to get installed ports list\n" % pkg_info.stdout.read())
+      exit(1)
+    options.args.extend(pkg_info.stdout.read().split())
 
   # Architecture flag
   if options.arch:
