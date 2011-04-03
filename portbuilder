@@ -82,7 +82,7 @@ def main():
 
   if not flags["no_op_print"]:
     Top().start()
-  run_loop(delegate.no_port)
+  run_loop(delegate.no_port, options)
 
 def mkdir(directory):
   """Make a given directory if needed."""
@@ -100,12 +100,19 @@ def mkdir(directory):
       print "%s: unable to create directory (%s)" % (directory, e)
       exit(2)
 
-def run_loop(no_port):
+def run_loop(no_port, options):
   """Run the main event loop, print nice messages if something goes wrong."""
   from libpb.event import run
 
   try:
     run()
+
+    if options.no_opt_print:
+      # All ports not configured, run all queues
+      from libpb.queue import queues
+      for queue in queues:
+        queue.load = 1
+      run()
 
     if no_port:
       print "Unable to locate ports: %s" % no_port
@@ -282,8 +289,13 @@ def set_options(options):
 
   # No operations and print (-n)
   if options.no_opt_print:
+    from libpb.queue import queues
+
     flags["no_op"] = True
     flags["no_op_print"] = True
+    # Configure all ports before printing commands
+    for queue in queues[1:]:
+      queue.load = 0
 
   # No opterations (-N)
   if options.no_opt:

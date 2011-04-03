@@ -274,6 +274,10 @@ Future release:
    - make top monitor use signals
  - profile
  - fully implement setup (distutils) script (distutils/apiref)
+ - make port/mk to using pkg_* interface (vs direct file inspection)
+ - make compatible with pkgng
+ - display skipped ports (with toggle)
+ - procedures
 
 0.1.2 - Milestone 2 (Dependant Handler):
  + Port:
@@ -300,7 +304,7 @@ Future release:
    * Generic handler for executing make targets
  * python based setup/build script
  * FreeBSD port
- - add `-a` options (aka `pkg_info -aoq`)
+ * add `-a` options (aka `pkg_info -aoq`)
  - describe top interface
 
 0.1.1 - Milestone 1 (Basic Port infrastructure):

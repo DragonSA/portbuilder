@@ -1,6 +1,6 @@
 0.1.2 - 2011:
- * Rename to portbuilder
- * Use python/distutils to make port installable
+ * Rename to portbuilder (and pyport->libpb)
+ * Use python/distutils to make program installable
 
 0.1.1 - 2011 March 16:
  * Add support for fetch_only mode
