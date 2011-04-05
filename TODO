@@ -286,7 +286,7 @@ Future release:
    * Proper dependant handling (mimic what ports does)
      * Create class for depends
      * Late allocation (with a check that port is configged)
-   + Create handlers for various make targets (stages):
+   * Create handlers for various make targets (stages):
      * config
        * Reget attr after configging
      * fetch

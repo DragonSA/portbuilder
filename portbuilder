@@ -82,7 +82,11 @@ def main():
 
   if not flags["no_op_print"]:
     Top().start()
-  run_loop(delegate.no_port, options)
+  if options.profile:
+    from cProfile import runctx
+    runctx("run_loop(delegate.no_port, options)", globals(), locals(), options.profile)
+  else:
+    run_loop(delegate.no_port, options)
 
 def mkdir(directory):
   """Make a given directory if needed."""
@@ -135,7 +139,7 @@ def gen_parser():
   """Create the options parser object."""
   from optparse import OptionParser
 
-  usage = "\t%prog [-bdnpruFN] [-c config] [-D variable] [-f file] "\
+  usage = "\t%prog [-abnpruFN] [-c config] [-D variable] [-f file] "\
           "[variable=value] port ..."
 
   parser = OptionParser(usage, version="%prog 0.1.2")
@@ -192,6 +196,9 @@ def gen_parser():
   parser.add_option("-P", "--package-all", dest="packageA", action="store_true",
                     default=False, help="Create packages for all installed "\
                     "ports")
+
+  parser.add_option("--profile", action="store", default=False, type="string",
+                    help="Produce a profile of a run")
 
   parser.add_option("-u", "--upgrade", action="store_true", default=False,
                     help="Upgrade specified ports.")
