@@ -1,0 +1,109 @@
+#!/bin/sh
+
+usage() {
+
+  cat < __EOF
+usage: $0 tag
+
+    tag         Release tag
+__EOF
+  exit 1
+
+}
+
+prepare_release() {
+
+  echo "3. Prepare Release"
+
+  echo "3.1) Versioning:"
+  versioning
+
+  echo "3.2) setup.py:"
+  setup_py
+
+  echo "3.3) port:"
+  port
+
+  echo "3.4) Commit changes"
+  git commit -v
+
+}
+
+versioning() {
+
+  OLD_TAG=`git tag | tail -n 1 | sed 's/\./\\\./g'`
+
+  echo "3.1.1) Update version in ./setup.py"
+  sed -i '' -e "s/$OLD_TAG/$TAG/g" setup.py
+  git add setup.py
+
+  echo "3.1.2) Update version in ./portbuilder"
+  sed -i '' -e "s/$OLD_TAG/$TAG/g" portbuilder
+  git add portbuilder
+
+  echo "3.1.3) Update version in ./port/Makefile (and remove ./port/distinfo)"
+  sed -i '' -e "s/$OLD_TAG/$TAG/g" port/Makefile
+  rm port/distinfo
+  git add port/Makefile
+
+}
+
+setup_py() {
+
+  echo "3.2.1) Update packages"
+  PKGS=`find libpb -type d | sed -e 's/^/"/g' -e 's/$/", /g'`
+  sed -i '' -e "s/packages=.*/packages=\[$PKS\],/g" setup.py
+  git add setup.py
+
+  echo "3.2.2) Update scripts"
+  SCRIPTS=`find . -type f -depth 1 -exec test -x {} ";" -print | sed -e 's/^/"/g' -e 's/$/", /g'`
+  sed -i '' -e "s/scripts=.*/scripts=\[$PKS\],/g" setup.py
+  git add setup.py
+
+  echo "3.2.3) Update project information"
+
+  echo "3.2.4) Check setup.py (run build and install)"
+  python setup.py build || exit 1
+  python setup.py install --root /tmp/portbuilder.install || exit
+  rm -r build /tmp/portbuilder.install
+
+}
+
+port() {
+
+  echo "3.3.1) Update pkg-descr (from README)"
+
+  echo "3.3.2) Update comment (from setup.py)"
+
+  echo "3.3.3) Update pkg-plist"
+  (
+    for script in `sed -n -e 's/ *scripts=\[\(.*\)\],$/\1/p' setup.py | sed -e 's/"//g' -e 's/,//g'`
+    do
+      echo bin/$script
+    done
+
+    for py in `find libpb -type f -name '*.py' | sort`
+    do
+      echo "%%PYTHON_SITELIBDIR%%/%{py}"
+      echo "%%PYTHON_SITELIBDIR%%/%{py}c"
+      echo "%%PYTHON_SITELIBDIR%%/%{py}o"
+    done
+
+    for pydir in `find libpb -type d | sort -r`
+    do
+      echo "@rmdir $pydir"
+    done
+  ) > port/pkg-plist
+  git add port/pkg-plist
+
+}
+
+if [ $# -ne 1 ]
+then
+  usage
+fi
+
+TAG=$1
+
+cd `pwd | sed -e 's|/script$||' -e 's|/admin$||'`
+prepare_release
