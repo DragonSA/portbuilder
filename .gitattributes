@@ -1,3 +1,4 @@
+/admin export-ignore
 /port export-ignore
 .gitattributes export-ignore
 .gitignore export-ignore
