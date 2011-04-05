@@ -278,9 +278,10 @@ Future release:
  - make compatible with pkgng
  - display skipped ports (with toggle)
  - procedures
+ - interactive builds
 
 0.1.2 - Milestone 2 (Dependant Handler):
- + Port:
+ * Port:
    * Complete attribute tables and fixes
    * Proper dependant handling (mimic what ports does)
      * Create class for depends
@@ -289,10 +290,9 @@ Future release:
      * config
        * Reget attr after configging
      * fetch
-     + build
-     + install
+     * build
+     * install
        * Notify all dependants of our success
-     - interactive builds
    * Refracture startup code for stages
      * All previous stages build (without failure)
      * Handle stage depends
@@ -305,7 +305,7 @@ Future release:
  * python based setup/build script
  * FreeBSD port
  * add `-a` options (aka `pkg_info -aoq`)
- - describe top interface
+ * describe top interface
 
 0.1.1 - Milestone 1 (Basic Port infrastructure):
  * Expand documentation for ports library

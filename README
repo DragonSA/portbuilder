@@ -10,15 +10,18 @@ Some of its key features:
  * Top like UI
  * Persistent builds (by default)
 
+
 REQUIREMENTS
 ------------
 python >= 2.6
+
 
 INSTALLATION
 ------------
 Unpack (or clone) the source files and in the portbuilder directory do:
 # python setup.py build
 # python setup.py install
+
 
 USAGE
 -----
@@ -69,20 +72,36 @@ devel/svk       # For development
 ^C
 # ./port.py -f /root/ports
 
-Fetch all the files required to update all ports (and their dependancies) in a file
-# ./port.py -FUf /root/ports
+Fetch all the files required to update all ports in a file
+# ./port.py -Fuf /root/ports
 
 Reconfigure and upgrade all ports (and their dependancies) in a file
 # ./port.py -c all -Uf /root/ports
 
-Display the commands that will upgrade all ports (and their dependancies) in a file
-# ./port.py -nUf /root/ports
+Display the commands that will upgrade all installed ports
+# ./port.py -anUf
 
 Simulate the above (using the Top display) without printing the commands
-# ./port.py -NUf /root/ports
+# ./port.py -aNUf
 
 Rebuild strigi with debug symbols
 # ./port.py --force deskutils/strigi -DWITH_DEBUG
+
+
+INTERFACE
+---------
+Portbuilder offers a user interface similar to the top(1) program.  The
+interface should be intuitive however some commands are provided:
+
+^L   - Redraw screen
+f    - Toggle displaying only failed (and skipped) ports
+i    - Toggle displaying only idle ports
+PgDn - Scroll down display
+PgUp - Scroll up display
+q    - Quit portbuilder (once to send SIGTERM to all jobs,
+                         twice to send SIGKILL to all jobs,
+                         thrice to send SIGKILL to all and die)
+
 
 NOTES
 -----
