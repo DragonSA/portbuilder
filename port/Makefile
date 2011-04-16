@@ -7,7 +7,7 @@
 PORTNAME=	portbuilder
 PORTSUFFIX=	-devel
 DISTVERSION=	0.1.2
-CATEGORIES=	port-mgmt
+CATEGORIES=	ports-mgmt
 MASTER_SITES=	http://cloud.github.com/downloads/DragonSA/portbuilder/
 
 MAINTAINER=	naylor.b.david@gmail.com
