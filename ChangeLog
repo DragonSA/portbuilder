@@ -1,4 +1,4 @@
-0.1.2 - %%DATE%%:
+0.1.2 - 2011 April 16:
  * Rename to portbuilder (and pyport->libpb)
  * Use python/distutils to make program installable
  * Add support for profiling internals (use gprof2dot to parse output)

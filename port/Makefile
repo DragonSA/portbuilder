@@ -11,7 +11,7 @@ CATEGORIES=	port-mgmt
 MASTER_SITES=	http://cloud.github.com/downloads/DragonSA/portbuilder/
 
 MAINTAINER=	naylor.b.david@gmail.com
-COMMENT=	Concurrent FreeBSD port builder
+COMMENT=	"Concurrent FreeBSD port builder."
 
 LICENSES=	BSD
 

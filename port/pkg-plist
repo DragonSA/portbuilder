@@ -44,5 +44,5 @@ bin/portbuilder
 %%PYTHON_SITELIBDIR%%/libpb/subprocess.py
 %%PYTHON_SITELIBDIR%%/libpb/subprocess.pyc
 %%PYTHON_SITELIBDIR%%/libpb/subprocess.pyo
-@dirrm libpb/port
-@dirrm libpb
+@dirrm %%PYTHON_SITELIBDIR%%/libpb/port
+@dirrm %%PYTHON_SITELIBDIR%%/libpb

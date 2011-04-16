@@ -8,6 +8,6 @@ setup(name='portbuilder',
       author="David Naylor",
       author_email="naylor.b.david@gmail.com",
       url="http://github.com/DragonSA/portbuilder/",
-      packages=["libpb", "libpb.port"],
-      scripts=["portbuilder"],
+      packages=["libpb", "libpb/port",],
+      scripts=["portbuilder",],
       )
