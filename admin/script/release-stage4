@@ -1,0 +1,68 @@
+#!/bin/sh
+
+usage() {
+
+  cat << __EOF
+usage: $0 release-tag
+__EOF
+  exit 1
+
+}
+
+do_release() {
+
+  echo "4. Tag and Release"
+
+  echo "4.1) Create release tarball (excluding ./port)"
+  git archive 'master^{tree}' --prefix=portbuilder-$TAG/ | xz -9 > /tmp/portbuilder-$TAG.tar.xz
+
+  echo "4.2) Update port distinfo (and commit data)"
+  (cd port;
+    make makesum DISTDIR=/tmp
+  )
+  git add port/distinfo
+  cat > /tmp/portbuilder-distinfo-$TAG.msg << __EOF
+Update distinfo with release tarball
+__EOF
+  git commit -evF /tmp/portbuilder-distinfo-$TAG.msg
+
+  echo "4.3) Tag annotated release (with ChangeLog for file)"
+  python -c "import sys; exec sys.stdin.read()" > /tmp/portbuilder-tag-$TAG.msg << __EOF
+print "Tag release for version $TAG\n"
+lines = []
+for line in open("README", "r"):
+  if line == "\n":
+    break
+  else:
+    lines.append(line)
+print "".join(lines)[:-1]
+__EOF
+  git tag -sF /tmp/portbuilder-tag-$TAG.msg $TAG
+
+  git archive "$TAG^{tree}" --prefix=portbuilder-$TAG/ | xz -9 > /tmp/portbuilder-check-$TAG.tar.xz
+  if [ `sha256 -q /tmp/portbuilder-$TAG.tar.xz` != `sha256 -q /tmp/portbuilder-check-$TAG.tar.xz` ]
+  then
+    echo "!!!> Release tarball not the same as tags content"
+  fi
+
+  echo "4.4) Port release cleanup:"
+  echo "4.4.1) Add entry for next release in ChangeLog"
+  (echo "X.Y.Z: YYYY MMM DD:"; echo; cat ChangeLog) > /tmp/portbuilder-ChangeLog-$TAG
+  mv /tmp/portbuilder-ChangeLog-$TAG ChangeLog
+  cat > /tmp/portbuilder-post-$TAG.msg << __EOF
+Add template entry for next release's ChangeLog
+__EOF
+  git add ChangeLog
+  git commit -evF /tmp/portbuilder-post-$TAG.msg
+
+}
+
+if [ $# -ne 1 ]
+then
+  usage
+fi
+
+TAG=$1
+
+cd `pwd | sed -e 's|/script$||' -e 's|/admin$||'`
+do_release
