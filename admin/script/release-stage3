@@ -2,10 +2,8 @@
 
 usage() {
 
-  cat < __EOF
-usage: $0 tag
-
-    tag         Release tag
+  cat << __EOF
+usage: $0 release-tag
 __EOF
   exit 1
 
@@ -25,7 +23,21 @@ prepare_release() {
   port
 
   echo "3.4) Commit changes"
-  git commit -v
+  cat > /tmp/portbuilder-prepare-$TAG.msg << __EOF
+Prepare for release of $TAG
+
+Update:
+ - version tags in setup.py, portbuilder, port/Makefile and ChangeLog
+ - date of this release in ChangeLog
+ - setup.py:
+   - package directories
+   - scripts
+ - ports:
+   - pkg-descr
+   - COMMENT
+   - pkg-plist
+__EOF
+  git commit -evF /tmp/portbuilder-prepare-$TAG.msg
 
 }
 
@@ -46,25 +58,29 @@ versioning() {
   rm port/distinfo
   git add port/Makefile
 
+  echo "3.1.4) Update version in ./ChangeLog"
+  sed -i '' -e "s/X.Y.Z/$TAG/" -e "s/YYYY MMM DD/`date '+%Y %B %d'`/" ChangeLog
+  git add ChangeLog
+
 }
 
 setup_py() {
 
   echo "3.2.1) Update packages"
   PKGS=`find libpb -type d | sed -e 's/^/"/g' -e 's/$/", /g'`
-  sed -i '' -e "s/packages=.*/packages=\[$PKS\],/g" setup.py
+  PKGS=`echo $PKGS`
+  sed -i '' -e "s|packages=.*|packages=\[${PKGS}\],|g" setup.py
   git add setup.py
 
   echo "3.2.2) Update scripts"
-  SCRIPTS=`find . -type f -depth 1 -exec test -x {} ";" -print | sed -e 's/^/"/g' -e 's/$/", /g'`
-  sed -i '' -e "s/scripts=.*/scripts=\[$PKS\],/g" setup.py
+  SCRIPTS=`find . -type f -depth 1 -exec test -x {} ";" -print | sed -e 's|\./||g' -e 's/^/"/g' -e 's/$/", /g'`
+  SCRIPTS=`echo $SCRIPTS`
+  sed -i '' -e "s|scripts=.*|scripts=\[${SCRIPTS}\],|g" setup.py
   git add setup.py
 
-  echo "3.2.3) Update project information"
-
-  echo "3.2.4) Check setup.py (run build and install)"
-  python setup.py build || exit 1
-  python setup.py install --root /tmp/portbuilder.install || exit
+  echo "3.2.3) Check setup.py (run build and install)"
+  python setup.py build > /dev/null || (echo "!!!> Unable to build"; exit 1)
+  python setup.py install --root /tmp/portbuilder.install > /dev/null || (echo "!!!> Unable to install"; exit 2)
   rm -r build /tmp/portbuilder.install
 
 }
@@ -72,26 +88,47 @@ setup_py() {
 port() {
 
   echo "3.3.1) Update pkg-descr (from README)"
+  python -c "import sys; exec sys.stdin.read()" > port/pkg-descr << __EOF
+lines = []
+add = None
+for line in open("README", "r"):
+  if line == "DESCRIPTION\n":
+    add = False
+  elif len(line) > 1 and line == ("-" * (len(line) - 1) + "\n"):
+    if add is False:
+      add = True
+    else:
+      lines = lines[:-2]
+      break
+  elif add:
+    lines.append(line)
+print "".join(lines)[:-1]
+print "WWW: http://github.com/DragonSA/portbuilder/"
+__EOF
+  git add port/pkg-descr
 
   echo "3.3.2) Update comment (from setup.py)"
+  COMMENT=`sed -n -e 's/.*description=\(".*"\).*/\1/p' setup.py`
+  sed -i '' -e "s/^COMMENT=	.*/COMMENT=	${COMMENT}/" port/Makefile
+  git add port/Makefile
 
   echo "3.3.3) Update pkg-plist"
   (
-    for script in `sed -n -e 's/ *scripts=\[\(.*\)\],$/\1/p' setup.py | sed -e 's/"//g' -e 's/,//g'`
+    for script in `find . -type f -depth 1 -exec test -x {} ";" -print | sed -e 's|\./||g'`
     do
       echo bin/$script
     done
 
     for py in `find libpb -type f -name '*.py' | sort`
     do
-      echo "%%PYTHON_SITELIBDIR%%/%{py}"
-      echo "%%PYTHON_SITELIBDIR%%/%{py}c"
-      echo "%%PYTHON_SITELIBDIR%%/%{py}o"
+      echo "%%PYTHON_SITELIBDIR%%/${py}"
+      echo "%%PYTHON_SITELIBDIR%%/${py}c"
+      echo "%%PYTHON_SITELIBDIR%%/${py}o"
     done
 
     for pydir in `find libpb -type d | sort -r`
     do
-      echo "@rmdir $pydir"
+      echo "@dirrm %%PYTHON_SITELIBDIR%%/$pydir"
     done
   ) > port/pkg-plist
   git add port/pkg-plist
