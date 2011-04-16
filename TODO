@@ -27,7 +27,7 @@ Future release:
  - use kqueue to monitor Makefile changes
  - move DependHandler to using signals (for status changed)
  - support DESTDIR...
- - profile (and make it easy to do so)
+ * profile (and make it easy to do so)
  - speed up port.mk.attr (reduce subcalls from make -V)
  - handle alternative dependancies
  - update @pkgdep lines
@@ -272,7 +272,6 @@ Future release:
  * Fix PORTSDIR not having a trailing /
  - signal based updates of builders and queues:
    - make top monitor use signals
- - profile
  - fully implement setup (distutils) script (distutils/apiref)
  - make port/mk to using pkg_* interface (vs direct file inspection)
  - make compatible with pkgng

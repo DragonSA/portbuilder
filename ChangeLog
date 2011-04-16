@@ -1,6 +1,8 @@
-0.1.2 - 2011:
+0.1.2 - %%DATE%%:
  * Rename to portbuilder (and pyport->libpb)
  * Use python/distutils to make program installable
+ * Add support for profiling internals (use gprof2dot to parse output)
+ * Add FreeBSD port (currently only -devel)
 
 0.1.1 - 2011 March 16:
  * Add support for fetch_only mode
