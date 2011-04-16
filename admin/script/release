@@ -1,0 +1,195 @@
+#!/bin/sh
+
+usage() {
+
+  cat << __EOF
+usage: $0 release-tag
+__EOF
+  exit 1
+
+}
+
+prepare_release() {
+
+  echo "3. Prepare Release"
+
+  echo "3.1) Versioning:"
+  versioning
+
+  echo "3.2) setup.py:"
+  setup_py
+
+  echo "3.3) port:"
+  port
+
+  echo "3.4) Commit changes"
+  cat > /tmp/portbuilder-prepare-$TAG.msg << __EOF
+Prepare for release of $TAG
+
+Update:
+ - version tags in setup.py, portbuilder, port/Makefile and ChangeLog
+ - date of this release in ChangeLog
+ - setup.py:
+   - package directories
+   - scripts
+ - ports:
+   - pkg-descr
+   - COMMENT
+   - pkg-plist
+__EOF
+  git commit -evF /tmp/portbuilder-prepare-$TAG.msg
+
+}
+
+do_release() {
+
+  echo "4. Tag and Release"
+
+  echo "4.1) Create release tarball (excluding ./port)"
+  git archive 'master^{tree}' --prefix=portbuilder-$TAG/ | xz -9 > /tmp/portbuilder-$TAG.tar.xz
+
+  echo "4.2) Update port distinfo (and commit data)"
+  (cd port;
+    make makesum DISTDIR=/tmp
+  )
+  git add port/distinfo
+  cat > /tmp/portbuilder-distinfo-$TAG.msg << __EOF
+Update distinfo with release tarball
+__EOF
+  git commit -evF /tmp/portbuilder-distinfo-$TAG.msg
+
+  echo "4.3) Tag annotated release (with ChangeLog for file)"
+  python -c "import sys; exec sys.stdin.read()" > /tmp/portbuilder-tag-$TAG.msg << __EOF
+print "Tag release for version $TAG\n"
+lines = []
+for line in open("README", "r"):
+  if line == "\n":
+    break
+  else:
+    lines.append(line)
+print "".join(lines)[:-1]
+__EOF
+  git tag -sF /tmp/portbuilder-tag-$TAG.msg $TAG
+
+  git archive "$TAG^{tree}" --prefix=portbuilder-$TAG/ | xz -9 > /tmp/portbuilder-check-$TAG.tar.xz
+  if [ `sha256 -q /tmp/portbuilder-$TAG.tar.xz` != `sha256 -q /tmp/portbuilder-check-$TAG.tar.xz` ]
+  then
+    echo "!!!> Release tarball not the same as tags content"
+  fi
+
+  echo "4.4) Port release cleanup:"
+  echo "4.4.1) Add entry for next release in ChangeLog"
+  (echo "X.Y.Z: YYYY MMM DD:"; echo; cat ChangeLog) > /tmp/portbuilder-ChangeLog-$TAG
+  mv /tmp/portbuilder-ChangeLog-$TAG ChangeLog
+  cat > /tmp/portbuilder-post-$TAG.msg << __EOF
+Add template entry for next release's ChangeLog
+__EOF
+  git add ChangeLog
+  git commit -evF /tmp/portbuilder-post-$TAG.msg
+
+}
+
+versioning() {
+
+  OLD_TAG=`git tag | tail -n 1 | sed 's/\./\\\./g'`
+
+  echo "3.1.1) Update version in ./setup.py"
+  sed -i '' -e "s/$OLD_TAG/$TAG/g" setup.py
+  git add setup.py
+
+  echo "3.1.2) Update version in ./portbuilder"
+  sed -i '' -e "s/$OLD_TAG/$TAG/g" portbuilder
+  git add portbuilder
+
+  echo "3.1.3) Update version in ./port/Makefile (and remove ./port/distinfo)"
+  sed -i '' -e "s/$OLD_TAG/$TAG/g" port/Makefile
+  rm port/distinfo
+  git add port/Makefile
+
+  echo "3.1.4) Update version in ./ChangeLog"
+  sed -i '' -e "s/X.Y.Z/$TAG/" -e "s/YYYY MMM DD/`date '+%Y %B %d'`/" ChangeLog
+  git add ChangeLog
+
+}
+
+setup_py() {
+
+  echo "3.2.1) Update packages"
+  PKGS=`find libpb -type d | sed -e 's/^/"/g' -e 's/$/", /g'`
+  PKGS=`echo $PKGS`
+  sed -i '' -e "s|packages=.*|packages=\[${PKGS}\],|g" setup.py
+  git add setup.py
+
+  echo "3.2.2) Update scripts"
+  SCRIPTS=`find . -type f -depth 1 -exec test -x {} ";" -print | sed -e 's|\./||g' -e 's/^/"/g' -e 's/$/", /g'`
+  SCRIPTS=`echo $SCRIPTS`
+  sed -i '' -e "s|scripts=.*|scripts=\[${SCRIPTS}\],|g" setup.py
+  git add setup.py
+
+  echo "3.2.3) Check setup.py (run build and install)"
+  python setup.py build > /dev/null || (echo "!!!> Unable to build"; exit 1)
+  python setup.py install --root /tmp/portbuilder.install > /dev/null || (echo "!!!> Unable to install"; exit 2)
+  rm -r build /tmp/portbuilder.install
+
+}
+
+port() {
+
+  echo "3.3.1) Update pkg-descr (from README)"
+  python -c "import sys; exec sys.stdin.read()" > port/pkg-descr << __EOF
+lines = []
+add = None
+for line in open("README", "r"):
+  if line == "DESCRIPTION\n":
+    add = False
+  elif len(line) > 1 and line == ("-" * (len(line) - 1) + "\n"):
+    if add is False:
+      add = True
+    else:
+      lines = lines[:-2]
+      break
+  elif add:
+    lines.append(line)
+print "".join(lines)[:-1]
+print "WWW: http://github.com/DragonSA/portbuilder/"
+__EOF
+  git add port/pkg-descr
+
+  echo "3.3.2) Update comment (from setup.py)"
+  COMMENT=`sed -n -e 's/.*description=\(".*"\).*/\1/p' setup.py`
+  sed -i '' -e "s/^COMMENT=	.*/COMMENT=	${COMMENT}/" port/Makefile
+  git add port/Makefile
+
+  echo "3.3.3) Update pkg-plist"
+  (
+    for script in `find . -type f -depth 1 -exec test -x {} ";" -print | sed -e 's|\./||g'`
+    do
+      echo bin/$script
+    done
+
+    for py in `find libpb -type f -name '*.py' | sort`
+    do
+      echo "%%PYTHON_SITELIBDIR%%/${py}"
+      echo "%%PYTHON_SITELIBDIR%%/${py}c"
+      echo "%%PYTHON_SITELIBDIR%%/${py}o"
+    done
+
+    for pydir in `find libpb -type d | sort -r`
+    do
+      echo "@dirrm %%PYTHON_SITELIBDIR%%/$pydir"
+    done
+  ) > port/pkg-plist
+  git add port/pkg-plist
+
+}
+
+if [ $# -ne 1 ]
+then
+  usage
+fi
+
+TAG=$1
+
+cd `pwd | sed -e 's|/script$||' -e 's|/admin$||'`
+prepare_release
+do_release

@@ -1,0 +1,61 @@
+1. Finalise Work
+----------------
+Prior to a release all pending work should be finished and imported:
+
+1.1) Pull relevant branches
+
+2. Documentation
+----------------
+Update documentation:
+
+2.1) BUGS:
+2.1.1) Close and remove relevant BUGS
+2.1.2) Describe known BUGS (with explanation why BUGS still remain)
+
+2.2) TODO:
+2.2.1) Close completed TODO items
+2.2.2) If a major release then remove previous release TODO items
+
+2.3) ChangeLog:
+2.3.1) Update ChangeLog from closed TODO items and commit logs
+
+2.4) README:
+2.4.1) Update usage (to conform to portbuilder -h)
+2.4.2) Update examples (and add relevant ones)
+
+2.5) Commit changes
+
+3. Prepare Release
+------------------
+Prepare the code for release:
+
+3.1) Versioning:
+3.1.1) Update version in ./setup.py
+3.1.2) Update version in ./portbuilder
+3.1.3) Update version in ./port/Makefile (and remove ./port/distinfo)
+3.1.4) Update version and date in ./ChangeLog
+
+3.2) setup.py:
+3.2.1) Update packages
+3.2.2) Update scripts
+3.2.3) Check setup.py (run build and install)
+
+3.3) port:
+3.3.1) Update pkg-descr (from README)
+3.3.2) Update comment (from setup.py)
+3.3.3) Update pkg-plist
+
+3.4) Commit changes
+
+4. Tag and Release
+------------------
+Tag and release portbuilder
+
+4.1) Create release tarball (excluding ./port)
+4.2) Update port distinfo (and commit data)
+4.3) Tag annotated release (with ChangeLog for file)
+4.4) Port release cleanup:
+4.4.1) Add entry for next release in ChangeLog
+4.5) Push all changes to github
+4.6) Upload release tarball to github
+4.7) Update FreeBSD port
