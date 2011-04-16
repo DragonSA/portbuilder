@@ -156,7 +156,7 @@ __EOF
   git add port/pkg-descr
 
   echo "3.3.2) Update comment (from setup.py)"
-  COMMENT=`sed -n -e 's/.*description=\(".*"\).*/\1/p' setup.py`
+  COMMENT=`sed -n -e 's/.*description="\(.*\)".*/\1/p' setup.py`
   sed -i '' -e "s/^COMMENT=	.*/COMMENT=	${COMMENT}/" port/Makefile
   git add port/Makefile
 

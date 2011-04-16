@@ -5,13 +5,13 @@
 # $FreeBSD$
 
 PORTNAME=	portbuilder
-PORTSUFFIX=	-devel
 DISTVERSION=	0.1.2
 CATEGORIES=	ports-mgmt
 MASTER_SITES=	http://cloud.github.com/downloads/DragonSA/portbuilder/
+PKGNAMESUFFIX=	-devel
 
 MAINTAINER=	naylor.b.david@gmail.com
-COMMENT=	"Concurrent FreeBSD port builder."
+COMMENT=	Concurrent FreeBSD port builder
 
 LICENSES=	BSD
 
