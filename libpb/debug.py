@@ -26,8 +26,9 @@ def error(func, msg):
 
 def exception():
   """Report an exception to the general logfile"""
-  from os.path import join
   from datetime import datetime
+  from os.path import join
+  from traceback import format_list
   from .event import traceback
   from .env import flags
 
