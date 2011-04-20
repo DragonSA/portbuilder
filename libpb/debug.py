@@ -20,7 +20,7 @@ def error(func, msg):
   from datetime import datetime
   from .env import flags
 
-  fullmsg = "%s %s> %s\n" % (datetime.now(), func, "\t".join(msg))
+  fullmsg = "%s %s> %s\n" % (datetime.now(), func, "\n\t".join(msg))
 
   open(join(flags["log_dir"], flags["log_file"]), "a").write(fullmsg)
 
