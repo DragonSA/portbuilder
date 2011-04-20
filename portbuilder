@@ -126,14 +126,21 @@ def run_loop(no_port, options):
     from sys import stderr
     from traceback import format_list, print_exc
     from libpb.debug import exception
-    from libpb.event import traceback
+    from libpb.event import alarm, post_event, traceback
+    from libpb import stop
 
     exception()
     for tb, name in traceback():
       stderr.write("Traceback from %s (most recent call last):\n" % name)
       stderr.write("%s\n" % "".join(format_list(tb)))
     print_exc()
-    exit(255)
+
+    # Request cleanup operations to take place.  Start killing after 5 seconds
+    # and die after 10 seconds.
+    post_event(stop)
+    alarm(lambda: stop(kill=True), 5)
+    alarm(lambda: stop(kill=True, kill_clean=True), 10)
+    run()
 
 def gen_parser():
   """Create the options parser object."""
