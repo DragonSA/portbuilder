@@ -18,7 +18,7 @@ def make_target(callback, port, targets, pipe=None, **kwargs):
   """Build a make target and call a function when finished."""
   from os.path import join
   from os import setsid
-  from subprocess import PIPE, STDOUT, Popen
+  from subprocess import PIPE, Popen
   from .env import env as environ, env_master, flags
   from .subprocess import add_popen
 
@@ -49,7 +49,7 @@ def make_target(callback, port, targets, pipe=None, **kwargs):
 
   if pipe is True:
     # Give access to subprocess output
-    stdin, stdout, stderr = PIPE, PIPE, STDOUT
+    stdin, stdout, stderr = PIPE, PIPE, PIPE
   elif pipe is False:
     # No piping of output (i.e. interactive)
     stdin, stdout, stderr = None, None, None
@@ -66,6 +66,7 @@ def make_target(callback, port, targets, pipe=None, **kwargs):
     if stdin is not None:
       make.stdin.close()
 
+  make.origin = port
   add_popen(make, callback)
 
   return make
