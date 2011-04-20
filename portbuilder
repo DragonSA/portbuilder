@@ -138,8 +138,6 @@ def run_loop(no_port, options):
     # Request cleanup operations to take place.  Start killing after 5 seconds
     # and die after 10 seconds.
     post_event(stop)
-    alarm(lambda: stop(kill=True), 5)
-    alarm(lambda: stop(kill=True, kill_clean=True), 10)
     run()
 
 def gen_parser():
