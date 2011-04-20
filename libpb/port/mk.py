@@ -108,17 +108,25 @@ def parse_jobs_number(jobs_number):
     return cpus
 ports_attr["jobs_number"].append(parse_jobs_number)
 
-strip_depends = lambda x: [(i.split(':', 1)[0].strip(),
-                  i.split(':', 1)[1][len(env["PORTSDIR"]) + 1:].strip()) for i in x]
-ports_attr["depend_build"].append(strip_depends)
-ports_attr["depend_extract"].append(strip_depends)
-ports_attr["depend_fetch"].append(strip_depends)
-ports_attr["depend_lib"].append(strip_depends)
-ports_attr["depend_run"].append(strip_depends)
-ports_attr["depend_patch"].append(strip_depends)
-ports_attr["makefiles"].append(lambda x: [i for i in x if i != '..'])
+def strip_depends(depends):
+  """Remove $PORTSDIR from dependancy paths."""
+  for depend in depends:
+    if depend.find(':') == -1:
+      raise RuntimeError("bad dependancy line: '%s'" % depend)
+    obj, port = depend.split(':', 1)
+    if port.startswith(env["PORTSDIR"]):
+      port = port[len(env["PORTSDIR"]) + 1:]
+    else:
+      raise RuntimeError("bad dependancy line: '%s'" % depend)
+    yield obj, port
 
-del strip_depends
+ports_attr["depend_build"].extend((strip_depends, tuple))
+ports_attr["depend_extract"].extend((strip_depends, tuple))
+ports_attr["depend_fetch"].extend((strip_depends, tuple))
+ports_attr["depend_lib"].extend((strip_depends, tuple))
+ports_attr["depend_run"].extend((strip_depends, tuple))
+ports_attr["depend_patch"].extend((strip_depends, tuple))
+ports_attr["makefiles"].append(lambda x: [i for i in x if i != '..'])
 
 def status(port, changed=False, cache=dict()):
   """Get the current status of the port."""
@@ -187,9 +195,14 @@ def attr_stage2(make, callback):
 
   if make.wait() is not SUCCESS:
     from ..debug import error
-    error("libpb/port/mk/attr_stage2", make.stdout.readlines())
+    error("libpb/port/mk/attr_stage2", ["Failed to get port %s attributes" % make.origin,] + make.stderr.readlines())
     callback(None)
     return
+
+  errs = make.stderr.readlines()
+  if len(errs):
+    from ..debug import error
+    error("libpb/port/mk/attr_stage2", ["Non-fatal errors in port %s attributes" % make.origin,] + errs)
 
   attr_map = {}
   for name, value in ports_attr.iteritems():
@@ -203,9 +216,11 @@ def attr_stage2(make, callback):
     for i in value[2:]:
       try:
         attr_map[name] = i(attr_map[name])
-      except BaseException:
+      except BaseException, e:
+        from ..debug import error
+        error("libpb/port/mk/attr_stage2", ("Failed to process port %s attributes" % make.origin,) + e.args)
         callback(None)
-        raise
+        return
 
   callback(attr_map)
 
