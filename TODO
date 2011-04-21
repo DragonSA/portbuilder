@@ -278,6 +278,8 @@ Future release:
  - display skipped ports (with toggle)
  - procedures
  - interactive builds
+ - improve port/mk.py
+ - unset environ flags from make (gmake)
 
 0.1.2 - Milestone 2 (Dependant Handler):
  * Port:
