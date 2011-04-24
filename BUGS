@@ -1,0 +1,2 @@
+ - databases/virtuoso does not compile with --arch=i386
+ - www/webkit-gtk2 does not compile with --arch=i386
