@@ -50,6 +50,7 @@ def sigint(_sig, _frame):
 
 def main():
   """The main event loop."""
+  from os import environ
   from signal import signal, SIGINT, SIGTERM
   from libpb.env import flags
   from libpb.monitor import Top
@@ -68,6 +69,13 @@ def main():
 
   # Make sure log_dir is available
   mkdir(flags["log_dir"])
+
+  # Make sure environ is not polluted with make flags
+  for key in ("__MKLVL__", "MAKEFLAGS", "MAKE_JOBS_FIFO"):
+    try:
+      del environ[key]
+    except KeyError:
+      pass
 
   # Install signal handlers
   signal(SIGINT, sigint)
@@ -235,6 +243,7 @@ def set_options(options):
     environ["UNAME_m"] = options.arch
     environ["UNAME_p"] = options.arch
     environ["MACHINE"] = options.arch
+    environ["MACHTYPE"] = options.arch
 
   # Batch mode
   if options.batch:
