@@ -71,7 +71,7 @@ def main():
   mkdir(flags["log_dir"])
 
   # Make sure environ is not polluted with make flags
-  for key in ("__MKLVL__", "MAKEFLAGS", "MAKE_JOBS_FIFO"):
+  for key in ("__MKLVL__", "MAKEFLAGS", "MAKELEVEL", "MFLAGS", "MAKE_JOBS_FIFO"):
     try:
       del environ[key]
     except KeyError:
