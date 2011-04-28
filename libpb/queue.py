@@ -13,6 +13,7 @@ class QueueManager(object):
   def __init__(self, load=1):
     """Initialise the manager with an indication of load available."""
     self._load = load
+    self._sort = False
     self.queue = []
     self.active = []
     self.stalled = []
@@ -38,7 +39,10 @@ class QueueManager(object):
     """Add a job to be run."""
     from bisect import insort
     assert(job not in self.queue)
-    insort(self.queue, job)
+    if self._sort:
+      self.queue.append(job)
+    else:
+      insort(self.queue, job)
     if self.active_load < self._load:
       self._run()
 
@@ -51,7 +55,7 @@ class QueueManager(object):
 
   def reorder(self):
     """Reorder the queued jobs as their priority may have changed."""
-    self.queue.sort()
+    self._sort = True
 
   def remove(self, job):
     """Remove a job from being run."""
@@ -67,6 +71,10 @@ class QueueManager(object):
     assert(self.active_load < self._load)
 
     stalled = []
+    if self._sort:
+      self._sort = False
+      self.stalled.sort()
+      self.queue.sort()
     for queue in (self.stalled, self.queue):
       while self.active_load < self._load and len(queue):
         job = self._find_job(self._load - self.active_load, queue)
