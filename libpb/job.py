@@ -42,7 +42,7 @@ class Job(Signal):
     """Utility method to indicate the work has completed."""
     if self.__manager:
       self.__manager.done(self)
-    self(self)
+    self.emit(self)
 
   @abstractmethod
   def work(self):

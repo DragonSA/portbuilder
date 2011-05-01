@@ -56,7 +56,7 @@ class Signal(object):
     """Indicates if this signal has the slot."""
     return slot in self._slots
 
-  def __call__(self, *args, **kwargs):
+  def emit(self, *args, **kwargs):
     """Emit a signal."""
     from .event import post_event
 

@@ -348,7 +348,7 @@ class Port(object):
       self.failed = True
     self.working = False
     self.stage = max(stage + 1, self.stage)
-    self.stage_completed(self)
+    self.stage_completed.emit(self)
     if self.failed or self.stage >= (Port.FETCH if flags["fetch_only"] else Port.INSTALL):
       self.dependant.status_changed()
 
