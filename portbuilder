@@ -132,18 +132,23 @@ def run_loop(no_port, options):
     raise
   except BaseException:
     from sys import stderr
-    from traceback import format_list, print_exc
+    from traceback import format_list, format_exc
     from libpb.debug import exception
     from libpb.event import alarm, post_event, traceback
     from libpb import stop
 
-    exception()
-    post_event(stop)
-    run()
+    msg = ""
     for tb, name in traceback():
-      stderr.write("Traceback from %s (most recent call last):\n" % name)
-      stderr.write("%s\n" % "".join(format_list(tb)))
-    print_exc()
+      msg += "Traceback from %s (most recent call last):\n" % name
+      msg += "%s\n" % "".join(format_list(tb))
+    msg += format_exc()
+    exception()
+
+    post_event(stop)
+    try:
+      run()
+    finally:
+      stderr.write(msg)
 
 def gen_parser():
   """Create the options parser object."""

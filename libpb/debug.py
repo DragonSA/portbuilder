@@ -20,7 +20,7 @@ def error(func, msg):
   from datetime import datetime
   from .env import flags
 
-  fullmsg = "%s %s> %s\n" % (datetime.now(), func, "\n\t".join(msg))
+  fullmsg = "%s %s> %s\n" % (datetime.now(), func, "\n  ".join(msg))
 
   open(join(flags["log_dir"], flags["log_file"]), "a").write(fullmsg)
 
@@ -28,13 +28,16 @@ def exception():
   """Report an exception to the general logfile"""
   from datetime import datetime
   from os.path import join
-  from traceback import format_list
+  from traceback import format_list, format_exc
   from .event import traceback
   from .env import flags
 
   log = open(join(flags["log_dir"], flags["log_file"]), "a")
-  log.write("%s> EXCEPTION\n")
+  log.write("%s> EXCEPTION\n  " % datetime.now())
+  msg = ""
   for tb, name in traceback():
-    log.write("\tTraceback from %s (most recent call last):\n" % name)
-    log.write("%s\n" % "\t".join(format_list(tb)))
+    msg += "Traceback from %s (most recent call last):\n" % name
+    msg += "%s\n" % "".join(format_list(tb))
+  msg += format_exc()
+  log.write(msg.replace("\n", "\n  "))
   log.close()
