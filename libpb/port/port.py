@@ -3,6 +3,7 @@
 from __future__ import absolute_import
 
 from contextlib import contextmanager
+from ..signal import SignalProperty
 
 __all__ = ["Port"]
 
@@ -75,7 +76,11 @@ class FileLock(object):
       self.release(files)
 
 class Port(object):
-  """A FreeBSD port class."""
+  """A FreeBSD port class.
+
+  Signals:
+   - stage_completed(Port):     Indicates the port completed a stage
+  """
 
   # Installed status flags
   ABSENT  = 0
@@ -99,9 +104,10 @@ class Port(object):
   _fetched = set()
   _fetch_failed = set()
 
+  stage_completed = SignalProperty("stage_completed")
+
   def __init__(self, origin, attr):
     """Itialise the port with the required information."""
-    from ..signal import Signal
     from .mk import status
     from .dependhandler import Dependant
 
@@ -115,7 +121,6 @@ class Port(object):
     self.working = False
 
     self.stage = Port.ZERO
-    self.stage_completed = Signal("%s.stage_completed" % self)
     self.install_status = status(self)
 
     self.dependancy = None

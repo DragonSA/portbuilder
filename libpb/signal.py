@@ -2,7 +2,7 @@
 
 from __future__ import absolute_import
 
-__all__ = ["Signal"]
+__all__ = ["Signal", "SignalProperty"]
 
 class Signal(object):
   """Allows signals to be sent to connected slots."""
@@ -62,3 +62,27 @@ class Signal(object):
 
     for slot in self._slots:
       post_event((slot, args, kwargs, self._tb[slot]))
+
+class SignalProperty(object):
+  """Creates a Signal Property for a call."""
+
+  def __init__(self, name=""):
+    """Initialise the signal property."""
+    from weakref import WeakKeyDictionary
+
+    self._name = name
+    self._signals = WeakKeyDictionary()
+
+  def __get__(self, instance, _owner):
+    try:
+      return self._signals[instance]
+    except KeyError:
+      signal = Signal("%s.%s" % (instance.__class__.__name__, self._name))
+      self._signals[instance] = signal
+      return signal
+
+  def __set__(self, _instance, _value):
+    raise AttributeError("can't set signal property")
+
+  def __del__(self, _instance):
+    raise AttributeError("can't delete signal property")
