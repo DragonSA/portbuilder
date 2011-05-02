@@ -38,6 +38,7 @@ class Monitor(object):
   def stop(self):
     """Stop the monitor."""
     if self._running:
+      self.run()
       self._running = False
       self._deinit()
 
