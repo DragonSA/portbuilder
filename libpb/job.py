@@ -94,7 +94,7 @@ class CleanJob(Job):
     """Mark job as finished."""
     from .make import SUCCESS
     self.pid = None
-    self.status = popen.wait() is SUCCESS
+    self.status = popen.wait() == SUCCESS
     self.done()
 
 class PortJob(Job):

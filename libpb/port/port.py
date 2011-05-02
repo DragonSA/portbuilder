@@ -341,7 +341,7 @@ class Port(object):
     post_map = (self._post_config, self._post_checksum, self._post_fetch,
                 self._post_build, self._post_install, self._post_package)
     stage = self.stage
-    status = post_map[stage](make, make.wait() is SUCCESS)
+    status = post_map[stage](make, make.wait() == SUCCESS)
     if status is not None:
       self._finalise(stage, status)
 

@@ -193,9 +193,9 @@ def attr_stage2(make, callback):
   """Parse the attributes from a port and call the requested function."""
   from ..make import SUCCESS
 
-  if make.wait() is not SUCCESS:
+  if make.wait() != SUCCESS:
     from ..debug import error
-    error("libpb/port/mk/attr_stage2", ["Failed to get port %s attributes" % make.origin,] + make.stderr.readlines())
+    error("libpb/port/mk/attr_stage2", ["Failed to get port %s attributes (err=%s)" % (make.origin, make.returncode),] + make.stderr.readlines())
     callback(None)
     return
 
