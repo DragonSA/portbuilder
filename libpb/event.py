@@ -51,6 +51,17 @@ class EventManager(object):
       from select import KQ_FILTER_TIMER
       event = (obj, KQ_FILTER_TIMER)
       data = int(data * 1000)
+    elif mode.startswith("p"):
+      from select import KQ_FILTER_PROC, KQ_NOTE_EXIT, KQ_NOTE_FORK, KQ_NOTE_EXEC
+      event = (obj.pid, KQ_FILTER_PROC)
+      if "f" in mode[1:]:
+        note |= KQ_NOTE_FORK
+      elif "e" in mode[1:]:
+        note |= KQ_NOTE_EXEC
+      elif "-" in mode[1:]:
+        # HACK: work around python bug!!!
+        note -= KQ_NOTE_EXIT
+        self._chld.add(obj.pid)
     else:
       raise ValueError("unknown event mode")
 
@@ -86,9 +97,6 @@ class EventManager(object):
       self.start.emit()
       while True:
         while len(self._events):
-          # Process outstanding alarm and selects before next event
-          self._queue(0)
-
           func, args, kwargs, tb_slot, tb_call = self._events.popleft()
           self._construct_tb((tb_slot, "signal connect"), (tb_call, "signal caller"))
           func(*args, **kwargs)
@@ -98,7 +106,7 @@ class EventManager(object):
           # Die if no events or outstanding processes
           break
 
-        self._queue(1)
+        self._queue()
 
     finally:
       self.stop.emit()
@@ -122,15 +130,15 @@ class EventManager(object):
 
   def _queue(self, timeout=None):
     """Run any events returned by kqueue."""
-    while True:
-      try:
-        for event in self._kq.control(None, 10, timeout):
-          event = (event.ident, event.filter)
-          if event in self._kq_events:
-            self._kq_events[event].emit()
-        break
-      except OSError:
-        pass
+    from select import kevent, KQ_FILTER_PROC, KQ_NOTE_EXIT, KQ_EV_DELETE
+
+    for ev in self._kq.control(None, 2, timeout):
+      event = (ev.ident, ev.filter)
+      if event in self._kq_events:
+        if ev.filter == KQ_FILTER_PROC and ev.fflags == KQ_NOTE_EXIT:
+          self._kq_events.pop(event).emit()
+        else:
+          self._kq_events[event].emit()
 
 _manager = EventManager()
 

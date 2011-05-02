@@ -9,10 +9,7 @@ class ChildrenMonitor(object):
 
   def __init__(self):
     """Initialise subprocess monitor."""
-    from signal import signal, SIGCHLD
-
     self._pid_map = {}
-    signal(SIGCHLD, self._signal)
 
   def __len__(self):
     """Number of active subprocesses."""
@@ -23,7 +20,9 @@ class ChildrenMonitor(object):
     from subprocess import Popen
 
     if isinstance(popen, Popen):
+      from .event import event
       self._pid_map[popen.pid] = (popen, callback)
+      event(popen, "p-").connect(lambda: self._process_signal(popen.pid))
     else:
       from .event import post_event
       post_event(callback, popen)
@@ -32,33 +31,11 @@ class ChildrenMonitor(object):
     """Returns all the current children."""
     return self._pid_map.keys()
 
-  def _signal(self, _signum, _frame):
-    """Handle a signal from child process."""
-    from os import waitpid, WNOHANG
-    from .event import post_event
-
-    try:
-      while True:
-        pid, status = waitpid(-1, WNOHANG)
-        if not pid:
-          break
-
-        if status & 0xff:
-          # If low byte set then process exited due to signal
-          status = -(status & 0xff)
-        else:
-          # Else high byte contains exit status
-          status = status >> 8
-        post_event(self._process_signal, pid, status)
-    except OSError:
-      pass
-
-  def _process_signal(self, pid, status):
+  def _process_signal(self, pid):
     """Update the subprocess object and dispatch the callback."""
-    from .event import post_event
+    from .event import post_event, event
 
     popen, callback = self._pid_map.pop(pid)
-    popen.returncode = status
 
     post_event(callback, popen)
 
