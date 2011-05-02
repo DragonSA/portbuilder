@@ -4,7 +4,7 @@ Provides a framework for calling functions asynchroniously."""
 from __future__ import absolute_import
 
 __all__ = ["pending_events", "post_event", "pending_events" "run", "alarm",
-           "select", "unselect", "suspend_alarm", "resume_alarm", "traceback"]
+           "event", "suspend_alarm", "resume_alarm", "traceback"]
 
 class EventManager(object):
   """Handles Events that need to be called asynchroniously."""
@@ -14,12 +14,15 @@ class EventManager(object):
 
     A sleeper function is used to wake up once a new event comes available."""
     from collections import deque
+    from select import kqueue
 
     self._events = deque()
     self._alarms = []
     self._alarm_active = True
+    self._kq = kqueue()
+    self._kq_events = {}
     self._selects = ({}, {}, {})
-    self.traceback = None
+    self.traceback = ()
     self._no_tb = False
 
   def __len__(self):
@@ -32,23 +35,30 @@ class EventManager(object):
     from .debug import get_tb
     self._alarms.append([callback, time() + interval, get_tb()])
 
-  def select(self, callback, rlist=None, wlist=None, xlist=None):
-    """Add a callback to the required file describtor."""
-    from .debug import get_tb
+  def event(self, obj, mode="r", clear=False):
+    from select import kevent, KQ_EV_ADD, KQ_EV_ENABLE, KQ_EV_DELETE
+    note = 0
+    if mode == "r":
+      from select import KQ_FILTER_READ
+      event = (obj.fileno(), KQ_FILTER_READ)
+    elif mode == "w":
+      from select import KQ_FILTER_WRITE
+      event = (obj.fileno(), KQ_FILTER_WRITE)
+    else:
+      raise ValueError("unknown event mode")
 
-    for fd, cb in zip((rlist, wlist, xlist), self._selects):
-      if fd:
-        if fd not in cb:
-          cb[fd] = {}
-        cb[fd][callback] = get_tb()
-
-  def unselect(self, callback, rlist=None, wlist=None, xlist=None):
-    """Remove a callback from the given file describtor."""
-    for fd, cb in zip((rlist, wlist, xlist), self._selects):
-      if fd:
-        cb[fd].pop(callback)
-        if not len(cb[fd]):
-          del cb[fd]
+    if clear:
+      try:
+        self._kq_events.pop(event)
+        self._kq.control((kevent(event[0], event[1], KQ_EV_DELETE),), 0)
+      except KeyError:
+        raise KeyError("no event registered")
+    else:
+      if event not in self._kq_events:
+        from .signal import Signal
+        self._kq.control((kevent(event[0], event[1], KQ_EV_ADD | KQ_EV_ENABLE, note),), 0)
+        self._kq_events[event] = Signal()
+      return self._kq_events[event]
 
   def suspend_alarm(self):
     """Suspend issuing of alarms."""
@@ -73,13 +83,13 @@ class EventManager(object):
     """Run the currently queued events."""
     from .subprocess import active_popen
 
-    self.traceback = None
+    self.traceback = ()
     try:
       while True:
         while len(self._events):
           # Process outstanding alarm and selects before next event
           self._alarm()
-          self._select()
+          self._queue(0)
 
           func, args, kwargs, tb_slot, tb_call = self._events.popleft()
           self._construct_tb((tb_slot, "signal connect"), (tb_call, "signal caller"))
@@ -150,36 +160,24 @@ class EventManager(object):
     if sleep_intr <= 0:
       self._alarm()
     else:
-      self._select(min(sleep_intr, 1))
+      self._queue(min(sleep_intr, 1))
 
-  def _select(self, timeout=0):
-    """Run any events waiting on a select."""
-    from select import error, select
-
-    if not timeout:
-      for i in self._selects:
-        if len(i):
-          break
-      else:
-        return
-
-    rlist, wlist, xlist = self._selects
-
-    try:
-      for fds, cb in zip(select(rlist, wlist, xlist, timeout), self._selects):
-        for fd in fds:
-          for callback, tb_select in cb[fd].items():
-            self._construct_tb((tb_select, "select connect"))
-            callback()
-            self._clear_tb()
-    except error:
-      pass
+  def _queue(self, timeout=None):
+    """Run any events returned by kqueue."""
+    while True:
+      try:
+        for event in self._kq.control(None, 10, timeout):
+          event = (event.ident, event.filter)
+          if event in self._kq_events:
+            self._kq_events[event].emit()
+        break
+      except OSError:
+        pass
 
 _manager = EventManager()
 
 alarm          = _manager.alarm
-select         = _manager.select
-unselect       = _manager.unselect
+event          = _manager.event
 suspend_alarm  = _manager.suspend_alarm
 resume_alarm   = _manager.resume_alarm
 pending_events = _manager.__len__

@@ -108,7 +108,7 @@ class Top(Monitor):
     """Initialise the curses library."""
     from curses import initscr, cbreak, noecho
     from sys import stdin
-    from .event import select
+    from .event import event
 
     self._stdscr = initscr()
     self._stdscr.keypad(1)
@@ -117,13 +117,13 @@ class Top(Monitor):
     cbreak()
     noecho()
 
-    select(self._userinput, rlist=stdin)
+    event(stdin).connect(self._userinput)
 
   def _deinit(self):
     """Shutdown the curses library."""
     from curses import nocbreak, echo, endwin
     from sys import stdin
-    from .event import unselect
+    from .event import event
 
     self._stdscr.move(self._stdscr.getmaxyx()[0] - 1, 0)
     self._stdscr.clrtoeol()
@@ -134,7 +134,7 @@ class Top(Monitor):
     echo()
     endwin()
 
-    unselect(self._userinput, rlist=stdin)
+    event(stdin, clear=True)
 
   def _userinput(self):
     """Gte user input and change display options."""
