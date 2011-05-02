@@ -22,7 +22,7 @@ class ChildrenMonitor(object):
     if isinstance(popen, Popen):
       from .event import event
       self._pid_map[popen.pid] = (popen, callback)
-      event(popen, "p-").connect(lambda: self._process_signal(popen.pid))
+      event(popen, "p-").connect(self._process_signal)
     else:
       from .event import post_event
       post_event(callback, popen)
@@ -31,11 +31,11 @@ class ChildrenMonitor(object):
     """Returns all the current children."""
     return self._pid_map.keys()
 
-  def _process_signal(self, pid):
+  def _process_signal(self, popen):
     """Update the subprocess object and dispatch the callback."""
     from .event import post_event, event
 
-    popen, callback = self._pid_map.pop(pid)
+    popen, callback = self._pid_map.pop(popen.pid)
 
     post_event(callback, popen)
 

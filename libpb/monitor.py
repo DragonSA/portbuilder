@@ -23,7 +23,7 @@ class Monitor(object):
     start.connect(self.start)
     stop.connect(self.stop)
 
-  def alarm(self):
+  def alarm(self, _alarm_id):
     """Monitor interface for event manager."""
     if self._running:
       self.run()
@@ -127,7 +127,7 @@ class Top(Monitor):
 
     event(stdin, clear=True)
 
-  def _userinput(self):
+  def _userinput(self, _stdin):
     """Get user input and change display options."""
     from curses import KEY_CLEAR, KEY_NPAGE, KEY_PPAGE, ascii
     from sys import stdin, stderr

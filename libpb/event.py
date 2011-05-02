@@ -73,8 +73,8 @@ class EventManager(object):
       if event not in self._kq_events:
         from .signal import Signal
         self._kq.control((kevent(event[0], event[1], KQ_EV_ADD | KQ_EV_ENABLE, note, data),), 0)
-        self._kq_events[event] = Signal()
-      return self._kq_events[event]
+        self._kq_events[event] = (Signal(), obj)
+      return self._kq_events[event][0]
 
   def post_event(self, func, *args, **kwargs):
     """Add an event to be called asynchroniously."""
@@ -134,9 +134,10 @@ class EventManager(object):
       event = (ev.ident, ev.filter)
       if event in self._kq_events:
         if ev.filter == KQ_FILTER_PROC and ev.fflags == KQ_NOTE_EXIT:
-          self._kq_events.pop(event).emit()
+          signal, obj = self._kq_events.pop(event)
         else:
-          self._kq_events[event].emit()
+          signal, obj = self._kq_events[event]
+        signal.emit(obj)
 
 _manager = EventManager()
 
