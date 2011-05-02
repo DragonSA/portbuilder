@@ -90,7 +90,8 @@ class EventManager(object):
     """Run the currently queued events."""
     from .subprocess import active_popen
 
-    self.traceback = ()
+    self._no_tb = False
+    self.traceback = None
     try:
       self.start.emit()
       while True:
@@ -150,4 +151,4 @@ run            = _manager.run
 start          = _manager.start
 stop           = _manager.stop
 suspend        = _manager.stop.emit
-traceback      = lambda: _manager.traceback
+traceback      = lambda: (_manager.traceback if _manager.traceback else ())
