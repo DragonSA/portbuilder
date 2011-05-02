@@ -14,7 +14,7 @@ def stop(kill=False, kill_clean=False):
   from .subprocess import children
 
   if flags["no_op"]:
-    exit(254)
+    raise SystemExit(254)
 
   flags["mode"] = "clean"
 
