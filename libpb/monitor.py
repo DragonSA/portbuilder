@@ -13,43 +13,33 @@ class Monitor(object):
 
   def __init__(self):
     """Initialise the monitor"""
-    from .event import alarm
+    from .event import alarm, event, stop, start
 
     self.delay = 1  #: Delay between monitor iterations
-    self._started = False  #: Indicate if we have started
-    self._stopped = False  #: Indicate the stopped status
+    self._running = False  #: Indicate if we have started
+    self._timer_id = alarm()
 
-    alarm(self.alarm, 1)
+    event(self._timer_id, "t", data=self.delay).connect(self.alarm)
+    start.connect(self.start)
+    stop.connect(self.stop)
 
-  def alarm(self, end):
+  def alarm(self):
     """Monitor interface for event manager."""
-    if not self._started:
-      return self.delay
-    elif end is None:
-      if self._started and not self._stopped:
-        self.stop()
-    elif end is False:
-      if self._stopped:
-        self.start()
-      else:
-        self.run()
-    elif not self._stopped:
+    if self._running:
       self.run()
-      self.stop()
-    return self.delay
 
   def start(self):
     """Start the monitor."""
-    self._started = True
-    self._stopped = False
-    self._init()
-    self.run()
+    if not self._running:
+      self._running = True
+      self._init()
+      self.run()
 
   def stop(self):
     """Stop the monitor."""
-    assert self._started is True
-    self._stopped = True
-    self._deinit()
+    if self._running:
+      self._running = False
+      self._deinit()
 
   @abstractmethod
   def run(self):
@@ -137,8 +127,9 @@ class Top(Monitor):
     event(stdin, clear=True)
 
   def _userinput(self):
-    """Gte user input and change display options."""
+    """Get user input and change display options."""
     from curses import KEY_CLEAR, KEY_NPAGE, KEY_PPAGE, ascii
+    from sys import stdin, stderr
 
     run = False
     while True:

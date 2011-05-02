@@ -21,21 +21,21 @@ class Lock(object):
 
   def acquire(self):
     """Acquire lock."""
-    from ..event import suspend_alarm
+    from ..event import suspend
 
     if self._locked:
       return False
     self._locked = True
-    suspend_alarm()
+    suspend()
     return True
 
   def release(self):
     """Release lock."""
-    from ..event import resume_alarm
+    from ..event import resume
 
     assert self._locked
     self._locked = False
-    resume_alarm()
+    resume()
 
   @contextmanager
   def lock(self):
