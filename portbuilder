@@ -34,25 +34,28 @@ class PortDelegate(object):
       from libpb.builder import install_builder
       install_builder(port)
 
-def sigterm(_sig, _frame):
+def sigterm():
   """Kill subprocesses and die."""
   from libpb import stop
-  stop(kill=True, kill_clean=True)
-  exit(254)
 
-def sigint(_sig, _frame):
+  stop(kill=True, kill_clean=True)
+  raise SystemExit(254)
+
+def sigint():
   """Ask politely for everything to stop at a convenient time."""
-  from signal import signal, SIGINT
-  from libpb.event import post_event
+  from signal import SIGINT
+  from libpb.event import event, post_event
   from libpb import stop
+
   post_event(stop)
-  signal(SIGINT, sigterm)
+  event(SIGINT, "s").disconnect(sigint).connect(sigterm)
 
 def main():
   """The main event loop."""
   from os import environ
-  from signal import signal, SIGINT, SIGTERM
+  from signal import signal, SIGINT, SIGTERM, SIG_IGN
   from libpb.env import flags
+  from libpb.event import event
   from libpb.monitor import Top
   from libpb.port import get_port
 
@@ -78,8 +81,10 @@ def main():
       pass
 
   # Install signal handlers
-  signal(SIGINT, sigint)
-  signal(SIGTERM, sigterm)
+  signal(SIGINT, SIG_IGN)
+  event(SIGINT, "s").connect(sigint)
+  signal(SIGTERM, SIG_IGN)
+  event(SIGTERM, "s").connect(sigterm)
 
   # Port delegate
   delegate = PortDelegate(options.package, options.upgrade, options.force)

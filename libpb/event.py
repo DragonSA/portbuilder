@@ -39,29 +39,27 @@ class EventManager(object):
     return self._alarms
 
   def event(self, obj, mode="r", clear=False, data=0):
+    import select
     from select import kevent, KQ_EV_ADD, KQ_EV_ENABLE, KQ_EV_DELETE
     note = 0
     if mode == "r":
-      from select import KQ_FILTER_READ
-      event = (obj.fileno(), KQ_FILTER_READ)
+      event = (obj.fileno(), select.KQ_FILTER_READ)
     elif mode == "w":
-      from select import KQ_FILTER_WRITE
-      event = (obj.fileno(), KQ_FILTER_WRITE)
+      event = (obj.fileno(), select.KQ_FILTER_WRITE)
     elif mode == "t":
-      from select import KQ_FILTER_TIMER
-      event = (obj, KQ_FILTER_TIMER)
+      event = (obj, select.KQ_FILTER_TIMER)
       data = int(data * 1000)
     elif mode.startswith("p"):
-      from select import KQ_FILTER_PROC, KQ_NOTE_EXIT, KQ_NOTE_FORK, KQ_NOTE_EXEC
-      event = (obj.pid, KQ_FILTER_PROC)
+      event = (obj.pid, select.KQ_FILTER_PROC)
       if "f" in mode[1:]:
-        note |= KQ_NOTE_FORK
+        note |= select.KQ_NOTE_FORK
       elif "e" in mode[1:]:
-        note |= KQ_NOTE_EXEC
+        note |= select.KQ_NOTE_EXEC
       elif "-" in mode[1:]:
         # HACK: work around python bug!!!
-        note -= KQ_NOTE_EXIT
-        self._chld.add(obj.pid)
+        note -= select.KQ_NOTE_EXIT
+    elif mode.startswith("s"):
+      event = (obj, select.KQ_FILTER_SIGNAL)
     else:
       raise ValueError("unknown event mode")
 
