@@ -63,21 +63,32 @@ class Signal(object):
     for slot in self._slots:
       post_event((slot, args, kwargs, self._tb[slot]))
 
+
+class InlineSignal(Signal):
+  """Sends signals inline."""
+
+  def emit(self, *args, **kwargs):
+    """Emit a signal."""
+    for slot in self._slots:
+      slot(*args, **kwargs)
+
+
 class SignalProperty(object):
   """Creates a Signal Property for a call."""
 
-  def __init__(self, name=""):
+  def __init__(self, name="", signal=Signal):
     """Initialise the signal property."""
     from weakref import WeakKeyDictionary
 
     self._name = name
     self._signals = WeakKeyDictionary()
+    self._signal = signal
 
   def __get__(self, instance, _owner):
     try:
       return self._signals[instance]
     except KeyError:
-      signal = Signal("%s.%s" % (instance.__class__.__name__, self._name))
+      signal = self._signal("%s.%s" % (instance.__class__.__name__, self._name))
       self._signals[instance] = signal
       return signal
 
