@@ -80,13 +80,16 @@ class Popen(_Popen, Signal):
     Signal.__init__(self, "Popen")
     self.origin = origin
 
-    event(self, "p-").connect(self.emit)
+    event(self, "p-").connect(self._emit)
+
+  def _emit(self):
+    self.emit(self)
 
 class PopenNone(Signal):
   """An empty replacement for Popen."""
 
   returncode = SUCCESS  #: Return code for the dummy processes
-  pid = -1              #: PID of the dummy processes
+  pid = None            #: PID of the dummy processes
 
   stdin  = None  #: Stdin stream
   stdout = None  #: Stdout stream
