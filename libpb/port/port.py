@@ -332,7 +332,7 @@ class Port(object):
     """Build the requested targets."""
     from ..make import make_target
 
-    make_target(self._make, self, targets, **kwargs)
+    make_target(self, targets, **kwargs).connect(self._make)
 
   def _make(self, make):
     """Call the _post_[stage] function and finalise the stage."""

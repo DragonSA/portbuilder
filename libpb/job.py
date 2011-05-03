@@ -87,7 +87,7 @@ class CleanJob(Job):
   def work(self):
     """Clean a port."""
     from .make import make_target
-    make = make_target(self._cleaned, self.port, "clean", NOCLEANDEPENDS=True)
+    make = make_target(self.port, "clean", NOCLEANDEPENDS=True).connect(self._cleaned)
     self.pid = make.pid
 
   def _cleaned(self, popen):

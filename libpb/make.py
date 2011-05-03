@@ -2,6 +2,7 @@
 
 from __future__ import absolute_import
 
+from subprocess import Popen as _Popen
 from .signal import Signal
 
 __all__ = ["SUCCESS", "make_target"]
@@ -16,13 +17,11 @@ def env2args(env):
     else:
       yield "%s=%s" % (key, value)
 
-def make_target(callback, port, targets, pipe=None, **kwargs):
+def make_target(port, targets, pipe=None, **kwargs):
   """Build a make target and call a function when finished."""
   from os.path import join
-  from os import setsid
-  from subprocess import PIPE, Popen
+  from subprocess import PIPE
   from .env import env as environ, env_master, flags
-  from .event import event, post_event
 
   if type(port) is str:
     assert pipe is True
@@ -62,17 +61,26 @@ def make_target(callback, port, targets, pipe=None, **kwargs):
     stderr = stdout
 
   if pipe is None and flags["no_op"]:
-    make = PopenNone(args)
-    make.origin = port
-    post_event(make.connect(callback).emit, make)
+    make = PopenNone(args, port)
   else:
-    make = Popen(args, stdin=stdin, stdout=stdout, stderr=stderr, close_fds=True, preexec_fn=setsid)
+    make = Popen(args, port, stdin=stdin, stdout=stdout, stderr=stderr)
     if stdin is not None:
       make.stdin.close()
-    make.origin = port
-    event(make, "p-").connect(callback)
 
   return make
+
+class Popen(_Popen, Signal):
+  """A Popen class with signals that emits a signal on exit."""
+
+  def __init__(self, target, origin, stdin, stdout, stderr):
+    from os import setsid
+    from .event import event
+
+    _Popen.__init__(self, target, stdin=stdin, stdout=stdout, stderr=stderr, close_fds=True, preexec_fn=setsid)
+    Signal.__init__(self, "Popen")
+    self.origin = origin
+
+    event(self, "p-").connect(self.emit)
 
 class PopenNone(Signal):
   """An empty replacement for Popen."""
@@ -84,10 +92,12 @@ class PopenNone(Signal):
   stdout = None  #: Stdout stream
   stderr = None  #: Stderr stream
 
-  def __init__(self, args):
+  def __init__(self, args, origin):
     from .env import flags
+    from .event import post_event
 
     Signal.__init__(self)
+    self.origin = origin
     if flags["no_op_print"]:
       argstr = []
       for i in args:
@@ -96,6 +106,8 @@ class PopenNone(Signal):
         if ' ' in i or '\t' in i or '\n' in i:
           argstr[-1] = '"%s"' % argstr[-1]
       print " ".join(argstr)
+
+    post_event(self.emit, self)
 
   def wait(self):
     """Simulate Popen.wait()."""
