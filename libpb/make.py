@@ -2,6 +2,8 @@
 
 from __future__ import absolute_import
 
+from .signal import Signal
+
 __all__ = ["SUCCESS", "make_target"]
 
 SUCCESS = 0
@@ -20,7 +22,7 @@ def make_target(callback, port, targets, pipe=None, **kwargs):
   from os import setsid
   from subprocess import PIPE, Popen
   from .env import env as environ, env_master, flags
-  from .subprocess import add_popen
+  from .event import event, post_event
 
   if type(port) is str:
     assert pipe is True
@@ -61,17 +63,18 @@ def make_target(callback, port, targets, pipe=None, **kwargs):
 
   if pipe is None and flags["no_op"]:
     make = PopenNone(args)
+    make.origin = port
+    post_event(make.connect(callback).emit, make)
   else:
     make = Popen(args, stdin=stdin, stdout=stdout, stderr=stderr, close_fds=True, preexec_fn=setsid)
     if stdin is not None:
       make.stdin.close()
-
-  make.origin = port
-  add_popen(make, callback)
+    make.origin = port
+    event(make, "p-").connect(callback)
 
   return make
 
-class PopenNone(object):
+class PopenNone(Signal):
   """An empty replacement for Popen."""
 
   returncode = SUCCESS  #: Return code for the dummy processes
@@ -83,6 +86,8 @@ class PopenNone(object):
 
   def __init__(self, args):
     from .env import flags
+
+    Signal.__init__(self)
     if flags["no_op_print"]:
       argstr = []
       for i in args:

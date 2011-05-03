@@ -11,25 +11,11 @@ def stop(kill=False, kill_clean=False):
   from .builder import builders
   from .env import cpus, flags
   from .queue import attr_queue, clean_queue, queues
-  from .subprocess import children
 
   if flags["no_op"]:
     raise SystemExit(254)
 
   flags["mode"] = "clean"
-
-  if kill_clean:
-    cleaning = ()
-  else:
-    cleaning = set(i.pid for i in clean_queue.active)
-
-  # Kill all active children
-  for pid in children():
-    if pid not in cleaning:
-      try:
-        killpg(pid, SIGKILL if kill else SIGTERM)
-      except OSError:
-        pass
 
   # Stop all queues
   attr_queue.load = 0
