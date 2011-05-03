@@ -88,10 +88,12 @@ class EventManager(object):
 
   def run(self):
     """Run the currently queued events."""
+    from .queue import attr_queue, clean_queue, queues
     from .subprocess import active_popen
 
     self._no_tb = False
     self.traceback = None
+    queues = (attr_queue, clean_queue) + queues
     try:
       self.start.emit()
       while True:
@@ -101,7 +103,10 @@ class EventManager(object):
           func(*args, **kwargs)
           self._clear_tb()
 
-        if not active_popen():
+        for queue in queues:
+          if len(queue.active):
+            break
+        else:
           # Die if no events or outstanding processes
           break
 
