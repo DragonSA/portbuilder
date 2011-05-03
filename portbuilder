@@ -34,14 +34,14 @@ class PortDelegate(object):
       from libpb.builder import install_builder
       install_builder(port)
 
-def sigterm(_signal):
+def sigterm():
   """Kill subprocesses and die."""
   from libpb import stop
 
   stop(kill=True, kill_clean=True)
   raise SystemExit(254)
 
-def sigint(_signal):
+def sigint():
   """Ask politely for everything to stop at a convenient time."""
   from signal import SIGINT
   from libpb.event import event, post_event
