@@ -25,6 +25,7 @@ class Job(Signal):
     if priority is not None:
       self.priority = priority
     self.load = load
+    self.pid = None
     self.__manager = None
 
   def __lt__(self, other):
@@ -40,6 +41,7 @@ class Job(Signal):
 
   def done(self):
     """Utility method to indicate the work has completed."""
+    self.pid = None
     if self.__manager:
       self.__manager.done(self)
     self.emit(self)
@@ -54,22 +56,19 @@ class Job(Signal):
 class AttrJob(Job):
   """A port attributes job."""
 
-  def __init__(self, origin, callback, reget):
-    Job.__init__(self, priority=2 if reget else 1)
-    self.origin = origin
-    self.callback = callback
+  def __init__(self, attr):
+    Job.__init__(self)
+    self.attr = attr
 
   def __repr__(self):
-    return "<AttrJob(origin=%s)>" % self.origin
+    return "<AttrJob(origin=%s)>" % self.attr.origin
 
   def work(self):
     """Fetch a ports attributes."""
-    from .port.mk import attr_stage1 as attr
-    attr(self.origin, self._attr)
+    self.pid = self.attr.get().connect(self._done).pid
 
-  def _attr(self, attr):
+  def _done(self, _make):
     """Callback special function with origin and attributes."""
-    self.callback(self.origin, attr)
     self.done()
 
 class CleanJob(Job):
@@ -93,7 +92,6 @@ class CleanJob(Job):
   def _cleaned(self, popen):
     """Mark job as finished."""
     from .make import SUCCESS
-    self.pid = None
     self.status = popen.wait() == SUCCESS
     self.done()
 
@@ -104,6 +102,7 @@ class PortJob(Job):
     from .port.port import Port
 
     Job.__init__(self, port.load if stage == Port.BUILD else 1, None)
+    self.pid = None
     self.port = port
     self.stage = stage
 
@@ -119,9 +118,10 @@ class PortJob(Job):
     """Run the required port stage."""
     self.port.stage_completed.connect(self.stage_done)
     try:
-      if not self.port.build_stage(self.stage):
-        raise
-        #self.stage_done(self.port)
+      status = self.port.build_stage(self.stage)
+      assert status is not False
+      if not isinstance(status, bool) and status is not None:
+        self.pid = status.pid
     except StalledJob:
       self.port.stage_completed.disconnect(self.stage_done)
       raise

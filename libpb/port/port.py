@@ -168,12 +168,13 @@ class Port(object):
     self.working = time()
     try:
       status = pre_map[stage - 1]()
-      if status is not None:
+      if isinstance(status, bool):
         self._finalise(stage - 1, status)
+        return True
     except StalledJob:
       self.working = False
       raise
-    return True
+    return status
 
   def _pre_config(self):
     """Configure the ports options."""
@@ -181,7 +182,7 @@ class Port(object):
       if not self._config_lock.acquire():
         from ..job import StalledJob
         raise StalledJob()
-      self._make_target("config", pipe=False)
+      return self._make_target("config", pipe=False)
     else:
       self._load_dependancy()
 
@@ -189,9 +190,9 @@ class Port(object):
     """Refetch attr data if ports were configured successfully."""
     self._config_lock.release()
     if status:
-      from .mk import attr
+      from .mk import Attr
 
-      attr(self.origin, self._load_attr, True)
+      Attr(self.origin).connect(self._load_attr).get()
       return None
     return status
 
@@ -247,7 +248,7 @@ class Port(object):
       from ..job import StalledJob
       raise StalledJob()
     else:
-      self._make_target("checksum", BATCH=True, DISABLE_CONFLICTS=True, FETCH_REGET=0)
+      return self._make_target("checksum", BATCH=True, DISABLE_CONFLICTS=True, FETCH_REGET=0)
 
   def _post_checksum(self, _make, status):
     """Advance to build stage if checksum passed."""
@@ -273,7 +274,7 @@ class Port(object):
       from ..job import StalledJob
       raise StalledJob()
     else:
-      self._make_target("checksum", BATCH=True, DISABLE_CONFLICTS=True, NO_DEPENDS=True)
+      return self._make_target("checksum", BATCH=True, DISABLE_CONFLICTS=True, NO_DEPENDS=True)
 
   def _post_fetch(self, _make, status):
     """Register fetched files if fetch succeeded."""
@@ -289,7 +290,7 @@ class Port(object):
 
   def _pre_build(self):
     """Build the port."""
-    self._make_target(["clean","all"], BATCH=True, NOCLEANDEPENDS=True, NO_DEPENDS=True)
+    return self._make_target(["clean","all"], BATCH=True, NOCLEANDEPENDS=True, NO_DEPENDS=True)
 
   @staticmethod
   def _post_build(_make, status):
@@ -302,7 +303,7 @@ class Port(object):
       target = ("install",)
     else:
       target = ("deinstall", "reinstall")
-    self._make_target(target, BATCH=True, NO_DEPENDS=True)
+    return self._make_target(target, BATCH=True, NO_DEPENDS=True)
 
   def _post_install(self, _make, status):
     """Update the install status."""
@@ -321,7 +322,7 @@ class Port(object):
 
   def _pre_package(self):
     """Package the port,"""
-    self._make_target("package", BATCH=True)
+    return self._make_target("package", BATCH=True)
 
   @staticmethod
   def _post_package(_make, status):
@@ -332,7 +333,7 @@ class Port(object):
     """Build the requested targets."""
     from ..make import make_target
 
-    make_target(self, targets, **kwargs).connect(self._make)
+    return make_target(self, targets, **kwargs).connect(self._make)
 
   def _make(self, make):
     """Call the _post_[stage] function and finalise the stage."""

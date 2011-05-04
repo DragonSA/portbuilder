@@ -3,8 +3,9 @@
 from __future__ import absolute_import
 
 from ..env import env
+from ..signal import Signal
 
-__all__ = ["attr", "status", "pkg_version"]
+__all__ = ["Attr", "attr", "status", "pkg_version"]
 
 ports_attr = {
 # Port naming
@@ -170,59 +171,67 @@ def status(port, changed=False, cache=dict()):
         pstatus = max(pstatus, pkg_version(i, port.attr['pkgname']))
   return pstatus
 
-def attr(origin, callback, reget=False):
-  """Retrieve a ports attributes."""
+def attr(origin):
+  """Retrieve a ports attributes by using the attribute queue."""
   from ..job import AttrJob
   from ..queue import attr_queue
 
-  attr_queue.add(AttrJob(origin, callback, reget))
+  attr = Attr(origin)
+  attr_queue.add(AttrJob(attr))
+  return attr
 
-def attr_stage1(origin, callback):
-  """Retrieves the attributes for a given port."""
-  from ..make import make_target
+class Attr(Signal):
+  """Get the attributes for a given port"""
 
-  args = []  #: Arguments to be passed to the make target
-  # Pass all the arguments from ports_attr table
-  for i in ports_attr.itervalues():
-    args.append('-V')
-    args.append(i[0])
+  def __init__(self, origin):
+    Signal.__init__(self)
+    self.origin = origin
 
-  make_target(origin, args, True).connect(lambda x: attr_stage2(x, callback))
+  def get(self):
+    from ..make import make_target
 
-def attr_stage2(make, callback):
-  """Parse the attributes from a port and call the requested function."""
-  from ..make import SUCCESS
+    args = []  #: Arguments to be passed to the make target
+    # Pass all the arguments from ports_attr table
+    for i in ports_attr.itervalues():
+      args.append('-V')
+      args.append(i[0])
 
-  if make.wait() != SUCCESS:
-    from ..debug import error
-    error("libpb/port/mk/attr_stage2", ["Failed to get port %s attributes (err=%s)" % (make.origin, make.returncode),] + make.stderr.readlines())
-    callback(None)
-    return
+    return make_target(self.origin, args, True).connect(self.parse_attr)
 
-  errs = make.stderr.readlines()
-  if len(errs):
-    from ..debug import error
-    error("libpb/port/mk/attr_stage2", ["Non-fatal errors in port %s attributes" % make.origin,] + errs)
+  def parse_attr(self, make):
+    """Parse the attributes from a port and call the requested function."""
+    from ..make import SUCCESS
 
-  attr_map = {}
-  for name, value in ports_attr.iteritems():
-    if value[1] is str:
-      # Get the string (stripped)
-      attr_map[name] = make.stdout.readline().strip()
-    else:
-      # Pass the string through a special processing (like list/tuple)
-      attr_map[name] = value[1](make.stdout.readline().split())
-    # Apply all filters for the attribute
-    for i in value[2:]:
-      try:
-        attr_map[name] = i(attr_map[name])
-      except BaseException, e:
-        from ..debug import error
-        error("libpb/port/mk/attr_stage2", ("Failed to process port %s attributes" % make.origin,) + e.args)
-        callback(None)
-        return
+    if make.wait() != SUCCESS:
+      from ..debug import error
+      error("libpb/port/mk/attr_stage2", ["Failed to get port %s attributes (err=%s)" % (self.origin, make.returncode),] + make.stderr.readlines())
+      self.emit(self.origin, None)
+      return
 
-  callback(attr_map)
+    errs = make.stderr.readlines()
+    if len(errs):
+      from ..debug import error
+      error("libpb/port/mk/attr_stage2", ["Non-fatal errors in port %s attributes" % self.origin,] + errs)
+
+    attr_map = {}
+    for name, value in ports_attr.iteritems():
+      if value[1] is str:
+        # Get the string (stripped)
+        attr_map[name] = make.stdout.readline().strip()
+      else:
+        # Pass the string through a special processing (like list/tuple)
+        attr_map[name] = value[1](make.stdout.readline().split())
+      # Apply all filters for the attribute
+      for i in value[2:]:
+        try:
+          attr_map[name] = i(attr_map[name])
+        except BaseException, e:
+          from ..debug import error
+          error("libpb/port/mk/attr_stage2", ("Failed to process port %s attributes" % self.origin,) + e.args)
+          self.emit(self.origin, None)
+          return
+
+    self.emit(self.origin, attr_map)
 
 def pkg_version(old, new):
   """Compare two package names and indicates the difference."""

@@ -26,7 +26,7 @@ class PortCache(object):
       else:
         from .mk import attr
         self._waiters[origin] = [callback]
-        attr(origin, self._attr)
+        attr(origin).connect(self._attr)
 
   def _attr(self, origin, attr):
     """Use attr to create a port."""
