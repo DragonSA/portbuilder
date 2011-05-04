@@ -6,7 +6,7 @@ from . import event
 
 def stop(kill=False, kill_clean=False):
   """Stop building ports and cleanup."""
-  from os import killpg
+  from os import kill, killpg
   from signal import SIGTERM, SIGKILL
   from .builder import builders
   from .env import cpus, flags
@@ -16,6 +16,21 @@ def stop(kill=False, kill_clean=False):
     raise SystemExit(254)
 
   flags["mode"] = "clean"
+
+  kill_queues = (attr_queue,) + queues
+  if kill_clean:
+    kill_queues += (clean_queue,)
+
+  # Kill all active jobs
+  for queue in kill_queues:
+    for pid in (job.pid for job in queue.active if job.pid):
+      try:
+        if kill:
+          killpg(pid, SIGKILL)
+        else:
+          kill(pid, SIGTERM)
+      except OSError:
+        pass
 
   # Stop all queues
   attr_queue.load = 0
