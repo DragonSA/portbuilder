@@ -109,7 +109,7 @@ class QueueManager(object):
 attr_queue = QueueManager(_cpus * 2)
 clean_queue = QueueManager(1)
 
-config_queue = QueueManager(max(2, _cpus * 2))
+config_queue = QueueManager(1)
 checksum_queue = QueueManager(max(1, _cpus // 2))
 fetch_queue = QueueManager(1)
 build_queue = QueueManager(_cpus * 2)
