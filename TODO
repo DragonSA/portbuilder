@@ -33,6 +33,9 @@ Future release:
  - update @pkgdep lines
  - add `-x` (and `-X` recursive) to exclude ports
  - add package support (install from package)
+ - create custom Popen class (without exceptions on bad fork)
+ - fine tune queue lengths
+ - add option to set queue lengths
 
 0.1.9 - Milestone 9 (Sundry modules):
  - modules:
