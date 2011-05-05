@@ -91,11 +91,12 @@ class Port(object):
   # Build stage status flags
   ZERO     = 0
   CONFIG   = 1
-  CHECKSUM = 2
-  FETCH    = 3
-  BUILD    = 4
-  INSTALL  = 5
-  PACKAGE  = 6
+  DEPEND   = 2
+  CHECKSUM = 3
+  FETCH    = 4
+  BUILD    = 5
+  INSTALL  = 6
+  PACKAGE  = 7
 
   _config_lock = Lock()
   _checksum_lock = FileLock()
@@ -155,13 +156,14 @@ class Port(object):
     from time import time
     from ..job import StalledJob
 
-    pre_map = (self._pre_config, self._pre_checksum, self._pre_fetch,
-                self._pre_build, self._pre_install, self._pre_package)
+    pre_map = (self._pre_config, self._pre_depend, self._pre_checksum,
+               self._pre_fetch, self._pre_build, self._pre_install,
+               self._pre_package)
 
     if self.working or self.stage != stage - 1 or self.failed:
       # Don't do stage if not able to
       return False
-    if self.stage >= Port.CONFIG and self.dependancy.check(stage):
+    if self.stage >= Port.DEPEND and self.dependancy.check(stage):
       # Don't do stage if not configured
       return False
 
@@ -184,7 +186,7 @@ class Port(object):
         raise StalledJob()
       return self._make_target("config", pipe=False)
     else:
-      self._load_dependancy()
+      return True
 
   def _post_config(self, _make, status):
     """Refetch attr data if ports were configured successfully."""
@@ -198,14 +200,10 @@ class Port(object):
 
   def _load_attr(self, _origin, attr):
     """Load the attributes for this port."""
-    if attr is None:
-      self._finalise(self.stage, False)
-      return
-    else:
-      self.attr = attr
-      self._load_dependancy()
+    self.attr = attr
+    self._finalise(self.stage, attr is not None)
 
-  def _load_dependancy(self):
+  def _pre_depend(self):
     """Create a dependancy object for this port."""
     from os.path import join
     from ..env import flags
@@ -217,10 +215,6 @@ class Port(object):
     depends = ('depend_build', 'depend_extract', 'depend_fetch', 'depend_lib',
                'depend_run', 'depend_patch')
     self.dependancy = Dependancy(self, [self.attr[i] for i in depends])
-
-  def dependancy_loaded(self, status):
-    """Informs port that dependancy loading has completed."""
-    self._finalise(self.stage, status)
 
   def _pre_checksum(self):
     """Check if distfiles are available."""
@@ -339,7 +333,7 @@ class Port(object):
     """Call the _post_[stage] function and finalise the stage."""
     from ..make import SUCCESS
 
-    post_map = (self._post_config, self._post_checksum, self._post_fetch,
+    post_map = (self._post_config, None, self._post_checksum, self._post_fetch,
                 self._post_build, self._post_install, self._post_package)
     stage = self.stage
     status = post_map[stage](make, make.wait() == SUCCESS)

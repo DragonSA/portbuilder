@@ -167,7 +167,7 @@ class Dependancy(DependHandler):
         get_port(j[1], adder(j[0], i))
     if not self._loading:
       self._update_priority()
-      self.port.dependancy_loaded(True)
+      self.port._finalise(Port.DEPEND, True)
 
   def __repr__(self):
     return "<Dependancy(port=%s)>" % self.port.origin
@@ -193,7 +193,7 @@ class Dependancy(DependHandler):
         self.failed = True
     if self._loading == 0:
       self._update_priority()
-      self.port.dependancy_loaded(not self.failed)
+      self.port._finalise(Port.DEPEND, not self.failed)
 
   def get(self, typ=None):
     """Retrieve a list of dependancies."""
