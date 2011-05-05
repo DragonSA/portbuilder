@@ -151,7 +151,7 @@ class Top(Monitor):
           stop(kill=True)
         elif self._quit == 3:
           stop(kill=True, kill_clean=True)
-          exit(254)
+          raise SystemExit(254)
         continue
       elif ch == KEY_CLEAR or ch == ascii.FF:      # Redraw window
         self._stdscr.clear()
