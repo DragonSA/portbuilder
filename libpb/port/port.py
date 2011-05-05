@@ -127,6 +127,9 @@ class Port(object):
     self.dependancy = None
     self.dependant = Dependant(self)
 
+    if not len(self.attr["options"]) or self._check_config():
+      self.stage = Port.CONFIG
+
   def __repr__(self):
     return "<Port(%s)>" % (self.origin)
 
@@ -180,13 +183,10 @@ class Port(object):
 
   def _pre_config(self):
     """Configure the ports options."""
-    if len(self.attr["options"]) and not self._check_config():
-      if not self._config_lock.acquire():
-        from ..job import StalledJob
-        raise StalledJob()
-      return self._make_target("config", pipe=False)
-    else:
-      return True
+    if not self._config_lock.acquire():
+      from ..job import StalledJob
+      raise StalledJob()
+    return self._make_target("config", pipe=False)
 
   def _post_config(self, _make, status):
     """Refetch attr data if ports were configured successfully."""
