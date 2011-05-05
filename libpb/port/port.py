@@ -132,19 +132,19 @@ class Port(object):
 
   def clean(self):
     """Clean the ports working directory any log file."""
-    assert not self.working
     if self.stage >= Port.BUILD:
+      assert not self.working
       from ..job import CleanJob
       from ..queue import clean_queue
+      self.working = True
       clean_queue.add(CleanJob(self).connect(self._cleaned))
-    else:
-      self._cleaned()
 
   def _cleaned(self, job=None):
-    """Make the port as clean."""
+    """Mark the port as clean."""
+    self.working = False
     if job and not job.status:
       self.failed = True
-    if not self.failed and self.stage > Port.CONFIG:
+    if not self.failed and self.stage >= Port.BUILD:
       from os.path import isfile
       from os import unlink
 
