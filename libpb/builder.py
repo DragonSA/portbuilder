@@ -17,7 +17,7 @@ class ConfigBuilder(object):
 
   def __call__(self, port):
     """Configure the given port."""
-    self.add(port)
+    return self.add(port)
 
   def __repr__(self):
     return "<ConfigBuilder()>"
@@ -33,7 +33,6 @@ class ConfigBuilder(object):
       from .queue import config_queue
 
       # Create a config stage job and add it to the queue
-      port.stage_completed.connect(self._refresh_queues)
       job = PortJob(port, port.CONFIG)
       job.connect(self._cleanup)
       self.ports[port] = job
@@ -46,14 +45,51 @@ class ConfigBuilder(object):
       self.failed.append(job.port)
     del self.ports[job.port]
 
-  def _refresh_queues(self, port):
-    """Inform all queues that priorities may have changed."""
+class DependBuilder(object):
+  """Load port's dependancies."""
+
+  def __init__(self):
+    """Initialise depend builder"""
+    self.ports = {}
+    self.failed = []
+
+  def __call__(self, port):
+    """Add a port to have its dependancies loaded."""
+    return self.add(port)
+
+  def add(self, port):
+    """Add a port to have its dependancies loaded."""
+
+    if port in self.ports:
+      return self.ports[port]
+    else:
+      from .signal import Signal
+
+      sig = Signal()
+      self.ports[port] = sig
+      if port.stage < Port.CONFIG:
+        config_builder.add(port).connect(self._add)
+      else:
+        port.stage_completed.connect(self._loaded)
+        port.build_stage(Port.DEPEND)
+      return sig
+
+  def _add(self, job):
+    port = job.port
+    port.stage_completed.connect(self._loaded)
+    port.build_stage(Port.DEPEND)
+
+  def _loaded(self, port):
+    """Port has finished loading dependency."""
     from .queue import queues
 
-    port.stage_completed.disconnect(self._refresh_queues)
+    port.stage_completed.disconnect(self._loaded)
     if port.dependancy is not None:
       for queue in queues:
         queue.reorder()
+    if port.failed:
+      self.failed.append(port)
+    self.ports.pop(port).emit(port)
 
 class StageBuilder(object):
   """General port stage builder."""
@@ -68,7 +104,7 @@ class StageBuilder(object):
     self._pending = {}
     self._depends = {}
     self.stage = stage
-    self.queue = queues[stage - 1]
+    self.queue = queues[stage - 2]
     self.prev_builder = prev_builder
 
   def __call__(self, port):
@@ -94,17 +130,15 @@ class StageBuilder(object):
       self.ports[port] = job
 
       # Configure port then process it
-      if port.stage < port.CONFIG:
-        config_builder.add(port).connect(self._add)
+      if port.stage < port.DEPEND:
+        depend_builder.add(port).connect(self._add)
       else:
-        self._add(job)
+        self._add(port)
       return job
 
-  def _add(self, job):
+  def _add(self, port):
     """Add a ports dependancies and prior stage to be built."""
     from .env import flags
-
-    port = job.port
 
     # Don't try and build a port that has already failed (or cannot be built)
     if port.failed or port.dependancy.failed:
@@ -220,9 +254,10 @@ class StageBuilder(object):
       self.ports[port].stage_done()
 
 config_builder   = ConfigBuilder()
-checksum_builder = StageBuilder(Port.CHECKSUM, config_builder)
+depend_builder   = DependBuilder()
+checksum_builder = StageBuilder(Port.CHECKSUM, None)
 fetch_builder    = StageBuilder(Port.FETCH,    checksum_builder)
 build_builder    = StageBuilder(Port.BUILD,    fetch_builder)
 install_builder  = StageBuilder(Port.INSTALL,  build_builder)
 package_builder  = StageBuilder(Port.PACKAGE,  install_builder)
-builders = (config_builder, checksum_builder, fetch_builder, build_builder, install_builder, package_builder)
+builders = (config_builder, depend_builder, checksum_builder, fetch_builder, build_builder, install_builder, package_builder)
