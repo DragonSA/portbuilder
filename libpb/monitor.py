@@ -56,7 +56,7 @@ class Monitor(object):
     pass
 
 
-STAGE_NAME = ["config", "config", "chcksm", "fetch", "build", "install", "package", "error"]
+STAGE_NAME = ["config", "config", "depend", "chcksm", "fetch", "build", "install", "package", "error"]
 
 def get_name(port):
   """Get the ports name."""
@@ -85,7 +85,7 @@ class Top(Monitor):
     from .env import flags
 
     if flags["fetch_only"]:
-      self._stats = Statistics(("config", "checksum", "fetch"))
+      self._stats = Statistics(("config", "depend", "checksum", "fetch"))
     else:
       self._stats = Statistics()
 
@@ -176,6 +176,7 @@ class Top(Monitor):
     self._update_ports(scr)
     self._update_summary(scr)
     self._update_stage(scr, "Checksum", self._stats.checksum)
+    self._update_stage(scr, "Depend", self._stats.depend)
     self._update_stage(scr, "Fetch", self._stats.fetch)
     self._update_stage(scr, "Build", self._stats.build)
     self._update_stage(scr, "Install", self._stats.install)
@@ -338,6 +339,7 @@ class Statistics(object):
     self.time = time()
 
     self.config   = ([], [], [], [])
+    self.depend   = ([], (), (), [])
     self.checksum = ([], [], [], [])
     self.fetch    = ([], [], [], [])
     self.build    = ([], [], [], [])
@@ -350,15 +352,31 @@ class Statistics(object):
     self.clean[self.QUEUED].extend(i.port for i in queues.clean_queue.queue)
 
     if not stages:
-      stages = ("config", "checksum", "fetch", "build", "install", "package")
+      stages = ("config", "depend", "checksum", "fetch", "build", "install", "package")
 
     seen = set()
     seen.update(self.clean[self.ACTIVE])
     seen.update(self.clean[self.QUEUED])
     for stage in stages:
       stats = getattr(self, stage)
-      queue = getattr(queues, "%s_queue" % stage)
       builder = getattr(builders, "%s_builder" % stage)
+      if stage == "depend":
+        ports = list(builder.ports)
+        ports.sort(key=lambda x: x.working)
+        stats[self.ACTIVE].extend(ports)
+        self.summary[self.ACTIVE].extend(reversed(stats[self.ACTIVE]))
+        seen.update(stats[self.ACTIVE])
+
+        for port in builder.failed:
+          if port not in seen:
+            if port.failed:
+              stats[self.FAILED].append(port)
+            else:
+              seen.add(port)
+        self.summary[self.FAILED].extend(reversed(stats[self.FAILED]))
+        seen.update(stats[self.FAILED])
+        continue
+      queue = getattr(queues, "%s_queue" % stage)
 
       stats[self.ACTIVE].extend((i.port for i in queue.active))
       self.summary[self.ACTIVE].extend(reversed(stats[self.ACTIVE]))
@@ -373,7 +391,7 @@ class Statistics(object):
       ports.sort(key=lambda x: -x.dependant.priority)
       for port in ports:
         if port not in seen and not port.failed:
-          if stage == "install" and port.stage == port.CONFIG:
+          if stage == "install" and port.stage == port.DEPEND:
             continue
           stats[self.PENDING].append(port)
       self.summary[self.PENDING].extend(reversed(stats[self.PENDING]))
