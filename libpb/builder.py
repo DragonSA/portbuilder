@@ -14,6 +14,7 @@ class ConfigBuilder(object):
     """Initialise config builder."""
     self.ports = {}
     self.failed = []
+    self.stage = Port.CONFIG
 
   def __call__(self, port):
     """Configure the given port."""
@@ -52,6 +53,7 @@ class DependBuilder(object):
     """Initialise depend builder"""
     self.ports = {}
     self.failed = []
+    self.stage = Port.DEPEND
 
   def __call__(self, port):
     """Add a port to have its dependancies loaded."""
