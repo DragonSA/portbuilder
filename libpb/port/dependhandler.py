@@ -19,6 +19,7 @@ class DependHandler(object):
 
   STAGE2DEPENDS = {
     Port.CONFIG:   (),                           # The config dependancies
+    Port.DEPEND:   (),                           # The depend dependancies
     Port.CHECKSUM: (),                           # The checksum dependancies
     Port.FETCH:    (FETCH,),                     # The fetch dependancies
     Port.BUILD:    (EXTRACT, PATCH, LIB, BUILD), # The build dependancies
@@ -167,7 +168,7 @@ class Dependancy(DependHandler):
         get_port(j[1], adder(j[0], i))
     if not self._loading:
       self._update_priority()
-      self.port._finalise(Port.DEPEND, True)
+      self.port._finalise(Port.CONFIG, True)
 
   def __repr__(self):
     return "<Dependancy(port=%s)>" % self.port.origin
@@ -193,7 +194,7 @@ class Dependancy(DependHandler):
         self.failed = True
     if self._loading == 0:
       self._update_priority()
-      self.port._finalise(Port.DEPEND, not self.failed)
+      self.port._finalise(Port.CONFIG, not self.failed)
 
   def get(self, typ=None):
     """Retrieve a list of dependancies."""
