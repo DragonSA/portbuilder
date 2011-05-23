@@ -1,5 +1,6 @@
 X.Y.Z: YYYY MMM DD:
  * Implemented a kqueue event handler
+ * Remove the use of callback (use Signal instead)
 
 0.1.2 - 2011 April 16:
  * Rename to portbuilder (and pyport->libpb)

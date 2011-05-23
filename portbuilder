@@ -91,7 +91,7 @@ def main():
 
   # Execute the primary build target
   for port in args:
-    get_port(port, delegate)
+    get_port(port).connect(delegate)
 
   if not flags["no_op_print"]:
     Top().start()

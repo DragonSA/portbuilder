@@ -15,32 +15,38 @@ class PortCache(object):
   def __len__(self):
     return len(self._ports)
 
-  def get_port(self, origin, callback):
+  def get_port(self, origin):
     """Get a port and callback with it."""
     if origin in self._ports:
       from ..event import post_event
-      post_event(callback, self._ports[origin])
+      from ..signal import Signal
+
+      signal = Signal()
+      post_event(signal.emit, self._ports[origin])
+      return signal
     else:
       if origin in self._waiters:
-        self._waiters[origin].append(callback)
+        return self._waiters[origin]
       else:
         from .mk import attr
-        self._waiters[origin] = [callback]
+        from ..signal import Signal
+
+        signal = Signal()
+        self._waiters[origin] = signal
         attr(origin).connect(self._attr)
+        return signal
 
   def _attr(self, origin, attr):
     """Use attr to create a port."""
-    from ..event import post_event
     from .port import Port
 
-    waiters = self._waiters.pop(origin)
+    signal = self._waiters.pop(origin)
     if attr is None:
       port = origin
     else:
       port = Port(origin, attr)
     self._ports[origin] = port
-    for callback in waiters:
-      post_event(callback, port)
+    signal.emit(port)
 
 _cache = PortCache()
 

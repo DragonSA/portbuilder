@@ -165,7 +165,7 @@ class Dependancy(DependHandler):
     for i in range(len(depends)):
       for j in depends[i]:
         self._loading += 1
-        get_port(j[1], adder(j[0], i))
+        get_port(j[1]).connect(adder(j[0], i))
     if not self._loading:
       self._update_priority()
       self.port._finalise(Port.CONFIG, True)
