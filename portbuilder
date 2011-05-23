@@ -182,8 +182,8 @@ def gen_parser():
   parser.add_option("-C", dest="chroot", action="store", type="string",
                     default="", help="Build ports in chroot environment.")
 
-  parser.add_option("-d", "--debug", action="store_true", default=True,
-                    help="Turn on extra diagnostic information (slower)")
+  parser.add_option("-d", "--debug", action="store_false", default=True,
+                    help="Turn off extra diagnostic information (faster)")
 
   parser.add_option("-D", dest="make_env", action="append", metavar="variable",
                     default=[], help="Define the given variable for make (i.e."\
