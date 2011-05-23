@@ -9,6 +9,24 @@ __all__ = ["SUCCESS", "make_target"]
 
 SUCCESS = 0
 
+import subprocess
+# HACK !!!
+def _eintr_retry_call(func, *args):
+  """HACK: do not wait for subprocesses to report ready.
+
+  subprocess uses read to get subprocess status, prevent it from being called"""
+  if func.__name__ == "read":
+    return ""
+  while True:
+    try:
+      return func(*args)
+    except OSError, e:
+      if e.errno == errno.EINTR:
+        continue
+      raise
+subprocess._eintr_retry_call = _eintr_retry_call
+del subprocess, _eintr_retry_call
+
 def env2args(env):
   """Convert environment variables into make arguments."""
   for key, value in env.items():
@@ -98,17 +116,12 @@ class PopenNone(Signal):
   def __init__(self, args, origin):
     from .env import flags
     from .event import post_event
+    from subprocess import list2cmdline
 
     Signal.__init__(self)
     self.origin = origin
     if flags["no_op_print"]:
-      argstr = []
-      for i in args:
-        argstr.append(i.replace("\\", "\\\\").replace('"', '\\"').\
-                        replace("'", "\\'").replace('\n', '\\\n'))
-        if ' ' in i or '\t' in i or '\n' in i:
-          argstr[-1] = '"%s"' % argstr[-1]
-      print " ".join(argstr)
+      print list2cmdline(args)
 
     post_event(self.emit, self)
 
