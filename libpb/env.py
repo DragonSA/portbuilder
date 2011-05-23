@@ -34,15 +34,65 @@ flags = {
 env_master = {}
 env_master.update(env)
 
-def _check():
+def _sysctl(name):
+  from subprocess import Popen, PIPE
+
+  # TODO: create ctypes wrapper around sysctl(3)
+  sysctl = Popen(("sysctl", "-n", name), stdout=PIPE, stderr=PIPE, close_fds=True)
+  if sysctl.wait() == 0:
+    return sysctl.stdout.read()[:-1]
+  else:
+    return ""
+
+def _get_os_version():
+  """Get the OS Version.  Based on how ports/Mk/bsd.port.mk sets OSVERSION"""
+  # XXX: platform specific code
+  from os.path import isfile
+  from re import MULTILINE, search
+  from subprocess import Popen, PIPE
+
+  for path in ("/usr/include/sys/param.h", "/usr/src/sys/sys/param.h"):
+    if isfile(path):
+      break
+  else:
+    path = None
+
+  if path:
+    # We have a param.h
+    osversion = search('^#define\s+__FreeBSD_version\s+([0-9]*).*$', open(path, "r").read(), MULTILINE)
+    if osversion:
+      return osversion.groups()[0]
+
+  return _sysctl("kern.osreldate")
+
+def _setup_env():
   """Update the env dictonary based on this programs environment flags."""
-  from os import environ
+  from os import environ, getuid, uname
 
   for i in env:
     if i in environ:
       env[i] = environ[i]
   # TODO: set env_master from make -V ...
 
+  # Cleanup some env variables
   if env["PORTSDIR"][-1] == '/':
     env["PORTSDIR"] = env["PORTSDIR"][:-1]
-_check()
+
+  # The following variables are conditionally set in ports/Mk/bsd.port.mk
+  uname = uname()
+  environ["ARCH"] = uname[4]
+  environ["OPSYS"] = uname[0]
+  environ["OSREL"] = uname[2].split('-', 1)[0].split('(', 1)[0]
+  environ["OSVERSION"] = _get_os_version()
+  if uname[4] in ("amd64", "ia64"):
+    from subprocess import Popen, PIPE
+    # TODO: create ctypes wrapper around sysctl(3)
+    environ["HAVE_COMPAT_IA32_KERN"] = "YES" if _sysctl("compat.ia32.maxvmem") else ""
+  environ["LINUX_OSRELEASE"] = _sysctl("compat.linux.osrelease")
+  environ["UID"] = str(getuid())
+  environ["CONFIGURE_MAX_CMD_LEN"] = _sysctl("kern.argmax")
+
+  # The following variables are also conditionally set in ports/Mk/bsd.port.subdir.mk
+  environ["_OSVERSION"] = uname[2]
+
+_setup_env()
