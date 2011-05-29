@@ -89,14 +89,15 @@ class Port(object):
   NEWER   = 3
 
   # Build stage status flags
-  ZERO     = 0
-  CONFIG   = 1
-  DEPEND   = 2
-  CHECKSUM = 3
-  FETCH    = 4
-  BUILD    = 5
-  INSTALL  = 6
-  PACKAGE  = 7
+  ZERO       = 0
+  CONFIG     = 1
+  DEPEND     = 2
+  CHECKSUM   = 3
+  FETCH      = 4
+  BUILD      = 5
+  INSTALL    = 6
+  PACKAGE    = 7
+  PKGINSTALL = 8
 
   _config_lock = Lock()
   _checksum_lock = FileLock()
@@ -161,7 +162,7 @@ class Port(object):
 
     pre_map = (self._pre_config, self._pre_depend, self._pre_checksum,
                self._pre_fetch, self._pre_build, self._pre_install,
-               self._pre_package)
+               self._pre_package, None)
 
     if self.working or self.stage != stage - 1 or self.failed:
       # Don't do stage if not able to
@@ -323,6 +324,76 @@ class Port(object):
     """Indicate package status."""
     return status
 
+  def pkginstall(self):
+    """Prepare to install the port from it's package."""
+    from os.path import isfile
+    from ..env import flags
+    from ..make import make_target
+
+    if self.working or not isfile(self.attr["pkgfile"]):
+      return False
+
+    self.stage = self.PKGINSTALL - 1
+    self.working = True
+    if self.install_status > self.ABSENT:
+      return make_target(self, "deinstall").connect(self._pkginstall)
+    else:
+      self._pkginstall()
+
+  def _pkginstall(self, make=None):
+    """Install the port from it's package."""
+    from ..env import flags
+    from ..make import SUCCESS
+
+    if make is not None:
+      status = make.wait() == SUCCESS:
+      if not status:
+        self.stage = self.PKGINSTALL
+        self.working = False
+        self.stage_completed.emit(self)
+      self.dependant.state_changed()
+      if not status:
+        return
+
+    if flags["chroot"]:
+      args = ("pkg_add", "-C", flags["chroot"], pkgfile)
+    else:
+      args = ("pkg_add", pkgfile)
+
+    if flags["noop"]:
+      from ..make import PopenNone
+
+      pkg_add = PopenNone(args, self)
+    else:
+      from subprocess import PIPE
+      from ..make import Popen
+
+      logfile = open(self.logfile, "a")
+      pkg_add = Popen(args, self, stdin=PIPE, stdout=logfile, stderr=logfile)
+      pkg_add.stdin.close()
+    return pkg_add.connect(self._post_pkginstall)
+
+  def _post_pkginstall(self, pkg_add):
+    """Report if the port successfully installed from it's package."""
+    from ..env import flags
+    from ..make import SUCCESS
+    from .mk import status
+
+    self.working = False
+    if flags["noop"]:
+      success = True
+      self.install_status = self.CURRENT
+    else:
+      success = make.wait() == SUCCESS
+      if success:
+        self.install_status = status(self, True)
+
+    self.failed = not success
+    self.stage = self.PKGINSTALL
+    self.stage_completed.emit(self)
+
+    self.dependant.status_changed()
+
   def _make_target(self, targets, **kwargs):
     """Build the requested targets."""
     from ..make import make_target
@@ -334,7 +405,7 @@ class Port(object):
     from ..make import SUCCESS
 
     post_map = (self._post_config, None, self._post_checksum, self._post_fetch,
-                self._post_build, self._post_install, self._post_package)
+                self._post_build, self._post_install, self._post_package, None)
     stage = self.stage
     status = post_map[stage](make, make.wait() == SUCCESS)
     if status is not None:
