@@ -19,6 +19,7 @@ ports_attr = {
 "pkgname":   ["PKGNAME",       str], # The port's package name
 "pkgprefix": ["PKGNAMEPREFIX", str], # The port's package prefix
 "pkgsuffix": ["PKGNAMESUFFIX", str], # The port's package suffix
+"pkgfile":   ["PKGFILE",       str], # The port's package file
 
 # Port's dependancies and conflicts
 "depends":        ["_DEPEND_DIRS",    tuple], # The port's dependency list
