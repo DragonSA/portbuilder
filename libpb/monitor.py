@@ -56,7 +56,7 @@ class Monitor(object):
     pass
 
 
-STAGE_NAME = ["config", "config", "depend", "chcksm", "fetch", "build", "install", "package", "error"]
+STAGE_NAME = ["config", "config", "depend", "chcksm", "fetch", "build", "install", "package", "pkginst", "error"]
 
 def get_name(port):
   """Get the ports name."""
