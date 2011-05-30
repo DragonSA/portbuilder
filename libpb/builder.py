@@ -5,7 +5,8 @@ from __future__ import absolute_import
 from .port.port import Port
 
 __all__ = ["builders", "config_builder", "checksum_builder", "fetch_builder",
-           "build_builder", "install_builder", "package_builder"]
+           "build_builder", "install_builder", "package_builder",
+           "pkginstall_builder"]
 
 class ConfigBuilder(object):
   """Configure ports."""
@@ -58,6 +59,9 @@ class DependBuilder(object):
   def __call__(self, port):
     """Add a port to have its dependancies loaded."""
     return self.add(port)
+
+  def __repr__(self):
+    return "<DependBuilder()>"
 
   def add(self, port):
     """Add a port to have its dependancies loaded."""
@@ -163,7 +167,7 @@ class StageBuilder(object):
       self._depends[p].add(port)
 
     # Build the previous stage if needed
-    if (port.install_status <= flags["stage"] or port.force) and port.stage < self.stage - 1:
+    if self.prev_builder and (port.install_status <= flags["stage"] or port.force) and port.stage < self.stage - 1:
       self._pending[port] += 1
       self.prev_builder.add(port).connect(self._stage_resolv)
 
@@ -236,7 +240,7 @@ class StageBuilder(object):
         assert(port.stage == port.INSTALL)
         self._build_port(port)
     else:
-      # Checks for self.stage <= port.INSTALL
+      # Checks for self.stage <= port.INSTALL || self.stage == port.PKGINSTALL
       if port.dependant.status == port.dependant.RESOLV:
         # port does not need to build
         self.ports[port].stage_done()
@@ -249,17 +253,18 @@ class StageBuilder(object):
 
   def _build_port(self, port):
     """Actually build the port."""
-    assert port.stage >= self.stage - 1
+    assert port.stage >= self.stage - 1 or self.stage == port.PKGINSTALL
     if port.stage < self.stage:
       self.queue.add(self.ports[port])
     else:
       self.ports[port].stage_done()
 
-config_builder   = ConfigBuilder()
-depend_builder   = DependBuilder()
-checksum_builder = StageBuilder(Port.CHECKSUM, None)
-fetch_builder    = StageBuilder(Port.FETCH,    checksum_builder)
-build_builder    = StageBuilder(Port.BUILD,    fetch_builder)
-install_builder  = StageBuilder(Port.INSTALL,  build_builder)
-package_builder  = StageBuilder(Port.PACKAGE,  install_builder)
-builders = (config_builder, depend_builder, checksum_builder, fetch_builder, build_builder, install_builder, package_builder)
+config_builder     = ConfigBuilder()
+depend_builder     = DependBuilder()
+checksum_builder   = StageBuilder(Port.CHECKSUM,   None)
+fetch_builder      = StageBuilder(Port.FETCH,      checksum_builder)
+build_builder      = StageBuilder(Port.BUILD,      fetch_builder)
+install_builder    = StageBuilder(Port.INSTALL,    build_builder)
+package_builder    = StageBuilder(Port.PACKAGE,    install_builder)
+pkginstall_builder = StageBuilder(Port.PKGINSTALL, None)
+builders = (config_builder, depend_builder, checksum_builder, fetch_builder, build_builder, install_builder, package_builder, pkginstall_builder)
