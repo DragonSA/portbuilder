@@ -133,7 +133,7 @@ class EventManager(object):
 
   def _queue(self, timeout=None):
     """Run any events returned by kqueue."""
-    from select import kevent, KQ_FILTER_PROC, KQ_NOTE_EXIT, KQ_EV_DELETE
+    from select import KQ_FILTER_PROC, KQ_NOTE_EXIT
 
     for ev in self._kq.control(None, 2, timeout):
       event = (ev.ident, ev.filter)

@@ -130,7 +130,6 @@ class Top(Monitor):
   def _userinput(self):
     """Get user input and change display options."""
     from curses import KEY_CLEAR, KEY_NPAGE, KEY_PPAGE, ascii
-    from sys import stdin, stderr
 
     run = False
     while True:
