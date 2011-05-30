@@ -35,6 +35,7 @@ env_master = {}
 env_master.update(env)
 
 def _sysctl(name):
+  """Retrieve the string value of a sysctlbyname(3)."""
   from subprocess import Popen, PIPE
 
   # TODO: create ctypes wrapper around sysctl(3)

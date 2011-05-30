@@ -188,6 +188,7 @@ class Attr(Signal):
     self.origin = origin
 
   def get(self):
+    """Get the attributes from the port by invoking make"""
     from ..make import make_target
 
     args = []  #: Arguments to be passed to the make target

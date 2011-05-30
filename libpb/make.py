@@ -101,6 +101,7 @@ class Popen(_Popen, Signal):
     event(self, "p-").connect(self._emit)
 
   def _emit(self):
+    """Emit signal after process termination."""
     self.emit(self)
 
 class PopenNone(Signal):
