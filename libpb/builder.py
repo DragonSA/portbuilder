@@ -8,6 +8,40 @@ __all__ = ["builders", "config_builder", "checksum_builder", "fetch_builder",
            "build_builder", "install_builder", "package_builder",
            "pkginstall_builder"]
 
+class DependLoader(object):
+  """Resolve a port as a dependency."""
+
+  def __init__(self):
+    self.ports = {}
+
+  def __call__(self, port):
+    if port not in self.ports:
+      from .env import flags
+      from .signal import Signal
+
+      self.ports[port] = Signal()
+      self._resolve(port, flags["depend"][0])
+    return self.ports[port]
+
+  def _clean(self, job):
+    """Cleanup after a port has finished"""
+    self.ports.pop(job.port)
+
+  def _resolve(self, port, method):
+    if method == "build":
+      from .env import flags
+      if flags["package"]:
+        # Connect to install job and give package_builder ownership (cleanup)
+        job = install_builder.add(p)
+        package_builder(p)
+      else:
+        job = install_builder(p)
+    elif method == "package":
+      job = pkginstall_builder(p)
+    else:
+      assert not "Unknown port resolve method"
+    job.connect(self._clean).connect(self.ports[port].emit)
+
 class ConfigBuilder(object):
   """Configure ports."""
 
