@@ -135,7 +135,7 @@ class Port(object):
     return "<Port(%s)>" % (self.origin)
 
   def clean(self):
-    """Clean the ports working directory any log file."""
+    """Clean the ports working directory and log file."""
     if self.stage >= Port.BUILD:
       assert not self.working
       from ..job import CleanJob
@@ -338,7 +338,7 @@ class Port(object):
     if self.install_status > self.ABSENT:
       return make_target(self, "deinstall").connect(self._pkginstall)
     else:
-      self._pkginstall()
+      return self._pkginstall()
 
   def _pkginstall(self, make=None):
     """Install the port from it's package."""
