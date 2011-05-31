@@ -139,7 +139,7 @@ def run_loop(no_port, options):
     from sys import stderr
     from traceback import format_list, format_exc
     from libpb.debug import exception
-    from libpb.event import alarm, post_event, traceback
+    from libpb.event import post_event, traceback
     from libpb import stop
 
     msg = ""

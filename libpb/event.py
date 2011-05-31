@@ -39,6 +39,18 @@ class EventManager(object):
     return self._alarms
 
   def event(self, obj, mode="r", clear=False, data=0):
+    """Add or remove a kevent monitor.
+
+    Current events are:
+      r - Read a file descriptor
+      w - Write to a file descriptor
+      t - Periodic timer callback (data=period)
+      p - Monitor subprocess
+        f - Inform when subprocess forks
+        e - Inform when subprocess uses execve(2)
+        - - Informs when subprocess dies
+      s - Signal handling
+    """
     import select
     from select import kevent, KQ_EV_ADD, KQ_EV_ENABLE, KQ_EV_DELETE
     note = 0
@@ -58,7 +70,7 @@ class EventManager(object):
       elif "-" in mode[1:]:
         # HACK: work around python bug!!!
         note -= select.KQ_NOTE_EXIT
-    elif mode.startswith("s"):
+    elif mode == "s":
       event = (obj, select.KQ_FILTER_SIGNAL)
     else:
       raise ValueError("unknown event mode")
@@ -133,7 +145,7 @@ class EventManager(object):
 
   def _queue(self, timeout=None):
     """Run any events returned by kqueue."""
-    from select import kevent, KQ_FILTER_PROC, KQ_NOTE_EXIT, KQ_EV_DELETE
+    from select import KQ_FILTER_PROC, KQ_NOTE_EXIT
 
     for ev in self._kq.control(None, 2, timeout):
       event = (ev.ident, ev.filter)

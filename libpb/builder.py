@@ -77,6 +77,7 @@ class DependBuilder(object):
       return sig
 
   def _add(self, job):
+    """Load a ports dependencies."""
     port = job.port
     port.stage_completed.connect(self._loaded)
     port.build_stage(Port.DEPEND)

@@ -4,6 +4,7 @@ from __future__ import absolute_import
 
 from subprocess import Popen as _Popen
 from .signal import Signal
+import errno
 
 __all__ = ["SUCCESS", "make_target"]
 
@@ -101,6 +102,7 @@ class Popen(_Popen, Signal):
     event(self, "p-").connect(self._emit)
 
   def _emit(self):
+    """Emit signal after process termination."""
     self.emit(self)
 
 class PopenNone(Signal):

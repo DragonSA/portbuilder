@@ -35,6 +35,7 @@ env_master = {}
 env_master.update(env)
 
 def _sysctl(name):
+  """Retrieve the string value of a sysctlbyname(3)."""
   from subprocess import Popen, PIPE
 
   # TODO: create ctypes wrapper around sysctl(3)
@@ -49,7 +50,6 @@ def _get_os_version():
   # XXX: platform specific code
   from os.path import isfile
   from re import MULTILINE, search
-  from subprocess import Popen, PIPE
 
   for path in ("/usr/include/sys/param.h", "/usr/src/sys/sys/param.h"):
     if isfile(path):
@@ -85,7 +85,6 @@ def _setup_env():
   environ["OSREL"] = uname[2].split('-', 1)[0].split('(', 1)[0]
   environ["OSVERSION"] = _get_os_version()
   if uname[4] in ("amd64", "ia64"):
-    from subprocess import Popen, PIPE
     # TODO: create ctypes wrapper around sysctl(3)
     environ["HAVE_COMPAT_IA32_KERN"] = "YES" if _sysctl("compat.ia32.maxvmem") else ""
   environ["LINUX_OSRELEASE"] = _sysctl("compat.linux.osrelease")
