@@ -1,7 +1,7 @@
  - Coding standard:
  - Handle appropriate exceptions
  - Log all relevant events
- - Document all classes, methods, functions and (global|class) variables
+ * Document all classes, methods, functions and (global|class) variables
  - Specify a public API (via __all___)
 
 TEMP:
@@ -14,7 +14,7 @@ Future release:
  - Check spelling for all documentation
  - Increase level of logging
  * Prevent multiple fetches of the same file!!!
- - When segterm, make sure logging is done properly
+ * When segterm, make sure logging is done properly
  - Move to the python 2.6 naming and styles (and make compatible with 3)
  - Implement proper recording of ports installation (i.e. when they fail)
  * Check if KeyboardInterrupt is appropriate
@@ -22,18 +22,16 @@ Future release:
  - Refactor:
    - Break ports into its own libraries
    - Try isolate system and ports dependant code
- - PortCache:
-   - Move to DictMixin
  - use kqueue to monitor Makefile changes
  - move DependHandler to using signals (for status changed)
  - support DESTDIR...
  * profile (and make it easy to do so)
- - speed up port.mk.attr (reduce subcalls from make -V)
+ * speed up port.mk.attr (reduce subcalls from make -V)
  - handle alternative dependancies
  - update @pkgdep lines
  - add `-x` (and `-X` recursive) to exclude ports
  - add package support (install from package)
- - create custom Popen class (without exceptions on bad fork)
+ * create custom Popen class (without exceptions on bad fork)
  - fine tune queue lengths
  - add option to set queue lengths
 
@@ -174,7 +172,7 @@ Future release:
  * PortCache:
    * Minimise duplicate job requests
  + Port:
-   - Add clean target (and have a failed port clean itself...)
+   * Add clean target (and have a failed port clean itself...)
    * Use batch mode for all stages except config
    * Precleaning
    * Only clean port (don't do recursive cleaning)
@@ -253,8 +251,8 @@ Future release:
  * Allow KeyboardInterrupt to terminate program:
 
 0.1.3 - Milestone 3 (Target Builders):
- - Finish call documentation
- - Move type() checks to isinstance
+ * Finish call documentation
+ * Move type() checks to isinstance
  - Make sure all variable comments have a #:
  * Port:
    * Getter for origin
@@ -271,18 +269,18 @@ Future release:
    * Add logging support (pipe redirection)
    * Condense functionality
  * Create ordering logic for building (and resolving dependants)
- - Remove make_target from global import
+ * Remove make_target from global import
  * Fix PORTSDIR not having a trailing /
  - signal based updates of builders and queues:
    - make top monitor use signals
- - fully implement setup (distutils) script (distutils/apiref)
+ * fully implement setup (distutils) script (distutils/apiref)
  - make port/mk to using pkg_* interface (vs direct file inspection)
  - make compatible with pkgng
  - display skipped ports (with toggle)
- - procedures
+ * procedures
  - interactive builds
  - improve port/mk.py
- - unset environ flags from make (gmake)
+ * unset environ flags from make (gmake)
 
 0.1.2 - Milestone 2 (Dependant Handler):
  * Port:
