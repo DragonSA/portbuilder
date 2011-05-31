@@ -1,4 +1,4 @@
-# New ports collection Makefile for:	portbuilder-devel
+# New ports collection Makefile for:	portbuilder
 # Date created:				2011/04/03
 # Whom:					David Naylor <naylor.b.david@gmail.com>
 #
@@ -8,7 +8,6 @@ PORTNAME=	portbuilder
 DISTVERSION=	0.1.2
 CATEGORIES=	ports-mgmt
 MASTER_SITES=	http://cloud.github.com/downloads/DragonSA/portbuilder/
-PKGNAMESUFFIX=	-devel
 
 MAINTAINER=	naylor.b.david@gmail.com
 COMMENT=	Concurrent FreeBSD port builder
