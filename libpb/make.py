@@ -41,15 +41,15 @@ def make_target(port, targets, pipe=None, **kwargs):
   from subprocess import PIPE
   from .env import env as environ, env_master, flags
 
-  if type(port) is str:
+  if isinstance(port, str):
     assert pipe is True
     origin = port
   else:
     origin = port.origin
 
-  if type(targets) is str:
+  if isinstance(targets, str):
     targets = (targets,)
-  if type(targets) != tuple:
+  elif not isinstance(targets, tuple):
     targets = tuple(targets)
 
   env = {}
