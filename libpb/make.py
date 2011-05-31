@@ -4,6 +4,7 @@ from __future__ import absolute_import
 
 from subprocess import Popen as _Popen
 from .signal import Signal
+import errno
 
 __all__ = ["SUCCESS", "make_target"]
 
