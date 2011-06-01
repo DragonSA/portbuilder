@@ -138,10 +138,15 @@ class Port(object):
     """Clean the ports working directory and log file."""
     if self.stage >= Port.BUILD:
       assert not self.working
+      from time import time
       from ..job import CleanJob
       from ..queue import clean_queue
-      self.working = True
-      clean_queue.add(CleanJob(self).connect(self._cleaned))
+
+      self.working = time()
+      if self.stage != Port.PKGINSTALL:
+        clean_queue.add(CleanJob(self).connect(self._cleaned))
+      else:
+        self._cleaned()
 
   def _cleaned(self, job=None):
     """Mark the port as clean."""
@@ -327,6 +332,7 @@ class Port(object):
   def pkginstall(self):
     """Prepare to install the port from it's package."""
     from os.path import isfile
+    from time import time
     from ..env import flags
     from ..make import make_target
 
@@ -334,7 +340,7 @@ class Port(object):
       return False
 
     self.stage = self.PKGINSTALL - 1
-    self.working = True
+    self.working = time()
     if self.install_status > self.ABSENT:
       return make_target(self, "deinstall").connect(self._pkginstall)
     else:
@@ -346,21 +352,21 @@ class Port(object):
     from ..make import SUCCESS
 
     if make is not None:
-      status = make.wait() == SUCCESS:
+      status = make.wait() == SUCCESS
       if not status:
         self.stage = self.PKGINSTALL
         self.working = False
         self.stage_completed.emit(self)
-      self.dependant.state_changed()
+      self.dependant.status_changed()
       if not status:
         return
 
     if flags["chroot"]:
-      args = ("pkg_add", "-C", flags["chroot"], pkgfile)
+      args = ("pkg_add", "-C", flags["chroot"], self.attr["pkgfile"])
     else:
-      args = ("pkg_add", pkgfile)
+      args = ("pkg_add", self.attr["pkgfile"])
 
-    if flags["noop"]:
+    if flags["no_op"]:
       from ..make import PopenNone
 
       pkg_add = PopenNone(args, self)
@@ -368,7 +374,7 @@ class Port(object):
       from subprocess import PIPE
       from ..make import Popen
 
-      logfile = open(self.logfile, "a")
+      logfile = open(self.log_file, "a")
       pkg_add = Popen(args, self, stdin=PIPE, stdout=logfile, stderr=logfile)
       pkg_add.stdin.close()
     return pkg_add.connect(self._post_pkginstall)
@@ -380,11 +386,11 @@ class Port(object):
     from .mk import status
 
     self.working = False
-    if flags["noop"]:
+    if flags["no_op"]:
       success = True
       self.install_status = self.CURRENT
     else:
-      success = make.wait() == SUCCESS
+      success = pkg_add.wait() == SUCCESS
       if success:
         self.install_status = status(self, True)
 
