@@ -169,14 +169,14 @@ def gen_parser():
                     "-aoq`)")
 
   parser.add_option("--arch", action="store", type="string", default="",
-                    help="Set the architecture environment variables (for "\
+                    help="Set the architecture environment variables (for " \
                     "cross building)")
 
   parser.add_option("-b", "--batch", dest="batch", action="store_true",
                     default=False, help="Batch mode.  Skips the config stage.")
 
   parser.add_option("-c", "--config", action="callback", callback=parse_config,
-                    type="string", help="Specify which ports to configure "\
+                    type="string", help="Specify which ports to configure " \
                     "(none, all, newer, changed) [default: changed]")
 
   parser.add_option("-C", dest="chroot", action="store", type="string",
@@ -184,6 +184,10 @@ def gen_parser():
 
   parser.add_option("-d", "--debug", action="store_false", default=True,
                     help="Turn off extra diagnostic information (faster)")
+
+  parser.add_option("--depend", action="store", type="string", default="",
+                    help="Comma seperated methods to resolve dependencies " \
+                    "(build, package) [default=build]")
 
   parser.add_option("-D", dest="make_env", action="append", metavar="variable",
                     default=[], help="Define the given variable for make (i.e."\
@@ -274,6 +278,16 @@ def set_options(options):
   # Debug mode
   if options.debug:
     flags["debug"] = True
+
+  # Depend resolve methods
+  if options.depend:
+    depend = [i.strip() for i in options.depend.split(",")]
+    for i in depend:
+      if depend.count(i) > 1:
+        options.parser.error("multiple depend method specified")
+      elif i not in ("build", "package"):
+        options.parser.error("unknown depend method")
+    flags["depend"] = depend
 
   # Add all -D options
   for i in options.make_env:

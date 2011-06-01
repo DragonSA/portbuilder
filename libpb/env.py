@@ -18,17 +18,18 @@ env = {
 }
 
 flags = {
-  "chroot"      : "",                  # Chroot directory of system
-  "config"      : "changed",           # Configure ports based on criteria
-  "debug"       : False,               # Print extra debug messages
-  "fetch_only"  : False,               # Only fetch ports
-  "log_dir"     : "/tmp/portbuilder",  # Directory for logging information
-  "log_file"    : "portbuilder",       # General log file
-  "mode"        : "install",           # Mode of operation
-  "no_op"       : False,               # Do nothing
-  "no_op_print" : False,               # Print commands that would have been executed
-  "package"     : False,               # Package all installed ports
-  "stage"       : _P.ABSENT            # The minimum level for build
+  "chroot"      : "",                   # Chroot directory of system
+  "config"      : "changed",            # Configure ports based on criteria
+  "debug"       : False,                # Print extra debug messages
+  "depend"      : ["package"],          # Resolve dependencies methods
+  "fetch_only"  : False,                # Only fetch ports
+  "log_dir"     : "/tmp/portbuilder",   # Directory for logging information
+  "log_file"    : "portbuilder",        # General log file
+  "mode"        : "install",            # Mode of operation
+  "no_op"       : False,                # Do nothing
+  "no_op_print" : False,                # Print commands that would have been executed
+  "package"     : False,                # Package all installed ports
+  "stage"       : _P.ABSENT             # The minimum level for build
 }
 
 env_master = {}
