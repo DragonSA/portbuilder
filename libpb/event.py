@@ -108,7 +108,12 @@ class EventManager(object):
     try:
       self.start.emit()
       while True:
+        events = 0
         while len(self._events):
+          events += 1
+          if not events == 50:
+            self._queue(0)
+            events = 0
           func, args, kwargs, tb_slot, tb_call = self._events.popleft()
           self._construct_tb((tb_slot, "signal connect"), (tb_call, "signal caller"))
           func(*args, **kwargs)
