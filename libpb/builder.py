@@ -257,6 +257,10 @@ class StageBuilder(object):
     if self.prev_builder and (port.install_status <= flags["stage"] or port.force) and port.stage < self.stage - 1:
       self._pending[port] += 1
       self.prev_builder.add(port).connect(self._stage_resolv)
+    elif self.stage == Port.PKGINSTALL:
+      # Set port stage to prevent other builders from attempting to build and
+      # so that monitor shows the correct stage of these ports
+      port.stage = Port.PKGINSTALL - 1
 
     # Build stage if port is ready
     if not self._pending[port]:
