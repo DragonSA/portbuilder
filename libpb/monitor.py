@@ -338,21 +338,22 @@ class Statistics(object):
 
     self.time = time()
 
-    self.config   = ([], [], [], [])
-    self.depend   = ([], (), (), [])
-    self.checksum = ([], [], [], [])
-    self.fetch    = ([], [], [], [])
-    self.build    = ([], [], [], [])
-    self.install  = ([], [], [], [])
-    self.package  = ([], [], [], [])
-    self.summary  = ([], [], [], [])
+    self.config     = ([], [], [], [])
+    self.depend     = ([], (), (), [])
+    self.checksum   = ([], [], [], [])
+    self.fetch      = ([], [], [], [])
+    self.build      = ([], [], [], [])
+    self.install    = ([], [], [], [])
+    self.package    = ([], [], [], [])
+    self.pkginstall = ([], [], [], [])
+    self.summary    = ([], [], [], [])
     self.clean = ([], [])
     self.clean[self.ACTIVE].extend(i.port for i in queues.clean_queue.active)
     self.clean[self.QUEUED].extend(i.port for i in queues.clean_queue.stalled)
     self.clean[self.QUEUED].extend(i.port for i in queues.clean_queue.queue)
 
     if not stages:
-      stages = ("config", "depend", "checksum", "fetch", "build", "install", "package")
+      stages = ("config", "depend", "checksum", "fetch", "build", "install", "package", "pkginstall")
 
     seen = set()
     seen.update(self.clean[self.ACTIVE])
@@ -360,7 +361,7 @@ class Statistics(object):
     for stage in stages:
       stats = getattr(self, stage)
       builder = getattr(builders, "%s_builder" % stage)
-      if stage == "depend":
+      if stage in ("depend", "pkginstall"):
         ports = list(builder.ports)
         ports.sort(key=lambda x: x.working)
         stats[self.ACTIVE].extend(ports)
