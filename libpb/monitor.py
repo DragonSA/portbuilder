@@ -182,6 +182,7 @@ class Top(Monitor):
     self._update_stage(scr, "Fetch", self._stats.fetch)
     self._update_stage(scr, "Build", self._stats.build)
     self._update_stage(scr, "Install", self._stats.install)
+    self._update_stage(scr, "Pkginst", self._stats.pkginstall)
     self._update_stage(scr, "Package", self._stats.package)
 
     offset = self._stats.time - self._time
@@ -366,11 +367,12 @@ class Statistics(object):
       stats = getattr(self, stage)
       builder = getattr(builders, "%s_builder" % stage)
       if stage in ("depend", "pkginstall"):
+        state = {"depend": self.ACTIVE, "pkginstall": self.PENDING}[stage]
         ports = list(builder.ports)
         ports.sort(key=lambda x: x.working)
-        stats[self.ACTIVE].extend(ports)
-        self.summary[self.ACTIVE].extend(reversed(stats[self.ACTIVE]))
-        seen.update(stats[self.ACTIVE])
+        stats[state].extend(ports)
+        self.summary[state].extend(reversed(stats[state]))
+        seen.update(stats[state])
 
         for port in builder.failed:
           if port not in seen:
