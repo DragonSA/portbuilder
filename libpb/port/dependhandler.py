@@ -44,6 +44,7 @@ class Dependant(DependHandler):
     self._dependants = [[], [], [], [], [], []]  #: All dependants
     self.port = port  #: The port whom we handle
     self.priority = port.priority
+    self.propogate = True
     if flags["mode"] == "install" and port.install_status > Port.ABSENT:
       self.status = Dependant.RESOLV
       # TODO: Change to actually check if we are resolved
@@ -86,12 +87,12 @@ class Dependant(DependHandler):
     """Indicates that our port's status has changed."""
     from ..env import flags
 
-    if self.port.failed or (self.port.dependancy and self.port.dependancy.failed):
+    if (self.propogate and self.port.failed) or (self.port.dependancy and self.port.dependancy.failed):
       status = Dependant.FAILURE
       # TODO: We might have failed and yet still satisfy our dependants
     elif flags["fetch_only"]:
       status = Dependant.RESOLV
-    elif self.port.install_status > Port.ABSENT:
+    elif self.port.install_status > flags["stage"]:
       status = Dependant.RESOLV
       if not self._verify():
         # TODO: We may satisfy some dependants, but not others,
