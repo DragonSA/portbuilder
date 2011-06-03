@@ -24,12 +24,18 @@ class DependLoader(object):
       self.ports[port] = Signal()
       self.method[port] = flags["depend"][0]
 
-      if not self._find_method(port):
-        from .event import post_event
+      for builder in (install_builder, pkginstall_builder):
+        if port in builder.ports:
+          builder.add(port).connect(self._clean)
+          self.method[port] = None
+          break
+      else:
+        if not self._find_method(port):
+          from .event import post_event
 
-        signal = self.ports.pop(port)
-        post_event(signal.emit, port)
-        return signal
+          signal = self.ports.pop(port)
+          post_event(signal.emit, port)
+          return signal
     return self.ports[port]
 
   def _clean(self, job):
