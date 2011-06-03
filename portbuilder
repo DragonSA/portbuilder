@@ -53,7 +53,7 @@ def sigint():
 
 def main():
   """The main event loop."""
-  from os import environ
+  from os import chdir, environ
   from signal import signal, SIGINT, SIGTERM, SIG_IGN
   from libpb.env import flags
   from libpb.event import event
@@ -80,6 +80,9 @@ def main():
       del environ[key]
     except KeyError:
       pass
+
+  # Change directory to / (root).  This is a workaround for bug misc/157543
+  chdir("/")
 
   # Install signal handlers
   signal(SIGINT, SIG_IGN)
