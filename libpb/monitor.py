@@ -80,6 +80,8 @@ class Top(Monitor):
     self._skip = 0
     self._quit = 0
 
+    self._last_event_count = 0
+
   def run(self):
     """Refresh the display."""
     from .env import flags
@@ -170,7 +172,7 @@ class Top(Monitor):
   def _update_header(self, scr):
     """Update the header details."""
     from time import strftime
-    from .event import pending_events
+    from .event import event_count
 
     self._offset = 0
     self._update_ports(scr)
@@ -189,9 +191,11 @@ class Top(Monitor):
     running = "running %i+%02i:%02i:%02i  " % (days, hours, mins, secs)
     # Display current time
     running += strftime("%H:%M:%S")
-    if pending_events():
+    events, self._last_event_count = self._last_event_count, event_count()
+    events = self._last_event_count - events - 1
+    if events > 0:
       # Display pending events
-      running = "events %i  " % pending_events() + running
+      running = "events %i  " % events + running
     scr.addstr(0, scr.getmaxyx()[1] - len(running) - 1, running)
 
   def _update_ports(self, scr):

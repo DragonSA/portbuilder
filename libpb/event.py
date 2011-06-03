@@ -27,6 +27,7 @@ class EventManager(object):
     self._kq = kqueue()
     self._kq_events = {}
     self.traceback = ()
+    self.event_count = 0
     self._no_tb = False
 
   def __len__(self):
@@ -97,6 +98,7 @@ class EventManager(object):
       self.start.emit()
       while True:
         while len(self._events):
+          self.event_count += 1
           func, args, kwargs, tb_slot, tb_call = self._events.popleft()
           self._construct_tb((tb_slot, "signal connect"), (tb_call, "signal caller"))
           func(*args, **kwargs)
@@ -147,6 +149,7 @@ _manager = EventManager()
 
 alarm          = _manager.alarm
 event          = _manager.event
+event_count    = lambda: _manager.event_count
 pending_events = _manager.__len__
 post_event     = _manager.post_event
 resume         = _manager.start.emit
