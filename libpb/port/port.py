@@ -189,6 +189,8 @@ class Port(object):
 
   def _pre_config(self):
     """Configure the ports options."""
+    if self._check_config():
+      return True
     if not self._config_lock.acquire():
       from ..job import StalledJob
       raise StalledJob()
