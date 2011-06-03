@@ -22,11 +22,11 @@ class DependLoader(object):
       from .signal import Signal
 
       self.ports[port] = Signal()
-      self.method[port] = None
+      self.method[port] = flags["depend"][0]
+
       if not self._find_method(port):
         from .event import post_event
-        port.failed = True
-        port.dependant.status_changed()
+
         signal = self.ports.pop(port)
         post_event(signal.emit, port)
         return signal
@@ -34,20 +34,27 @@ class DependLoader(object):
 
   def _clean(self, job):
     """Cleanup after a port has finished."""
-    if job.port.failed:
+    if job.port.failed and self.method[job.port]:
+      # If the port failed and there is another method to try
       job.port.failed = False
-      if not self._find_method(job.port):
-        job.port.failed = True
-        self.ports.pop(job.port).emit(job.port)
-    else:
-      self.ports.pop(job.port).emit(job.port)
+      if self._find_method(job.port):
+        return
+
+    self.ports.pop(job.port).emit(job.port)
 
   def _find_method(self, port):
     """Find a method to resolve the port."""
+    # TODO check if port in existing queue
+
     while True:
-      method = self.method[port] = self._next(self.method[port])
+      method = self.method[port]
+      self.method[port] = self._next(self.method[port])
+      port.dependant.propogate = not self.method[port]
       if method is None:
+        # No method left, port failed to resolve
         del self.method[port]
+        port.failed = True
+        port.dependant.status_changed()
         return False
       if self._resolve(port, method):
         return True
@@ -56,6 +63,9 @@ class DependLoader(object):
     """Try resolve the port using various methods."""
     if method == "build":
       from .env import flags
+
+      if port.stage == Port.PKGINSTALL:
+        port.stage = Port.ZERO
 
       if flags["package"]:
         # Connect to install job and give package_builder ownership (cleanup)
@@ -78,9 +88,6 @@ class DependLoader(object):
   def _next(method):
     """Find the next method used to resolve a dependency."""
     from .env import flags
-
-    if method is None:
-      return flags["depend"][0]
 
     try:
       return flags["depend"][flags["depend"].index(method) + 1]

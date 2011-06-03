@@ -39,9 +39,12 @@ Future release:
  - directly call pkg_delete when uninstalling port (install/pkginstall?)
 
 pkginstall:
- - only update dependant if final fail (of depend method)
- - correctly propogate to secondary resolve method
+ * only update dependant if final fail (of depend method)
+ * correctly propogate to secondary resolve method
  - use chroot vs -C for pkg_add
+ - check if port already in queue
+ - update monitor for pkginstall builder
+ - check dependhandler before adding a port to other queues (portbuilder)
 
 0.1.9 - Milestone 9 (Sundry modules):
  - modules:
