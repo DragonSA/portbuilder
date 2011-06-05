@@ -1,6 +1,8 @@
 X.Y.Z: YYYY MMM DD:
  * Implemented a kqueue (external) event handler
  * Remove the use of callback (use Signal instead)
+ * Add multiple methods (with fallback) to resolve a port
+ * Obey -DUSE_PACKAGE_DEPENDS (see previous item)
  * Improve performance by:
    * Skipping exception check from subprocess
    * Caching variables used by Mk/bsd.port.mk and Mk/bsd.port.subdir.mk

@@ -18,17 +18,18 @@ env = {
 }
 
 flags = {
-  "chroot"      : "",                  # Chroot directory of system
-  "config"      : "changed",           # Configure ports based on criteria
-  "debug"       : False,               # Print extra debug messages
-  "fetch_only"  : False,               # Only fetch ports
-  "log_dir"     : "/tmp/portbuilder",  # Directory for logging information
-  "log_file"    : "portbuilder",       # General log file
-  "mode"        : "install",           # Mode of operation
-  "no_op"       : False,               # Do nothing
-  "no_op_print" : False,               # Print commands that would have been executed
-  "package"     : False,               # Package all installed ports
-  "stage"       : _P.ABSENT            # The minimum level for build
+  "chroot"      : "",                   # Chroot directory of system
+  "config"      : "changed",            # Configure ports based on criteria
+  "debug"       : False,                # Print extra debug messages
+  "depend"      : ["build"],            # Resolve dependencies methods
+  "fetch_only"  : False,                # Only fetch ports
+  "log_dir"     : "/tmp/portbuilder",   # Directory for logging information
+  "log_file"    : "portbuilder",        # General log file
+  "mode"        : "install",            # Mode of operation
+  "no_op"       : False,                # Do nothing
+  "no_op_print" : False,                # Print commands that would have been executed
+  "package"     : False,                # Package all installed ports
+  "stage"       : _P.ABSENT             # The minimum level for build
 }
 
 env_master = {}
@@ -72,7 +73,7 @@ def _setup_env():
   for i in env:
     if i in environ:
       env[i] = environ[i]
-  # TODO: set env_master from make -V ...
+  # TODO: set env_master from make -V and environ...
 
   # Cleanup some env variables
   if env["PORTSDIR"][-1] == '/':
@@ -80,18 +81,27 @@ def _setup_env():
 
   # The following variables are conditionally set in ports/Mk/bsd.port.mk
   uname = uname()
-  environ["ARCH"] = uname[4]
-  environ["OPSYS"] = uname[0]
-  environ["OSREL"] = uname[2].split('-', 1)[0].split('(', 1)[0]
-  environ["OSVERSION"] = _get_os_version()
-  if uname[4] in ("amd64", "ia64"):
+  if "ARCH" not in environ:
+    environ["ARCH"] = uname[4]
+  if "OPSYS" not in environ:
+    environ["OPSYS"] = uname[0]
+  if "OSREL" not in environ:
+    environ["OSREL"] = uname[2].split('-', 1)[0].split('(', 1)[0]
+  if "OSVERSION" not in environ:
+    environ["OSVERSION"] = _get_os_version()
+  if uname[4] in ("amd64", "ia64") and "HAVE_COMPAT_IA32_KERN" not in environ:
+    from subprocess import Popen, PIPE
     # TODO: create ctypes wrapper around sysctl(3)
     environ["HAVE_COMPAT_IA32_KERN"] = "YES" if _sysctl("compat.ia32.maxvmem") else ""
-  environ["LINUX_OSRELEASE"] = _sysctl("compat.linux.osrelease")
-  environ["UID"] = str(getuid())
-  environ["CONFIGURE_MAX_CMD_LEN"] = _sysctl("kern.argmax")
+  if "LINUX_OSRELEASE" not in environ:
+    environ["LINUX_OSRELEASE"] = _sysctl("compat.linux.osrelease")
+  if "UID" not in environ:
+    environ["UID"] = str(getuid())
+  if "CONFIGURE_MAX_CMD_LEN" not in environ:
+    environ["CONFIGURE_MAX_CMD_LEN"] = _sysctl("kern.argmax")
 
   # The following variables are also conditionally set in ports/Mk/bsd.port.subdir.mk
-  environ["_OSVERSION"] = uname[2]
+  if "_OSVERSION" not in environ:
+    environ["_OSVERSION"] = uname[2]
 
 _setup_env()

@@ -56,7 +56,7 @@ class Monitor(object):
     pass
 
 
-STAGE_NAME = ["config", "config", "depend", "chcksm", "fetch", "build", "install", "package", "error"]
+STAGE_NAME = ["config", "config", "depend", "chcksm", "fetch", "build", "install", "package", "pkginst", "error"]
 
 def get_name(port):
   """Get the ports name."""
@@ -79,6 +79,8 @@ class Top(Monitor):
     self._idle = True
     self._skip = 0
     self._quit = 0
+
+    self._last_event_count = 0
 
   def run(self):
     """Refresh the display."""
@@ -169,7 +171,7 @@ class Top(Monitor):
   def _update_header(self, scr):
     """Update the header details."""
     from time import strftime
-    from .event import pending_events
+    from .event import event_count
 
     self._offset = 0
     self._update_ports(scr)
@@ -179,6 +181,7 @@ class Top(Monitor):
     self._update_stage(scr, "Fetch", self._stats.fetch)
     self._update_stage(scr, "Build", self._stats.build)
     self._update_stage(scr, "Install", self._stats.install)
+    self._update_stage(scr, "Pkginst", self._stats.pkginstall)
     self._update_stage(scr, "Package", self._stats.package)
 
     offset = self._stats.time - self._time
@@ -188,9 +191,11 @@ class Top(Monitor):
     running = "running %i+%02i:%02i:%02i  " % (days, hours, mins, secs)
     # Display current time
     running += strftime("%H:%M:%S")
-    if pending_events():
+    events, self._last_event_count = self._last_event_count, event_count()
+    events = self._last_event_count - events - 1
+    if events > 0:
       # Display pending events
-      running = "events %i  " % pending_events() + running
+      running = "events %i  " % events + running
     scr.addstr(0, scr.getmaxyx()[1] - len(running) - 1, running)
 
   def _update_ports(self, scr):
@@ -337,21 +342,22 @@ class Statistics(object):
 
     self.time = time()
 
-    self.config   = ([], [], [], [])
-    self.depend   = ([], (), (), [])
-    self.checksum = ([], [], [], [])
-    self.fetch    = ([], [], [], [])
-    self.build    = ([], [], [], [])
-    self.install  = ([], [], [], [])
-    self.package  = ([], [], [], [])
-    self.summary  = ([], [], [], [])
+    self.config     = ([], [], [], [])
+    self.depend     = ([], (), (), [])
+    self.checksum   = ([], [], [], [])
+    self.fetch      = ([], [], [], [])
+    self.build      = ([], [], [], [])
+    self.install    = ([], [], [], [])
+    self.package    = ([], [], [], [])
+    self.pkginstall = ([], [], [], [])
+    self.summary    = ([], [], [], [])
     self.clean = ([], [])
     self.clean[self.ACTIVE].extend(i.port for i in queues.clean_queue.active)
     self.clean[self.QUEUED].extend(i.port for i in queues.clean_queue.stalled)
     self.clean[self.QUEUED].extend(i.port for i in queues.clean_queue.queue)
 
     if not stages:
-      stages = ("config", "depend", "checksum", "fetch", "build", "install", "package")
+      stages = ("config", "depend", "checksum", "fetch", "build", "install", "package", "pkginstall")
 
     seen = set()
     seen.update(self.clean[self.ACTIVE])
@@ -359,12 +365,13 @@ class Statistics(object):
     for stage in stages:
       stats = getattr(self, stage)
       builder = getattr(builders, "%s_builder" % stage)
-      if stage == "depend":
+      if stage in ("depend", "pkginstall"):
+        state = {"depend": self.ACTIVE, "pkginstall": self.PENDING}[stage]
         ports = list(builder.ports)
         ports.sort(key=lambda x: x.working)
-        stats[self.ACTIVE].extend(ports)
-        self.summary[self.ACTIVE].extend(reversed(stats[self.ACTIVE]))
-        seen.update(stats[self.ACTIVE])
+        stats[state].extend(ports)
+        self.summary[state].extend(reversed(stats[state]))
+        seen.update(stats[state])
 
         for port in builder.failed:
           if port not in seen:

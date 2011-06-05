@@ -18,11 +18,12 @@ class PortDelegate(object):
   def __call__(self, port):
     """Add a port to the required builder."""
     from libpb.env import flags
+    from libpb.builder import depend
 
     if isinstance(port, str):
       self.no_port.append(port)
       return
-    if not (flags["mode"] == "recursive" or self.force) and port.install_status > flags["stage"]:
+    if not (flags["mode"] == "recursive" or self.force) and port.install_status > flags["stage"] or port in depend.ports:
       return
     if self.upgrade or self.force:
       port.dependant.status = port.dependant.UNRESOLV
@@ -52,7 +53,7 @@ def sigint():
 
 def main():
   """The main event loop."""
-  from os import environ
+  from os import chdir, environ
   from signal import signal, SIGINT, SIGTERM, SIG_IGN
   from libpb.env import flags
   from libpb.event import event
@@ -79,6 +80,9 @@ def main():
       del environ[key]
     except KeyError:
       pass
+
+  # Change directory to / (root).  This is a workaround for bug misc/157543
+  chdir("/")
 
   # Install signal handlers
   signal(SIGINT, SIG_IGN)
@@ -169,14 +173,14 @@ def gen_parser():
                     "-aoq`)")
 
   parser.add_option("--arch", action="store", type="string", default="",
-                    help="Set the architecture environment variables (for "\
+                    help="Set the architecture environment variables (for " \
                     "cross building)")
 
   parser.add_option("-b", "--batch", dest="batch", action="store_true",
                     default=False, help="Batch mode.  Skips the config stage.")
 
   parser.add_option("-c", "--config", action="callback", callback=parse_config,
-                    type="string", help="Specify which ports to configure "\
+                    type="string", help="Specify which ports to configure " \
                     "(none, all, newer, changed) [default: changed]")
 
   parser.add_option("-C", dest="chroot", action="store", type="string",
@@ -184,6 +188,10 @@ def gen_parser():
 
   parser.add_option("-d", "--debug", action="store_false", default=True,
                     help="Turn off extra diagnostic information (faster)")
+
+  parser.add_option("--depend", action="store", type="string", default="",
+                    help="Comma seperated methods to resolve dependencies " \
+                    "(build, package) [default=build]")
 
   parser.add_option("-D", dest="make_env", action="append", metavar="variable",
                     default=[], help="Define the given variable for make (i.e."\
@@ -233,9 +241,25 @@ def gen_parser():
 
 def set_options(options):
   """Set all the global options."""
+  from os import environ
   from re import match
   from libpb.env import env, flags
   from libpb.port.port import Port
+
+  # Add all -D options
+  for i in options.make_env:
+    if not match(VAR_NAME, i):
+      options.parser.error("incorrectly formatted variable name: %s" % i)
+    env[i] = True
+
+  # Add other make env options (aka variable=value)
+  for i in options.args[:]:
+    if i.find('=') != -1:
+      var, val = i.split('=', 1)
+      if not match(VAR_NAME, var):
+        options.parser.error("incorrectly formatted variable name: %s" % var)
+      env[var] = val
+      options.args.remove(i)
 
   # Add all installed ports to port list
   if options.all:
@@ -275,20 +299,17 @@ def set_options(options):
   if options.debug:
     flags["debug"] = True
 
-  # Add all -D options
-  for i in options.make_env:
-    if not match(VAR_NAME, i):
-      options.parser.error("incorrectly formatted variable name: %s" % i)
-    env[i] = True
-
-  # Add other make env options (aka variable=value)
-  for i in options.args[:]:
-    if i.find('=') != -1:
-      var, val = i.split('=', 1)
-      if not match(VAR_NAME, var):
-        options.parser.error("incorrectly formatted variable name: %s" % var)
-      env[var] = val
-      options.args.remove(i)
+  # Depend resolve methods
+  if not options.depend and "USE_PACKAGE_DEPENDS" in env or "USE_PACKAGE_DEPENDS" in environ:
+    options.depend = "package,build"
+  if options.depend:
+    depend = [i.strip() for i in options.depend.split(",")]
+    for i in depend:
+      if depend.count(i) > 1:
+        options.parser.error("multiple depend method specified")
+      elif i not in ("build", "package"):
+        options.parser.error("unknown depend method")
+    flags["depend"] = depend
 
   # Fetch only options:
   if options.fetch:

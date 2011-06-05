@@ -37,6 +37,7 @@ Future release:
  * create custom Popen class (without exceptions on bad fork)
  - fine tune queue lengths
  - add option to set queue lengths
+ - directly call pkg_delete when uninstalling port (install/pkginstall?)
 
 0.1.9 - Milestone 9 (Sundry modules):
  - modules:
@@ -251,7 +252,8 @@ Future release:
  * Create proper statistical handling of data (with easy collection methods)
  - Check all logging tags are correct
  * Improve monitor interface, move to classes
- * Allow KeyboardInterrupt to terminate program:
+ * Allow KeyboardInterrupt to terminate program
+ - Use Port when refering to defined flags (i.e. INSTALL, BUILD)
 
 0.1.3 - Milestone 3 (Target Builders):
  * Finish call documentation

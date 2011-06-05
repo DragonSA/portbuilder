@@ -118,7 +118,10 @@ class PortJob(Job):
     """Run the required port stage."""
     self.port.stage_completed.connect(self.stage_done)
     try:
-      status = self.port.build_stage(self.stage)
+      if self.stage == self.port.PKGINSTALL:
+        status = self.port.pkginstall()
+      else:
+        status = self.port.build_stage(self.stage)
       assert status is not False
       if not isinstance(status, bool) and status is not None:
         self.pid = status.pid
