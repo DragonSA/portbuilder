@@ -288,12 +288,14 @@ def set_options(options):
 
   # Set chroot environment
   if options.chroot:
-    from os.path import isdir
+    from os.path import isdir, join
+    from os import getcwd
+
     if options.chroot[-1] == '/':
       options.chroot = options.chroot[:-1]
     if not isdir(options.chroot):
       options.parser.error("chroot needs to be a valid directory")
-    flags["chroot"] = options.chroot
+    flags["chroot"] = join(getcwd(), options.chroot)
 
   # Debug mode
   if options.debug:
