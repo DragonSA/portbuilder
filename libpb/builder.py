@@ -67,9 +67,9 @@ class DependLoader(object):
 
   def _resolve(self, port, method):
     """Try resolve the port using various methods."""
-    if method == "build":
-      from .env import flags
+    from .env import flags
 
+    if method == "build":
       if port.stage == Port.PKGINSTALL:
         port.stage = Port.ZERO
 
@@ -82,7 +82,7 @@ class DependLoader(object):
     elif method == "package":
       from os.path import isfile
 
-      if not isfile(port.attr["pkgfile"]):
+      if not isfile(flags["chroot"] + port.attr["pkgfile"]):
         return False
       job = pkginstall_builder(port)
     else:
