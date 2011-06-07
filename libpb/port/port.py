@@ -160,6 +160,21 @@ class Port(object):
       if isfile(self.log_file):
         unlink(self.log_file)
 
+  def reset(self):
+    """Reset the ports state, and stage."""
+    assert not self.working
+    self.failed = False
+    if self.dependancy is not None:
+      if self._fetched.issuperset(self.attr["distfiles"]):
+        # If files are already fetched
+        self.stage = Port.FETCH
+      else:
+        # If dependency already loaded
+        self.stage = Port.DEPEND
+    elif not len(self.attr["options"]) or self._check_config():
+      # If no need to configure port
+      self.stage = Port.CONFIG
+
   def build_stage(self, stage):
     """Build the requested stage."""
     from time import time

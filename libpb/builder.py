@@ -17,6 +17,8 @@ class DependLoader(object):
 
   def __call__(self, port):
     """Try resolve a port as a dependency."""
+    assert not port.failed
+
     if port not in self.ports:
       from .env import flags
       from .signal import Signal
@@ -42,7 +44,6 @@ class DependLoader(object):
     """Cleanup after a port has finished."""
     if job.port.failed and self.method[job.port]:
       # If the port failed and there is another method to try
-      job.port.failed = False
       if self._find_method(job.port):
         return
 
@@ -69,10 +70,8 @@ class DependLoader(object):
     """Try resolve the port using various methods."""
     from .env import flags
 
+    port.reset()
     if method == "build":
-      if port.stage == Port.PKGINSTALL:
-        port.stage = Port.ZERO
-
       if flags["package"]:
         # Connect to install job and give package_builder ownership (cleanup)
         job = install_builder.add(port)
