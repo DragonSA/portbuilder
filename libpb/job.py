@@ -3,7 +3,7 @@
 from __future__ import absolute_import
 
 from abc import abstractmethod, ABCMeta
-from .signal import Signal
+from .signal import Signal, SignalProperty
 
 __all__ = ["Job", "PortJob", "StalledJob"]
 
@@ -15,6 +15,8 @@ class Job(Signal):
   """Handles queued jobs with callbacks, prioritising and load management."""
 
   __metaclass__ = ABCMeta
+
+  started = SignalProperty("Job.started")
 
   def __init__(self, load=1, priority=0):
     """Initiate a job with a given priority and load.
@@ -37,6 +39,7 @@ class Job(Signal):
     The method may throw StalledJob, indicating the job should be placed on the
     stalled queue and another run in its place."""
     self.__manager = manager
+    self.started.emit(self)
     self.work()
 
   def done(self):
