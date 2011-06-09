@@ -70,7 +70,8 @@ class DependLoader(object):
     """Try resolve the port using various methods."""
     from .env import flags
 
-    port.reset()
+    if port.stage > Port.DEPEND:
+      port.reset()
     if method == "build":
       if flags["package"]:
         # Connect to install job and give package_builder ownership (cleanup)
