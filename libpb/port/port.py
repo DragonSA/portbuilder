@@ -131,6 +131,9 @@ class Port(object):
     if not len(self.attr["options"]) or self._check_config():
       self.stage = Port.CONFIG
 
+  def __lt__(self, other):
+    return self.dependant.priority > other.dependant.priority
+
   def __repr__(self):
     return "<Port(%s)>" % (self.origin)
 
