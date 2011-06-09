@@ -112,7 +112,7 @@ class EventManager(object):
         events = 0
         while len(self._events):
           events += 1
-          if not events == 50:
+          if events == 50:
             self._queue(0)
             events = 0
           self.event_count += 1
