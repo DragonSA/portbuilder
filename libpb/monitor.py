@@ -3,6 +3,8 @@
 from __future__ import absolute_import
 
 from abc import ABCMeta, abstractmethod
+from .port.port import Port
+from .builder import Builder
 
 __all__ = ["Monitor", "Top"]
 
@@ -56,7 +58,26 @@ class Monitor(object):
     pass
 
 
-STAGE_NAME = ["config", "config", "depend", "chcksm", "fetch", "build", "install", "package", "pkginst", "error"]
+STAGE_NAME = ("config", "config", "depend", "chcksm", "fetch", "build", "install", "package", "pkginst", "error")
+STAGE = (
+    (Port.CHECKSUM,   "Checksum"),
+    (Port.DEPEND,     "Depend"),
+    (Port.FETCH,      "Fetch"),
+    (Port.BUILD,      "Build"),
+    (Port.INSTALL,    "Install"),
+    (Port.PKGINSTALL, "Pkginst"),
+    (Port.PACKAGE,    "Package"),
+  )
+
+STATUS_NAME = ("pending", "queued", "active", "failed", None, "done")
+STATUS = (
+    (Builder.ACTIVE, "active"),
+    (Builder.QUEUED, "queued"),
+    (Builder.ADDED,  "pending"),
+    (Builder.FAILED, "failed"),
+    (Builder.DONE,   "done"),
+  )
+
 
 def get_name(port):
   """Get the ports name."""
@@ -84,13 +105,10 @@ class Top(Monitor):
 
   def run(self):
     """Refresh the display."""
+    from time import time
     from .env import flags
 
-    if flags["fetch_only"]:
-      self._stats = Statistics(("config", "depend", "checksum", "fetch"))
-    else:
-      self._stats = Statistics()
-
+    self._time = time()
     self._stdscr.erase()
     self._update_header(self._stdscr)
     self._update_rows(self._stdscr)
@@ -172,19 +190,15 @@ class Top(Monitor):
     """Update the header details."""
     from time import strftime
     from .event import event_count
+    from . import state
 
     self._offset = 0
     self._update_ports(scr)
     self._update_summary(scr)
-    self._update_stage(scr, "Checksum", self._stats.checksum)
-    self._update_stage(scr, "Depend", self._stats.depend)
-    self._update_stage(scr, "Fetch", self._stats.fetch)
-    self._update_stage(scr, "Build", self._stats.build)
-    self._update_stage(scr, "Install", self._stats.install)
-    self._update_stage(scr, "Pkginst", self._stats.pkginstall)
-    self._update_stage(scr, "Package", self._stats.package)
+    for stage, stgname in STAGE:
+      self._update_stage(scr, stgname, state[stage])
 
-    offset = self._stats.time - self._time
+    offset = self._time - self._time
     secs, mins, hours = offset % 60, offset / 60 % 60, offset / 60 / 60 % 60
     days = offset / 60 / 60 / 24
     # Display running time
@@ -216,68 +230,77 @@ class Top(Monitor):
 
   def _update_summary(self, scr):
     """Update the summary information."""
-    summary = self._stats.summary
+    from . import state
 
-    ports = sum((len(i) for i in summary)) - len(summary[Statistics.FAILED])
+    msg = dict((status[1], 0) for status in STATUS)
+    ports = 0
+    for stage in state.stages:
+      for stat, status in STATUS:
+        msg[status] += len(stage[stat])
+        ports += len(stage[stat])
+
     if ports:
-      msg = "%i port%s remaining: " % (ports, "s" if ports > 1 else " ")
-
-      msgv = []
-      stages = ["active", "queued", "pending", "failed"]
-      for i in range(len(stages)):
-        if summary[i]:
-          msgv.append("%i %s" % (len(summary[i]), stages[i]))
-
-      msg += ", ".join(msgv)
-
-      scr.addstr(self._offset, 0, msg)
-
+      msg = ", ".join("%i %s" % (msg[status[1]], status[1]) for status in STATUS if msg[status[1]])
+      scr.addstr(self._offset, 0, "%i port%s remaining: %s" % (ports, "s" if ports > 1 else " ", msg))
       self._offset += 1
+    self._skip = min(self._skip, ports - 1)
 
   def _update_stage(self, scr, stage_name, stats):
     """Update various stage details."""
-    if sum((len(i) for i in stats)):
-      msg = "%s:%s" % (stage_name, " " * (9 - len(stage_name)))
-      msgv = []
-      stages = ["active", "queued", "pending", "failed"]
-      for i in range(len(stages)):
-        if stats[i]:
-          msgv.append("%i %s" % (len(stats[i]), stages[i]))
+    msg = []
+    for stat, status in STATUS[:1]:
+      if stats.status[stat]:
+        msg.append("%i %s" % (len(stats[stat]), status))
 
-      msg += ", ".join(msgv)
-      scr.addstr(self._offset, 0, msg)
+    if msg:
+      scr.addstr(self._offset, 0, "%s:%s%s" % (stage_name, " " * (9 - len(stage_name)), ", ".join(msg)))
       self._offset += 1
 
   def _update_rows(self, scr):
     """Update the rows of port information."""
-    active, queued, pending, failed = self._stats.summary
-    clean = self._stats.clean
+    from .env import flags
+    from .queue import clean_queue
+    from . import state
 
     scr.addstr(self._offset + 1, 2, ' STAGE   STATE   TIME PACKAGE')
+
+    def ports(stages, status):
+      from . import state
+
+      for stage in reversed(stages):
+        stat = stage[status]
+        if self._skip:
+          if self._skip >= len(stat):
+            self._skip -= len(stat)
+            continue
+          else:
+            stat = stat[skip:]
+            self._skip = 0
+        for port in stat:
+          yield port
 
     skip = self._skip
     lines, columns = scr.getmaxyx()
     offset = self._offset + 2
     lines -= offset
-    if not self._failed_only:
-      # Show at least one window of ports
-      if self._idle:
-        total = sum(len(i) for i in self._stats.summary)
-        total += sum(len(i) for i in clean)
-        if skip > total - lines:
-          self._skip = skip = max(0, total - lines)
-      else:
-        if skip > len(active) + len(clean[0]) - lines:
-          self._skip = skip = max(0, len(active) - lines)
+    state.sort()
+    if flags["fetch_only"]:
+      stages = state[:Port.FETCH+1]
+    else:
+      stages = state.stages
+    if self._failed_only:
+      status = (Builder.FAILED)
+    elif self._idle:
+      status = tuple(status[0] for status in STATUS)
+    else:
+      status = (Builder.ACTIVE)
 
-      # Display all active ports (and time active)
-      for port in active:
-        if skip:
-          skip -= 1
-          continue
+    if Builder.ACTIVE == status[0]:
+      status = status[1:]
+      for port in ports(stages, Builder.ACTIVE):
         time = port.working
         if time:
-          offtime = self._stats.time - time
+          offtime = self._time - time
           time = '%3i:%02i' % (offtime / 60, offtime % 60)
         else:
           continue
@@ -286,131 +309,42 @@ class Top(Monitor):
         offset += 1
         lines -= 1
         if not lines:
+          self._skip = skip
           return
 
       # Display ports cleaning and queued to be cleaned
-      for stage, cleaned in (("active", clean[0]),) + ((("queued", clean[1]),) if self._idle else ()):
-        for port in cleaned:
-          if skip:
-            skip -= 1
-            continue
-          scr.addnstr(offset, 0, '   clean %7s        %s' % (stage, get_name(port)), columns)
-          offset += 1
-          lines -= 1
-          if not lines:
-            return
-    elif skip > len(failed) - lines:
-      # Show at least one window of ports
-      self._skip = skip = max(0, len(failed) - lines)
-
-    if self._idle or self._failed_only:
-      # Show queued, pending and failed processes
-      for stage, name in ((queued, "queued"), (pending, "pending"), (failed, "failed")):
-        if name != "failed":
-          stg = 1
-          if self._failed_only:
-            # Skip if showing only failed
-            continue
-        else:
-          stg = 0
-        for port in stage:
-          if skip:
-            skip -= 1
-            continue
-          stage = STAGE_NAME[port.stage + stg]
-          scr.addnstr(offset, 0, ' %7s %7s        %s' %
-                      (STAGE_NAME[port.stage + stg], name, get_name(port)), columns)
-          offset += 1
-          lines -= 1
-          if not lines:
-            return
-
-
-class Statistics(object):
-  """A collection of statistics abouts various queues, builders and ports."""
-
-  ACTIVE  = 0
-  QUEUED  = 1
-  PENDING = 2
-  FAILED  = 3
-
-  def __init__(self, stages=None):
-    """Collect the statistics."""
-    from time import time
-    from . import builder as builders
-    from . import queue as queues
-
-    self.time = time()
-
-    self.config     = ([], [], [], [])
-    self.depend     = ([], (), (), [])
-    self.checksum   = ([], [], [], [])
-    self.fetch      = ([], [], [], [])
-    self.build      = ([], [], [], [])
-    self.install    = ([], [], [], [])
-    self.package    = ([], [], [], [])
-    self.pkginstall = ([], [], [], [])
-    self.summary    = ([], [], [], [])
-    self.clean = ([], [])
-    self.clean[self.ACTIVE].extend(i.port for i in queues.clean_queue.active)
-    self.clean[self.QUEUED].extend(i.port for i in queues.clean_queue.stalled)
-    self.clean[self.QUEUED].extend(i.port for i in queues.clean_queue.queue)
-
-    if not stages:
-      stages = ("config", "depend", "checksum", "fetch", "build", "install", "package", "pkginstall")
-
-    seen = set()
-    seen.update(self.clean[self.ACTIVE])
-    seen.update(self.clean[self.QUEUED])
-    for stage in stages:
-      stats = getattr(self, stage)
-      builder = getattr(builders, "%s_builder" % stage)
-      if stage in ("depend", "pkginstall"):
-        state = {"depend": self.ACTIVE, "pkginstall": self.PENDING}[stage]
-        ports = list(builder.ports)
-        ports.sort(key=lambda x: x.working)
-        stats[state].extend(ports)
-        self.summary[state].extend(reversed(stats[state]))
-        seen.update(stats[state])
-
-        for port in builder.failed:
-          if port not in seen:
-            if port.failed:
-              stats[self.FAILED].append(port)
-            else:
-              seen.add(port)
-        self.summary[self.FAILED].extend(reversed(stats[self.FAILED]))
-        seen.update(stats[self.FAILED])
-        continue
-      queue = getattr(queues, "%s_queue" % stage)
-
-      stats[self.ACTIVE].extend((i.port for i in queue.active))
-      self.summary[self.ACTIVE].extend(reversed(stats[self.ACTIVE]))
-      seen.update(stats[self.ACTIVE])
-
-      stats[self.QUEUED].extend((i.port for i in queue.stalled))
-      stats[self.QUEUED].extend((i.port for i in queue.queue))
-      self.summary[self.QUEUED].extend(reversed(stats[self.QUEUED]))
-      seen.update(stats[self.QUEUED])
-
-      ports = list(builder.ports)
-      ports.sort(key=lambda x: -x.dependant.priority)
-      for port in ports:
-        if port not in seen and not port.failed:
-          if stage == "install" and port.stage == port.DEPEND:
-            continue
-          stats[self.PENDING].append(port)
-      self.summary[self.PENDING].extend(reversed(stats[self.PENDING]))
-      seen.update(stats[self.PENDING])
-
-      for port in builder.failed:
-        if port not in seen:
-          if port.failed:
-            stats[self.FAILED].append(port)
+      if self._idle:
+        clean = clean_queue.active + clean_queue.stalled + clean_queue.queue
+      else:
+        clean = clean_queue.active
+      if len(clean) > self._skip:
+        self._skip -= len(clean)
+      else:
+        for job in clean[self._skip:]:
+          time = port.working
+          if time:
+            offtime = self._time - time
+            time = '%3i:%02i' % (offtime / 60, offtime % 60)
           else:
-            seen.add(port)
-      self.summary[self.FAILED].extend(reversed(stats[self.FAILED]))
-      seen.update(stats[self.FAILED])
+            time = ' ' * 6
+          scr.addnstr(offset, 0, '   clean %7s  active %s %s' % (stage, time, get_name(job.port)), columns)
+          offset += 1
+          lines -= 1
+          if not lines:
+            self._skip = skip
+            return
+        self._skip = 0
 
-    for i in self.summary:
-      i.reverse()
+    for status in status:
+      stg = 0 if status in (Builder.FAILED, Builder.DONE) else 1
+      for port in ports(stages, status):
+        stage = STAGE_NAME[port.stage + stg]
+        scr.addnstr(offset, 0, ' %7s %7s        %s' %
+                    (STAGE_NAME[port.stage + stg], STATUS_NAME[status], get_name(port)), columns)
+        offset += 1
+        lines -= 1
+        if not lines:
+          self._skip = skip
+          return
+
+    self._skip = skip
