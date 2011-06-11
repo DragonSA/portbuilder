@@ -124,7 +124,7 @@ class StateTracker(object):
 def stop(kill=False, kill_clean=False):
     """Stop building ports and cleanup."""
     from .builder import builders
-    from .env import cpus, flags
+    from .env import CPUS, flags
     from .queue import attr_queue, clean_queue, queues
 
     if flags["no_op"]:
@@ -157,7 +157,7 @@ def stop(kill=False, kill_clean=False):
         clean_queue.load = 0
         return
     else:
-        clean_queue.load = cpus
+        clean_queue.load = CPUS
 
     # Wait for all active ports to finish so that they may be cleaned
     active = set()

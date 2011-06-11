@@ -329,11 +329,11 @@ def set_options(options):
 
     # Fetch only options:
     if options.fetch:
-        from libpb.env import cpus
+        from libpb.env import CPUS
         from libpb.queue import checksum_queue
 
         flags["fetch_only"] = True
-        checksum_queue.load = cpus
+        checksum_queue.load = CPUS
 
     # Fetch ports list from file
     if options.ports_file:

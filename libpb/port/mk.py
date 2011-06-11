@@ -108,8 +108,8 @@ def parse_jobs_number(jobs_number):
     try:
         return int(jobs_number[2:])
     except ValueError:
-        from ..env import cpus
-        return cpus
+        from ..env import CPUS
+        return CPUS
 ports_attr["jobs_number"].append(parse_jobs_number)
 
 

@@ -8,7 +8,7 @@ import subprocess
 
 from .port.port import Port
 
-__all__ = ["cpus", "env", "env_master", "flags"]
+__all__ = ["CPUS", "env", "env_master", "flags"]
 
 CPUS = os.sysconf("SC_NPROCESSORS_ONLN")
 
