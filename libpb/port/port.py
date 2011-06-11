@@ -354,9 +354,9 @@ class Port(object):
     if self.working or not os.path.isfile(flags["chroot"] + self.attr["pkgfile"]):
       return False
 
-    self.stage = self.PKGINSTALL - 1
+    self.stage = Port.PKGINSTALL - 1
     self.working = time.time()
-    if self.install_status > self.ABSENT:
+    if self.install_status > Port.ABSENT:
       return make_target(self, "deinstall").connect(self._pkginstall)
     else:
       return self._pkginstall()
@@ -369,7 +369,7 @@ class Port(object):
     if make is not None:
       status = make.wait() == SUCCESS
       if not status:
-        self.stage = self.PKGINSTALL
+        self.stage = Port.PKGINSTALL
         self.working = False
         self.stage_completed.emit(self)
       self.dependent.status_changed()
@@ -402,14 +402,14 @@ class Port(object):
     self.working = False
     if flags["no_op"]:
       success = True
-      self.install_status = self.CURRENT
+      self.install_status = Port.CURRENT
     else:
       success = pkg_add.wait() == SUCCESS
       if success:
         self.install_status = status(self, True)
 
     self.failed = not success
-    self.stage = self.PKGINSTALL
+    self.stage = Port.PKGINSTALL
     self.stage_completed.emit(self)
 
     self.dependent.status_changed()
@@ -445,7 +445,7 @@ class Port(object):
 
   def _check_config(self):
     """Check the options file to see if it is up-to-date."""
-    from ..env import env, flags
+    from ..env import flags
     from .mk import pkg_version
 
     if flags["config"] == "none":

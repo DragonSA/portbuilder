@@ -152,7 +152,7 @@ class ConfigBuilder(Builder):
 
   def add(self, port):
     """Add a port to be configured."""
-    assert port.stage < port.CONFIG
+    assert port.stage < Port.CONFIG
 
     if port in self.ports:
       return self.ports[port]
@@ -160,7 +160,7 @@ class ConfigBuilder(Builder):
       from .job import PortJob
 
       # Create a config stage job and add it to the queue
-      job = PortJob(port, port.CONFIG)
+      job = PortJob(port, Port.CONFIG)
       job.connect(self._cleanup)
       self.ports[port] = job
       self.update.emit(self, Builder.ADDED, port)
@@ -272,7 +272,7 @@ class StageBuilder(Builder):
       self.update.emit(self, Builder.ADDED, port)
 
       # Configure port then process it
-      if port.stage < port.DEPEND:
+      if port.stage < Port.DEPEND:
         depend_builder.add(port).connect(self._add)
       else:
         self._add(port)
@@ -371,22 +371,23 @@ class StageBuilder(Builder):
 
   def _port_ready(self, port):
     """Add a port to the stage queue."""
+    from .port.dependhandler import Dependent
     from .env import flags
 
     del self._pending[port]
     if port.failed or port.dependency.failed or port.dependency.check(self.stage):
       # port cannot build
       self.ports[port].stage_done()
-    elif self.stage == port.PACKAGE:
+    elif self.stage == Port.PACKAGE:
       # Checks specific for package building
-      if port.stage < port.INSTALL:
+      if port.stage < Port.INSTALL:
         self.ports[port].stage_done()
       else:
-        assert(port.stage == port.INSTALL)
+        assert(port.stage == Port.INSTALL)
         self._build_port(port)
     else:
-      # Checks for self.stage <= port.INSTALL || self.stage == port.PKGINSTALL
-      if port.dependent.status == port.dependent.RESOLV:
+      # Checks for self.stage <= Port.INSTALL || self.stage == Port.PKGINSTALL
+      if port.dependent.status == Dependent.RESOLV:
         # port does not need to build
         self.ports[port].stage_done()
       elif port.install_status > flags["stage"] and not port.force:
@@ -398,7 +399,7 @@ class StageBuilder(Builder):
 
   def _build_port(self, port):
     """Actually build the port."""
-    assert port.stage >= self.stage - 1 or self.stage == port.PKGINSTALL
+    assert port.stage >= self.stage - 1 or self.stage == Port.PKGINSTALL
     if port.stage < self.stage:
       self.update.emit(self, Builder.QUEUED, port)
       self.ports[port].started.connect(self._started)

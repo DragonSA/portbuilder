@@ -28,6 +28,7 @@ class PortDelegate(object):
     """Add a port to the required builder."""
     from libpb.env import flags
     from libpb.builder import depend
+    from libpb.port.dependhandler import Dependent
 
     if isinstance(port, str):
       self.no_port.append(port)
@@ -35,7 +36,7 @@ class PortDelegate(object):
     if not (flags["mode"] == "recursive" or self.force) and port.install_status > flags["stage"] or port in depend.ports:
       return
     if self.upgrade or self.force:
-      port.dependent.status = port.dependent.UNRESOLV
+      port.dependent.status = Dependent.UNRESOLV
       port.force = True
     if self.package:
       from libpb.builder import package_builder

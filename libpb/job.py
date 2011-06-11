@@ -119,9 +119,11 @@ class PortJob(Job):
 
   def work(self):
     """Run the required port stage."""
+    from .port.port import Port
+
     self.port.stage_completed.connect(self.stage_done)
     try:
-      if self.stage == self.port.PKGINSTALL:
+      if self.stage == Port.PKGINSTALL:
         status = self.port.pkginstall()
       else:
         status = self.port.build_stage(self.stage)
