@@ -1,6 +1,6 @@
 """Event management utilities.
 
-Provides a framework for calling functions asynchroniously."""
+Provides a framework for calling functions asynchronously."""
 from __future__ import absolute_import
 
 from .signal import InlineSignal, SignalProperty
@@ -9,7 +9,7 @@ __all__ = ["alarm", "event", "pending_events", "post_event", "resume", "run",
            "start", "stop", "suspend", "traceback"]
 
 class EventManager(object):
-  """Handles Events that need to be called asynchroniously."""
+  """Handles Events that need to be called asynchronously."""
 
   start = SignalProperty("start", signal=InlineSignal)
   stop  = SignalProperty("stop",  signal=InlineSignal)
@@ -90,7 +90,7 @@ class EventManager(object):
       return self._kq_events[event]
 
   def post_event(self, func, *args, **kwargs):
-    """Add an event to be called asynchroniously."""
+    """Add an event to be called asynchronously."""
     from .debug import get_tb
 
     if not callable(func):
@@ -134,7 +134,7 @@ class EventManager(object):
       self.stop.emit()
 
   def _construct_tb(self, *args):
-    """Add extra tracebacks for debugging perposes."""
+    """Add extra tracebacks for debugging purposes."""
     if self.traceback is not None:
       self._no_tb = True
       return

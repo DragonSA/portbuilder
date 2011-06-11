@@ -58,7 +58,7 @@ Update distinfo with release tarball
 __EOF
   git commit -evF /tmp/portbuilder-distinfo-$TAG.msg
 
-  echo "4.3) Tag annotated release (with ChangeLog for file)"
+  echo "4.3) Tag annotated release (with ChangeLog for comment)"
   python -c "import sys; exec sys.stdin.read()" > /tmp/portbuilder-tag-$TAG.msg << __EOF
 print "Tag release for version $TAG\n"
 lines = []
@@ -77,7 +77,7 @@ __EOF
     echo "!!!> Release tarball not the same as tags content"
   fi
 
-  echo "4.4) Port release cleanup:"
+  echo "4.4) Post release cleanup:"
   echo "4.4.1) Add entry for next release in ChangeLog"
   (echo "X.Y.Z: YYYY MMM DD:"; echo; cat ChangeLog) > /tmp/portbuilder-ChangeLog-$TAG
   mv /tmp/portbuilder-ChangeLog-$TAG ChangeLog

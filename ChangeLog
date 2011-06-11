@@ -40,7 +40,7 @@ X.Y.Z: YYYY MMM DD:
    - Handle pkg-message
    - config stage only calls config when needed
    - fetch exclusion based on files fetching
-   - Proper handling of non privilaged building (via sudo)
+   - Proper handling of non privileged building (via sudo)
 
 0.0.4 - 2008 October 29:
  * pypkg:
@@ -95,7 +95,7 @@ X.Y.Z: YYYY MMM DD:
 0.0.2 - 2008 August 30:
  * Port:
    - Update attribute tables and fixers
-   - Late allocation for dependant handler
+   - Late allocation for dependent handler
    - Create handlers for targets
    - Refractured handler code
  * PortDepend:

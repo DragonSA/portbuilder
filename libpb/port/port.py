@@ -109,9 +109,9 @@ class Port(object):
   stage_completed = SignalProperty("stage_completed")
 
   def __init__(self, origin, attr):
-    """Itialise the port with the required information."""
+    """Initialise the port with the required information."""
     from .mk import status
-    from .dependhandler import Dependant
+    from .dependhandler import Dependent
 
     self.attr = attr
     self.log_file = None
@@ -125,14 +125,14 @@ class Port(object):
     self.stage = Port.ZERO
     self.install_status = status(self)
 
-    self.dependancy = None
-    self.dependant = Dependant(self)
+    self.dependency = None
+    self.dependent = Dependent(self)
 
     if not len(self.attr["options"]) or self._check_config():
       self.stage = Port.CONFIG
 
   def __lt__(self, other):
-    return self.dependant.priority > other.dependant.priority
+    return self.dependent.priority > other.dependent.priority
 
   def __repr__(self):
     return "<Port(%s)>" % (self.origin)
@@ -167,7 +167,7 @@ class Port(object):
     """Reset the ports state, and stage."""
     assert not self.working
     self.failed = False
-    if self.dependancy is not None:
+    if self.dependency is not None:
       if self._fetched.issuperset(self.attr["distfiles"]):
         # If files are already fetched
         self.stage = Port.FETCH
@@ -190,7 +190,7 @@ class Port(object):
     if self.working or self.stage != stage - 1 or self.failed:
       # Don't do stage if not able to
       return False
-    if self.stage >= Port.DEPEND and self.dependancy.check(stage):
+    if self.stage >= Port.DEPEND and self.dependency.check(stage):
       # Don't do stage if not configured
       return False
 
@@ -230,17 +230,17 @@ class Port(object):
     self._finalise(self.stage, attr is not None)
 
   def _pre_depend(self):
-    """Create a dependancy object for this port."""
+    """Create a dependency object for this port."""
     from os.path import join
     from ..env import flags
-    from .dependhandler import Dependancy
+    from .dependhandler import Dependency
 
     self.log_file = join(flags["log_dir"], self.attr["pkgname"])
     self.priority = self._get_priority()
-    self.dependant.priority += self.priority
+    self.dependent.priority += self.priority
     depends = ('depend_build', 'depend_extract', 'depend_fetch', 'depend_lib',
                'depend_run', 'depend_patch')
-    self.dependancy = Dependancy(self, [self.attr[i] for i in depends])
+    self.dependency = Dependency(self, [self.attr[i] for i in depends])
 
   def _pre_checksum(self):
     """Check if distfiles are available."""
@@ -288,7 +288,7 @@ class Port(object):
       # If files are already fetched
       return True
     if self._fetch_failed.issuperset(distfiles):
-      # If filfes have failed to fetch
+      # If files have failed to fetch
       return False
     if not self._fetch_lock.acquire(distfiles):
       from ..job import StalledJob
@@ -377,7 +377,7 @@ class Port(object):
         self.stage = self.PKGINSTALL
         self.working = False
         self.stage_completed.emit(self)
-      self.dependant.status_changed()
+      self.dependent.status_changed()
       if not status:
         return
 
@@ -418,7 +418,7 @@ class Port(object):
     self.stage = self.PKGINSTALL
     self.stage_completed.emit(self)
 
-    self.dependant.status_changed()
+    self.dependent.status_changed()
 
   def _make_target(self, targets, **kwargs):
     """Build the requested targets."""
@@ -447,7 +447,7 @@ class Port(object):
     self.stage = max(stage + 1, self.stage)
     self.stage_completed.emit(self)
     if self.failed or self.stage >= (Port.FETCH if flags["fetch_only"] else Port.INSTALL):
-      self.dependant.status_changed()
+      self.dependent.status_changed()
 
   def _check_config(self):
     """Check the options file to see if it is up-to-date."""
@@ -455,7 +455,7 @@ class Port(object):
     from ..env import env, flags
     from .mk import pkg_version
 
-    if "BATCH" in env or flags["config"] == "none":
+    if flags["config"] == "none":
       return True
     elif flags["config"] == "all":
       return False

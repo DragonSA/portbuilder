@@ -4,9 +4,6 @@
  * Document all classes, methods, functions and (global|class) variables
  - Specify a public API (via __all___)
 
-TEMP:
- - rework DependHandlers to use sets, dictionaries
-
 Pylint:
  - enable pylint C0301,E0611,W0404
  - verify module level names (e.g. libpb/events)
@@ -20,24 +17,25 @@ Future release:
  * When segterm, make sure logging is done properly
  - Move to the python 2.6 naming and styles (and make compatible with 3)
  - Implement proper recording of ports installation (i.e. when they fail)
- * Check if KeyboardInterrupt is appropriate
- * All BaseExceptions need to be preceeded by KeyboardInterrupt (and call term)
  - Refactor:
    - Break ports into its own libraries
-   - Try isolate system and ports dependant code
- - use kqueue to monitor Makefile changes
+   - Try isolate system and ports dependent code
  - move DependHandler to using signals (for status changed)
  - support DESTDIR...
  * profile (and make it easy to do so)
  * speed up port.mk.attr (reduce subcalls from make -V)
- - handle alternative dependancies
+ - handle alternative dependencies
  - update @pkgdep lines
  - add `-x` (and `-X` recursive) to exclude ports
- - add package support (install from package)
+ * add package support (install from package)
  * create custom Popen class (without exceptions on bad fork)
  - fine tune queue lengths
  - add option to set queue lengths
  - directly call pkg_delete when uninstalling port (install/pkginstall?)
+ - rework DependHandlers to use sets, dictionaries
+ - build-only dependencies:
+   - uninstall after use
+   - install from packages
 
 0.1.9 - Milestone 9 (Sundry modules):
  - modules:
@@ -49,6 +47,7 @@ Future release:
  - Add all assertions
  - Logging infrastructure (for messages for user)
  - Rename logging files for ports based on their unique-name
+ - manual page(s)
 
 0.1.8 - Milestone 8 (Finish command line controller):
  - modules:
@@ -98,17 +97,16 @@ Future release:
    - target
  - Refine and condense code
  - Implement proper and complete logging (and comments)
- - Add all assertions
+ + Add all assertions
  * Use relative imports
- + Add recursive command:
-   - config
+ * Add recursive command:
+   * config
    * fetch
    * install
    * package
  + Port:
-   - Separate package building?
+   * Separate package building
    - No auto-cleaning?
-   - Remove state variables
    * Add MAKE_JOBS flags
    * Support stalling of build (interactive)
  * StageBuilder:
@@ -126,14 +124,12 @@ Future release:
  * Add labels for queues (active, queued, pending, failed)
  * Add failed queue
 
-0.1.6 - Milestone 6 (Finish Dependant Handling):
+0.1.6 - Milestone 6 (Finish Dependent Handling):
  - modules:
    - port/dependhandler
  - Refine and condense code
  - Implement proper and complete logging (and comments)
- - Move to collections (from DictMixin)
  * Add documentation FetchLock
- - Increase callback hardiness
  * Make sure ports configured before creating DependHandler
  + DependHandler:
    - Ensure _count is done properly
@@ -146,7 +142,7 @@ Future release:
      - Add caching of dependencies (no need to check them multiple times)
    - Implement type specific checking (bin vs lib) [mimic ports]
    - Handle stale dependencies (with a dummy PortDepend)
-   - Handle a port having failed and still satisfy its dependants
+   - Handle a port having failed and still satisfy its dependents
    - Add a concurrent implementation (and probably a cache of sorts)
    - When doing individual checks, cache as they can be duplicated
    - Check for conflicts (and handle)
@@ -166,7 +162,7 @@ Future release:
  + monitor:
    * Add pause and resume support
    - Add dummy monitor (aka no op)
-   - Fix initialisation and deinitialisation
+   - Fix initialisation and denitialisation
  - CacheDB:
    - When user, synchronise db with master
    - Add --no-cache option for pypkg (the functionality)
@@ -273,37 +269,39 @@ Future release:
    * Handle pipes properly
    * Add logging support (pipe redirection)
    * Condense functionality
- * Create ordering logic for building (and resolving dependants)
+ * Create ordering logic for building (and resolving dependents)
  * Remove make_target from global import
  * Fix PORTSDIR not having a trailing /
- - signal based updates of builders and queues:
-   - make top monitor use signals
+ * signal based updates of builders and queues:
+   * make top monitor use signals
  * fully implement setup (distutils) script (distutils/apiref)
  - make port/mk to using pkg_* interface (vs direct file inspection)
  - make compatible with pkgng
  - display skipped ports (with toggle)
  * procedures
- - interactive builds
- - improve port/mk.py
+ * improve port/mk.py
  * unset environ flags from make (gmake)
+ * only reset port if it has progressed beyond DEPEND
+ - spell check
+ - s/ependen/ependen/g
 
-0.1.2 - Milestone 2 (Dependant Handler):
+0.1.2 - Milestone 2 (Dependent Handler):
  * Port:
    * Complete attribute tables and fixes
-   * Proper dependant handling (mimic what ports does)
+   * Proper dependent handling (mimic what ports does)
      * Create class for depends
-     * Late allocation (with a check that port is configged)
+     * Late allocation (with a check that port is config)
    * Create handlers for various make targets (stages):
      * config
-       * Reget attr after configging
+       * Reget attr after config
      * fetch
      * build
      * install
        * Notify all dependants of our success
-   * Refracture startup code for stages
+   * Refactor startup code for stages
      * All previous stages build (without failure)
      * Handle stage depends
-   * Refracture cleanup code for stages
+   * Refactor cleanup code for stages
  * ports:
    * Make ports_dir settable from the env
  * make:
@@ -318,7 +316,7 @@ Future release:
  * Expand documentation for ports library
  * Add exception handling
  * Add logging
- * Add queueing logic
+ * Add queuing logic
    * Filter multiple items (prevent duplicates?)
    * Handle different queue items (build, info)
  * Add a Port's cache (memory)

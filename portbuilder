@@ -26,7 +26,7 @@ class PortDelegate(object):
     if not (flags["mode"] == "recursive" or self.force) and port.install_status > flags["stage"] or port in depend.ports:
       return
     if self.upgrade or self.force:
-      port.dependant.status = port.dependant.UNRESOLV
+      port.dependent.status = port.dependent.UNRESOLV
       port.force = True
     if self.package:
       from libpb.builder import package_builder
@@ -176,6 +176,7 @@ def gen_parser():
                     help="Set the architecture environment variables (for " \
                     "cross building)")
 
+  # batch option supersedes config option
   parser.add_option("-b", "--batch", dest="batch", action="store_true",
                     default=False, help="Batch mode.  Skips the config stage.")
 
@@ -190,7 +191,7 @@ def gen_parser():
                     help="Turn off extra diagnostic information (faster)")
 
   parser.add_option("--depend", action="store", type="string", default="",
-                    help="Comma seperated methods to resolve dependencies " \
+                    help="Comma separated methods to resolve dependencies " \
                     "(build, package) [default=build]")
 
   parser.add_option("-D", dest="make_env", action="append", metavar="variable",
@@ -209,7 +210,7 @@ def gen_parser():
 
   parser.add_option("--force-all", dest="forceA", action="store_true",
                     default=False, help="Force (re)installation of specified "
-                    "ports and all its dependancies.")
+                    "ports and all its dependencies.")
 
   parser.add_option("-n", dest="no_opt_print", action="store_true",
                     default=False, help="Display the commands that would have "\
@@ -233,7 +234,7 @@ def gen_parser():
 
   parser.add_option("-U", "--upgrade-all", dest="upgradeA", action="store_true",
                     default=False, help="Upgrade specified ports and all its "\
-                    "dependancies.")
+                    "dependencies.")
 
   #parser.add_option("--index", action="store_true", default=False,
                     #help="Create the INDEX file for the ports infrastructure.")
@@ -261,6 +262,10 @@ def set_options(options):
       env[var] = val
       options.args.remove(i)
 
+  # Force 'none' config mode if BATCH present
+  if "BATCH" in env or "BATCH" in environ or options.batch:
+    flags["config"] = "none"
+
   # Add all installed ports to port list
   if options.all:
     from subprocess import Popen, PIPE, STDOUT
@@ -281,10 +286,6 @@ def set_options(options):
     environ["MACHTYPE"] = options.arch
     if options.arch == "i386" and "HAVE_COMPAT_IA32_KERN" in environ:
       del environ["HAVE_COMPAT_IA32_KERN"]
-
-  # Batch mode
-  if options.batch:
-    env["BATCH"] = True
 
   # Set chroot environment
   if options.chroot:
@@ -353,7 +354,7 @@ def set_options(options):
     for queue in queues[1:]:
       queue.load = 0
 
-  # No opterations (-N)
+  # No operations (-N)
   if options.no_opt:
     flags["no_op"] = True
 

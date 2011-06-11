@@ -3,6 +3,7 @@
 Prior to a release all pending work should be finished and imported:
 
 1.1) Pull relevant branches
+1.2) Run pylint
 
 2. Documentation
 ----------------
@@ -53,8 +54,8 @@ Tag and release portbuilder
 
 4.1) Create release tarball (excluding ./port)
 4.2) Update port distinfo (and commit data)
-4.3) Tag annotated release (with ChangeLog for file)
-4.4) Port release cleanup:
+4.3) Tag annotated release (with ChangeLog for comment)
+4.4) Post release cleanup:
 4.4.1) Add entry for next release in ChangeLog
 4.5) Push all changes to github
 4.6) Upload release tarball to github

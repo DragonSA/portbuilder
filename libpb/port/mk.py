@@ -21,14 +21,14 @@ ports_attr = {
 "pkgsuffix": ["PKGNAMESUFFIX", str], # The port's package suffix
 "pkgfile":   ["PKGFILE",       str], # The port's package file
 
-# Port's dependancies and conflicts
+# Port's dependencies and conflicts
 "depends":        ["_DEPEND_DIRS",    tuple], # The port's dependency list
-"depend_build":   ["BUILD_DEPENDS",   tuple], # The port's build dependancies
-"depend_extract": ["EXTRACT_DEPENDS", tuple], # The port's extract dependancies
-"depend_fetch":   ["FETCH_DEPENDS",   tuple], # The port's fetch dependancies
-"depend_lib":     ["LIB_DEPENDS",     tuple], # The port's library dependancies
-"depend_run":     ["RUN_DEPENDS",     tuple], # The port's run dependancies
-"depend_patch":   ["PATCH_DEPENDS",   tuple], # The port's patch dependancies
+"depend_build":   ["BUILD_DEPENDS",   tuple], # The port's build dependencies
+"depend_extract": ["EXTRACT_DEPENDS", tuple], # The port's extract dependencies
+"depend_fetch":   ["FETCH_DEPENDS",   tuple], # The port's fetch dependencies
+"depend_lib":     ["LIB_DEPENDS",     tuple], # The port's library dependencies
+"depend_run":     ["RUN_DEPENDS",     tuple], # The port's run dependencies
+"depend_patch":   ["PATCH_DEPENDS",   tuple], # The port's patch dependencies
 
 # Sundry port information
 "category":   ["CATEGORIES", tuple], # The port's categories
@@ -56,7 +56,7 @@ ports_attr = {
 
 # Sundry information
 "interactive": ["IS_INTERACTIVE", bool],  # The port is interactive
-"makefiles":   [".MAKEFILE_LIST", tuple], # The makefiles included
+"makefiles":   [".MAKEFILE_LIST", tuple], # The Makefiles included
 "optionsfile": ["OPTIONSFILE",    str],   # The options file
 "pkgdir":      ["PACKAGES",       str],   # The package directory
 "wrkdir":      ["WRKDIR",         str],   # The ports working directory
@@ -111,15 +111,15 @@ def parse_jobs_number(jobs_number):
 ports_attr["jobs_number"].append(parse_jobs_number)
 
 def strip_depends(depends):
-  """Remove $PORTSDIR from dependancy paths."""
+  """Remove $PORTSDIR from dependency paths."""
   for depend in depends:
     if depend.find(':') == -1:
-      raise RuntimeError("bad dependancy line: '%s'" % depend)
+      raise RuntimeError("bad dependency line: '%s'" % depend)
     obj, port = depend.split(':', 1)
     if port.startswith(env["PORTSDIR"]):
       port = port[len(env["PORTSDIR"]) + 1:]
     else:
-      raise RuntimeError("bad dependancy line: '%s'" % depend)
+      raise RuntimeError("bad dependency line: '%s'" % depend)
     yield obj, port
 
 ports_attr["depend_build"].extend((strip_depends, tuple))
@@ -260,27 +260,27 @@ def pkg_version(old, new):
   old = old.split('.')
   new = new.split('.')
   for i in range(min(len(old), len(new))):
-    # Try numirical comparison, otherwise use str
+    # Try numerical comparison, otherwise use str
     try:
       pstatus = cmp(int(old[i]), int(new[i]))
     except ValueError:
       pstatus = cmp(old[i], new[i])
-    # If there is a difference is leveled version
+    # If there is a difference in this version level
     if pstatus:
       return Port.CURRENT + pstatus
 
-  # The difference between the number of leveled versioning
+  # The difference between the number of version levels
   return Port.CURRENT - cmp(len(old), len(new))
 
 def cmp_attr(old, new, sym):
   """Compare the two attributes of the port."""
   old = old.rsplit(sym, 1)  # The value of the old pkg
   new = new.rsplit(sym, 1)  # The value of the new pkg
-  if len(old) > len(new):  # If old has versioning and new does not
+  if len(old) > len(new):  # If old has version and new does not
     return (old[0], new[0], 1)
-  elif len(old) < len(new): # If new has versioning and old does not
+  elif len(old) < len(new): # If new has version and old does not
     return (old[0], new[0], -1)
-  elif len(old) == len(new) == 1:  # If neither has versioning
+  elif len(old) == len(new) == 1:  # If neither has version
     return (old[0], new[0], 0)
-  else: #if len(old) == 2 and len(new) == 2 # Both have versioning
+  else: #if len(old) == 2 and len(new) == 2 # Both have version
     return (old[0], new[0], cmp(int(old[1]), int(new[1])))

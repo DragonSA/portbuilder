@@ -21,7 +21,7 @@ class Job(Signal):
   def __init__(self, load=1, priority=0):
     """Initiate a job with a given priority and load.
 
-    Higher the value of priority, the greater the precident.  Load indicates
+    Higher the value of priority, the greater the precedent.  Load indicates
     how many resources is required to run the job (i.e. CPUs)."""
     Signal.__init__(self)
     if priority is not None:
@@ -115,7 +115,7 @@ class PortJob(Job):
   @property
   def priority(self):
     """Priority of port.  Port's priority may change without notice."""
-    return self.port.dependant.priority
+    return self.port.dependent.priority
 
   def work(self):
     """Run the required port stage."""

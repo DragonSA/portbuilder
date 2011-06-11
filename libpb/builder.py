@@ -56,12 +56,12 @@ class DependLoader(object):
     while True:
       method = self.method[port]
       self.method[port] = self._next(self.method[port])
-      port.dependant.propogate = not self.method[port]
+      port.dependent.propogate = not self.method[port]
       if method is None:
         # No method left, port failed to resolve
         del self.method[port]
         port.failed = True
-        port.dependant.status_changed()
+        port.dependent.status_changed()
         return False
       if self._resolve(port, method):
         return True
@@ -178,21 +178,21 @@ class ConfigBuilder(Builder):
     del self.ports[job.port]
 
 class DependBuilder(Builder):
-  """Load port's dependancies."""
+  """Load port's dependencies."""
 
   def __init__(self):
     """Initialise depend builder"""
     Builder.__init__(self, Port.DEPEND)
 
   def __call__(self, port):
-    """Add a port to have its dependancies loaded."""
+    """Add a port to have its dependencies loaded."""
     return self.add(port)
 
   def __repr__(self):
     return "<DependBuilder()>"
 
   def add(self, port):
-    """Add a port to have its dependancies loaded."""
+    """Add a port to have its dependencies loaded."""
 
     if port in self.ports:
       return self.ports[port]
@@ -224,7 +224,7 @@ class DependBuilder(Builder):
     from .queue import queues
 
     port.stage_completed.disconnect(self._loaded)
-    if port.dependancy is not None:
+    if port.dependency is not None:
       for queue in queues:
         queue.reorder()
     if port.failed:
@@ -279,15 +279,15 @@ class StageBuilder(Builder):
       return job
 
   def _add(self, port):
-    """Add a ports dependancies and prior stage to be built."""
+    """Add a ports dependencies and prior stage to be built."""
     from .env import flags
 
     # Don't try and build a port that has already failed (or cannot be built)
-    if port.failed or port.dependancy.failed:
+    if port.failed or port.dependency.failed:
       self.ports[port].stage_done()
       return
 
-    depends = port.dependancy.check(self.stage)
+    depends = port.dependency.check(self.stage)
 
     # Add all outstanding ports to be installed
     self._pending[port] = len(depends)
@@ -330,7 +330,7 @@ class StageBuilder(Builder):
       self.update.emit(self, Builder.SUCCEEDED, job.port)
 
   def _depend_resolv(self, port):
-    """Update dependancy structures for resolved dependancy."""
+    """Update dependency structures for resolved dependency."""
     if not self._port_failed(port):
       for port in self._depends.pop(port):
         if port not in self.failed:
@@ -351,11 +351,11 @@ class StageBuilder(Builder):
 
     if port in self.failed or flags["mode"] == "clean":
       return True
-    elif port.failed or port.dependancy.failed:
+    elif port.failed or port.dependency.failed:
       from .event import post_event
 
       if port in self._depends:
-        # Inform all dependants that they have failed (because of us)
+        # Inform all dependents that they have failed (because of us)
         for deps in self._depends.pop(port):
           if (not self.prev_builder or deps not in self.prev_builder.ports) and deps not in self.failed:
             post_event(self._port_failed, deps)
@@ -374,7 +374,7 @@ class StageBuilder(Builder):
     from .env import flags
 
     del self._pending[port]
-    if port.failed or port.dependancy.failed or port.dependancy.check(self.stage):
+    if port.failed or port.dependency.failed or port.dependency.check(self.stage):
       # port cannot build
       self.ports[port].stage_done()
     elif self.stage == port.PACKAGE:
@@ -386,12 +386,12 @@ class StageBuilder(Builder):
         self._build_port(port)
     else:
       # Checks for self.stage <= port.INSTALL || self.stage == port.PKGINSTALL
-      if port.dependant.status == port.dependant.RESOLV:
+      if port.dependent.status == port.dependent.RESOLV:
         # port does not need to build
         self.ports[port].stage_done()
       elif port.install_status > flags["stage"] and not port.force:
         # port already up to date, does not need to build
-        port.dependant.status_changed()
+        port.dependent.status_changed()
         self.ports[port].stage_done()
       else:
         self._build_port(port)

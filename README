@@ -50,14 +50,14 @@ Options:
   -F, --fetch-only      Only fetch the distribution files for the ports
   --force               Force (re)installation of specified ports.
   --force-all           Force (re)installation of specified ports and all its
-                        dependancies.
+                        dependencies.
   -n                    Display the commands that would have been executed,
                         but do not actually execute them.
   -N                    Do not execute any commands.
   -p, --package         Create packages for specified ports.
   -P, --package-all     Create packages for all installed ports
   -u, --upgrade         Upgrade specified ports.
-  -U, --upgrade-all     Upgrade specified ports and all its dependancies.
+  -U, --upgrade-all     Upgrade specified ports and all its dependencies.
 
 
 EXAMPLES
@@ -75,7 +75,7 @@ devel/svk       # For development
 Fetch all the files required to update all ports in a file
 # ./port.py -Fuf /root/ports
 
-Reconfigure and upgrade all ports (and their dependancies) in a file
+Reconfigure and upgrade all ports (and their dependencies) in a file
 # ./port.py -c all -Uf /root/ports
 
 Display the commands that will upgrade all installed ports
