@@ -1,3 +1,2 @@
- - dependency resolution may supersede direct request from user
- - '-n' causes config dialog to corrupt `portbuilder -anUc all`
- - conflicting/alternative dependencies
+Conflicting/alternative dependencies:
+    Conflicting and alternative dependencies are currently not handled.

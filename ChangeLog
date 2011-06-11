@@ -6,6 +6,7 @@ X.Y.Z: YYYY MMM DD:
  * Improve performance by:
    * Skipping exception check from subprocess
    * Caching variables used by Mk/bsd.port.mk and Mk/bsd.port.subdir.mk
+   * Use StateTracker for Top UI
 
 0.1.2 - 2011 April 16:
  * Rename to portbuilder (and pyport->libpb)
