@@ -4,7 +4,6 @@ from __future__ import absolute_import
 
 import bisect
 import os
-import signal
 
 from . import event
 
@@ -126,6 +125,7 @@ def stop(kill=False, kill_clean=False):
     from .builder import builders
     from .env import CPUS, flags
     from .queue import attr_queue, clean_queue, queues
+    import signal
 
     if flags["no_op"]:
         raise SystemExit(254)
