@@ -311,6 +311,7 @@ class StageBuilder(Builder):
       self._port_ready(port)
 
   def _started(self, job):
+    """Emit a signal to indicate a port for this stage has become active."""
     job.started.disconnect(self._started)
     self.update.emit(self, Builder.ACTIVE, job.port)
 

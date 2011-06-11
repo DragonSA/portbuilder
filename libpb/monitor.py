@@ -259,8 +259,7 @@ class Top(Monitor):
     scr.addstr(self._offset + 1, 2, ' STAGE   STATE   TIME PACKAGE')
 
     def ports(stages, status):
-      from . import state
-
+      """Retrieve all the ports at status from stages."""
       for stage in reversed(stages):
         stat = stage[status]
         if self._skip:

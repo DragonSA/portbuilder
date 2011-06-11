@@ -18,6 +18,7 @@ class StateTracker(object):
     """Information about each stage of the build process."""
 
     def __init__(self, builder, next_stage=None):
+      """Initialise the Stage's state."""
       self.builder = builder
       self.stage = builder.stage
       self.active  = []
@@ -33,9 +34,11 @@ class StateTracker(object):
       builder.update.connect(self._update)
 
     def __getitem__(self, status):
+      """Get the ports at status"""
       return self.status[status]
 
     def _update(self, _builder, status, port):
+      """Handle a change in the stage builder."""
       from .builder import Builder
 
       if status == Builder.ADDED:
@@ -66,17 +69,21 @@ class StateTracker(object):
           self._next_stage.previous_stage_finished(port)
 
     def cleanup(self):
+      """Disconnect from signals."""
       self.builder.update.disconnect(self._update)
 
     def previous_stage_started(self, port):
+      """Handle a port starting a previous (superseding) stage."""
       if port in self._ports:
         self.pending.remove(port)
 
     def previous_stage_finished(self, port):
+      """Handle a port finishing a previous (superseding) stage."""
       if port in self._ports:
         bisect.insort(self.pending, port)
 
   def __init__(self):
+    """Initialise the StateTracker."""
     from .builder import builders, depend_builder
 
     self.stages = [StateTracker.Stage(builders[-1])]
@@ -88,15 +95,18 @@ class StateTracker(object):
     depend_builder.update.connect(self._sort)
 
   def __del__(self):
+    """Disconnect from signals."""
     from .builder import depend_builder
     for i in self.stages:
       i.cleanup()
     depend_builder.update.disconnect(self._sort)
 
   def __getitem__(self, stage):
+    """Get the Stage object for stage."""
     return self.stages[stage - 1]
 
   def sort(self):
+    """Do any sorting required for the various stages."""
     if self._resort:
       for stage in self.stages:
         stage.pending.sort()
@@ -104,6 +114,7 @@ class StateTracker(object):
       self._resort = False
 
   def _sort(self, _builder, status, _port):
+    """Handle changes that require a resort (due to changes in priority)"""
     from .builder import Builder
     if status in (Builder.FAILED, Builder.SUCCEEDED, Builder.DONE):
       self._resort = True
