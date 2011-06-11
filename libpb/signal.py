@@ -2,6 +2,8 @@
 
 from __future__ import absolute_import
 
+import weakref
+
 __all__ = ["Signal", "SignalProperty"]
 
 class Signal(object):
@@ -78,10 +80,8 @@ class SignalProperty(object):
 
   def __init__(self, name="", signal=Signal):
     """Initialise the signal property."""
-    from weakref import WeakKeyDictionary
-
     self._name = name
-    self._signals = WeakKeyDictionary()
+    self._signals = weakref.WeakKeyDictionary()
     self._signal = signal
 
   def __get__(self, instance, _owner):

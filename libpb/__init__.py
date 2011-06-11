@@ -2,6 +2,10 @@
 
 from __future__ import absolute_import
 
+import bisect
+import os
+import signal
+
 from . import event
 
 __all__ = ["event", "state", "stop"]
@@ -32,17 +36,16 @@ class StateTracker(object):
       return self.status[status]
 
     def _update(self, _builder, status, port):
-      from bisect import insort
       from .builder import Builder
 
       if status == Builder.ADDED:
-        insort(self.pending, port)
+        bisect.insort(self.pending, port)
         self._ports.add(port)
         if self._next_stage is not None:
           self._next_stage.previous_stage_started(port)
       elif status == Builder.QUEUED:
         self.pending.remove(port)
-        insort(self.queued, port)
+        bisect.insort(self.queued, port)
       elif status == Builder.ACTIVE:
         self.queued.remove(port)
         self.active.append(port)
@@ -71,8 +74,7 @@ class StateTracker(object):
 
     def previous_stage_finished(self, port):
       if port in self._ports:
-        from bisect import insort
-        insort(self.pending, port)
+        bisect.insort(self.pending, port)
 
   def __init__(self):
     from .builder import builders, depend_builder
@@ -109,8 +111,6 @@ class StateTracker(object):
 
 def stop(kill=False, kill_clean=False):
   """Stop building ports and cleanup."""
-  from os import kill, killpg
-  from signal import SIGTERM, SIGKILL
   from .builder import builders
   from .env import cpus, flags
   from .queue import attr_queue, clean_queue, queues
@@ -129,9 +129,9 @@ def stop(kill=False, kill_clean=False):
     for pid in (job.pid for job in queue.active if job.pid):
       try:
         if kill:
-          killpg(pid, SIGKILL)
+          os.killpg(pid, signal.SIGKILL)
         else:
-          kill(pid, SIGTERM)
+          os.kill(pid, signal.SIGTERM)
       except OSError:
         pass
 

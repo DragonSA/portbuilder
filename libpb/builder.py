@@ -3,6 +3,8 @@
 from __future__ import absolute_import
 
 from abc import ABCMeta, abstractmethod
+import os
+
 from .port.port import Port
 from .signal import SignalProperty
 
@@ -80,9 +82,7 @@ class DependLoader(object):
       else:
         job = install_builder(port)
     elif method == "package":
-      from os.path import isfile
-
-      if not isfile(flags["chroot"] + port.attr["pkgfile"]):
+      if not os.path.isfile(flags["chroot"] + port.attr["pkgfile"]):
         return False
       job = pkginstall_builder(port)
     else:
@@ -163,18 +163,18 @@ class ConfigBuilder(Builder):
       job = PortJob(port, port.CONFIG)
       job.connect(self._cleanup)
       self.ports[port] = job
-      self.signal.emit(self, Builder.ADDED, port)
+      self.update.emit(self, Builder.ADDED, port)
       self.queue.add(job)
-      self.signal.emit(self, Builder.QUEUED, port)
+      self.update.emit(self, Builder.QUEUED, port)
       return job
 
   def _cleanup(self, job):
     """Cleanup after the port was configured."""
     if job.port.failed:
       self.failed.append(job.port)
-      self.signal.emit(self, Builder.FAILED, port)
+      self.update.emit(self, Builder.FAILED, job.port)
     else:
-      self.signal.emit(self, Builder.SUCCEEDED, port)
+      self.update.emit(self, Builder.SUCCEEDED, job.port)
     del self.ports[job.port]
 
 class DependBuilder(Builder):

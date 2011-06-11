@@ -2,6 +2,10 @@
 
 from __future__ import absolute_import
 
+import datetime
+import os
+import traceback
+
 __all__ = ["error", "exception", "get_tb"]
 
 def get_tb(offset=0):
@@ -16,28 +20,23 @@ def get_tb(offset=0):
 
 def error(func, msg):
   """Report an error to the general logfile"""
-  from os.path import join
-  from datetime import datetime
   from .env import flags
 
-  fullmsg = "%s %s> %s\n" % (datetime.now(), func, "\n  ".join(msg))
+  fullmsg = "%s %s> %s\n" % (datetime.datetime.now(), func, "\n  ".join(msg))
 
-  open(join(flags["log_dir"], flags["log_file"]), "a").write(fullmsg)
+  open(os.path.join(flags["log_dir"], flags["log_file"]), "a").write(fullmsg)
 
 def exception():
   """Report an exception to the general logfile"""
-  from datetime import datetime
-  from os.path import join
-  from traceback import format_list, format_exc
-  from .event import traceback
+  from .event import traceback as event_traceback
   from .env import flags
 
-  log = open(join(flags["log_dir"], flags["log_file"]), "a")
-  log.write("%s> EXCEPTION\n  " % datetime.now())
+  log = open(os.path.join(flags["log_dir"], flags["log_file"]), "a")
+  log.write("%s> EXCEPTION\n  " % datetime.datetime.now())
   msg = ""
-  for tb, name in traceback():
+  for tb, name in event_traceback():
     msg += "Traceback from %s (most recent call last):\n" % name
-    msg += "%s\n" % "".join(format_list(tb))
-  msg += format_exc()
+    msg += "%s\n" % "".join(traceback.format_list(tb))
+  msg += traceback.format_exc()
   log.write(msg.replace("\n", "\n  "))
   log.close()

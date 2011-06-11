@@ -3,6 +3,9 @@
 Provides a framework for calling functions asynchronously."""
 from __future__ import absolute_import
 
+import collections
+import select
+
 from .signal import InlineSignal, SignalProperty
 
 __all__ = ["alarm", "event", "pending_events", "post_event", "resume", "run",
@@ -18,13 +21,10 @@ class EventManager(object):
     """Initialise the event manager.
 
     A sleeper function is used to wake up once a new event comes available."""
-    from collections import deque
-    from select import kqueue
-
-    self._events = deque()
+    self._events = collections.deque()
     self._alarms = 0
     self._alarm_active = True
-    self._kq = kqueue()
+    self._kq = select.kqueue()
     self._kq_events = {}
     self.traceback = ()
     self.event_count = 0
@@ -52,8 +52,6 @@ class EventManager(object):
         - - Informs when subprocess dies
       s - Signal handling
     """
-    import select
-    from select import kevent, KQ_EV_ADD, KQ_EV_ENABLE, KQ_EV_DELETE
     note = 0
     if mode == "r":
       event = (obj.fileno(), select.KQ_FILTER_READ)
@@ -79,13 +77,13 @@ class EventManager(object):
     if clear:
       try:
         self._kq_events.pop(event)
-        self._kq.control((kevent(event[0], event[1], KQ_EV_DELETE),), 0)
+        self._kq.control((select.kevent(event[0], event[1], select.KQ_EV_DELETE),), 0)
       except KeyError:
         raise KeyError("no event registered")
     else:
       if event not in self._kq_events:
         from .signal import Signal
-        self._kq.control((kevent(event[0], event[1], KQ_EV_ADD | KQ_EV_ENABLE, note, data),), 0)
+        self._kq.control((select.kevent(event[0], event[1], select.KQ_EV_ADD | select.KQ_EV_ENABLE, note, data),), 0)
         self._kq_events[event] = Signal()
       return self._kq_events[event]
 
@@ -152,12 +150,10 @@ class EventManager(object):
 
   def _queue(self, timeout=None):
     """Run any events returned by kqueue."""
-    from select import KQ_FILTER_PROC, KQ_NOTE_EXIT
-
     for ev in self._kq.control(None, 2, timeout):
       event = (ev.ident, ev.filter)
       if event in self._kq_events:
-        if ev.filter == KQ_FILTER_PROC and ev.fflags == KQ_NOTE_EXIT:
+        if ev.filter == select.KQ_FILTER_PROC and ev.fflags == select.KQ_NOTE_EXIT:
           self._kq_events.pop(event).emit()
         else:
           self._kq_events[event].emit()

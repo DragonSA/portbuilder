@@ -2,7 +2,9 @@
 
 from __future__ import absolute_import
 
-from .env import cpus as _cpus
+import bisect
+
+from .env import CPUS
 
 __all__ = ["QueueManager", "queues", "attr_queue", "config_queue",
            "checksum_queue", "fetch_queue", "build_queue", "install_queue"]
@@ -37,12 +39,11 @@ class QueueManager(object):
 
   def add(self, job):
     """Add a job to be run."""
-    from bisect import insort
     assert(job not in self.queue)
     if self._sort:
       self.queue.append(job)
     else:
-      insort(self.queue, job)
+      bisect.insort(self.queue, job)
     if self.active_load < self._load:
       self._run()
 
@@ -106,13 +107,13 @@ class QueueManager(object):
         best_idx = idx
     return queue.pop(best_idx)
 
-attr_queue = QueueManager(_cpus * 2)
+attr_queue = QueueManager(CPUS * 2)
 clean_queue = QueueManager(1)
 
 config_queue = QueueManager(1)
-checksum_queue = QueueManager(max(1, _cpus // 2))
+checksum_queue = QueueManager(max(1, CPUS // 2))
 fetch_queue = QueueManager(1)
-build_queue = QueueManager(_cpus * 2)
+build_queue = QueueManager(CPUS * 2)
 install_queue = QueueManager(1)
 package_queue = QueueManager(1)
 queues = (config_queue, checksum_queue, fetch_queue, build_queue, install_queue, package_queue, install_queue)

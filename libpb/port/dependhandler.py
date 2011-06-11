@@ -2,6 +2,8 @@
 
 from __future__ import absolute_import
 
+import collections
+
 from .port import Port
 
 __all__ = ['Dependent', 'Dependency']
@@ -249,9 +251,7 @@ class Dependency(DependHandler):
 
   def _update_priority(self):
     """Update the priority of all ports that are affected by this port,"""
-    from collections import deque
-
-    update_list = deque()
+    update_list = collections.deque()
     updated = set()
     update_list.extend(self.get())
     priority = self.port.dependent.priority

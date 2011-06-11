@@ -3,6 +3,10 @@
 from __future__ import absolute_import
 
 from contextlib import contextmanager
+import os
+import subprocess
+import time
+
 from ..signal import SignalProperty
 
 __all__ = ["Port"]
@@ -141,11 +145,10 @@ class Port(object):
     """Clean the ports working directory and log file."""
     if self.stage >= Port.BUILD:
       assert not self.working
-      from time import time
       from ..job import CleanJob
       from ..queue import clean_queue
 
-      self.working = time()
+      self.working = time.time()
       if self.stage != Port.PKGINSTALL:
         clean_queue.add(CleanJob(self).connect(self._cleaned))
       else:
@@ -157,11 +160,8 @@ class Port(object):
     if job and not job.status:
       self.failed = True
     if not self.failed and self.stage >= Port.BUILD:
-      from os.path import isfile
-      from os import unlink
-
-      if isfile(self.log_file):
-        unlink(self.log_file)
+      if os.path.isfile(self.log_file):
+        os.unlink(self.log_file)
 
   def reset(self):
     """Reset the ports state, and stage."""
@@ -180,7 +180,6 @@ class Port(object):
 
   def build_stage(self, stage):
     """Build the requested stage."""
-    from time import time
     from ..job import StalledJob
 
     pre_map = (self._pre_config, self._pre_depend, self._pre_checksum,
@@ -194,7 +193,7 @@ class Port(object):
       # Don't do stage if not configured
       return False
 
-    self.working = time()
+    self.working = time.time()
     try:
       status = pre_map[stage - 1]()
       if isinstance(status, bool):
@@ -231,11 +230,10 @@ class Port(object):
 
   def _pre_depend(self):
     """Create a dependency object for this port."""
-    from os.path import join
     from ..env import flags
     from .dependhandler import Dependency
 
-    self.log_file = join(flags["log_dir"], self.attr["pkgname"])
+    self.log_file = os.path.join(flags["log_dir"], self.attr["pkgname"])
     self.priority = self._get_priority()
     self.dependent.priority += self.priority
     depends = ('depend_build', 'depend_extract', 'depend_fetch', 'depend_lib',
@@ -244,7 +242,6 @@ class Port(object):
 
   def _pre_checksum(self):
     """Check if distfiles are available."""
-    from os.path import join, isfile
     from ..env import flags
 
     if flags["no_op"]:
@@ -260,7 +257,7 @@ class Port(object):
       return True
     distdir = self.attr["distdir"]
     for i in distfiles:
-      if not isfile(join(flags["chroot"], distdir, i)):
+      if not os.path.isfile(os.path.join(flags["chroot"], distdir, i)):
         # If file does not exist then it failed
         self._bad_checksum.add(i)
         return True
@@ -351,16 +348,14 @@ class Port(object):
 
   def pkginstall(self):
     """Prepare to install the port from it's package."""
-    from os.path import isfile
-    from time import time
     from ..env import flags
     from ..make import make_target
 
-    if self.working or not isfile(flags["chroot"] + self.attr["pkgfile"]):
+    if self.working or not os.path.isfile(flags["chroot"] + self.attr["pkgfile"]):
       return False
 
     self.stage = self.PKGINSTALL - 1
-    self.working = time()
+    self.working = time.time()
     if self.install_status > self.ABSENT:
       return make_target(self, "deinstall").connect(self._pkginstall)
     else:
@@ -391,11 +386,10 @@ class Port(object):
 
       pkg_add = PopenNone(args, self)
     else:
-      from subprocess import PIPE
       from ..make import Popen
 
       logfile = open(self.log_file, "a")
-      pkg_add = Popen(args, self, stdin=PIPE, stdout=logfile, stderr=logfile)
+      pkg_add = Popen(args, self, stdin=subprocess.PIPE, stdout=logfile, stderr=logfile)
       pkg_add.stdin.close()
     return pkg_add.connect(self._post_pkginstall)
 
@@ -451,7 +445,6 @@ class Port(object):
 
   def _check_config(self):
     """Check the options file to see if it is up-to-date."""
-    from os.path import isfile, join
     from ..env import env, flags
     from .mk import pkg_version
 
@@ -460,10 +453,10 @@ class Port(object):
     elif flags["config"] == "all":
       return False
 
-    optionfile = join(flags["chroot"], self.attr["optionsfile"])
+    optionfile = flags["chroot"] + self.attr["optionsfile"]
     pkgname = self.attr["pkgname"]
     options = set()
-    if isfile(optionfile):
+    if os.path.isfile(optionfile):
       for i in open(optionfile, 'r'):
         if i.startswith('_OPTIONS_READ='):
           # The option set to the last pkgname this config file was set for
@@ -478,12 +471,11 @@ class Port(object):
 
   def _get_priority(self):
     """Get the priority of this port, based on the distfiles size."""
-    from os.path import isfile, join
     from ..env import flags
 
     distfiles = self.attr["distfiles"]
-    distinfo = join(flags["chroot"], self.attr["distinfo"])
-    if not len(distfiles) or not isfile(distinfo):
+    distinfo = flags["chroot"] + self.attr["distinfo"]
+    if not len(distfiles) or not os.path.isfile(distinfo):
       return 0
     priority = 0
     for i in open(distinfo, 'r'):

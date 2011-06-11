@@ -3,6 +3,15 @@
 
 from __future__ import absolute_import
 
+import cProfile
+import optparse
+import os
+import re
+import signal
+import subprocess
+import sys
+import traceback
+
 VAR_NAME = "^[a-zA-Z_][a-zA-Z0-9_]*$"
 
 class PortDelegate(object):
@@ -44,17 +53,14 @@ def sigterm():
 
 def sigint():
   """Ask politely for everything to stop at a convenient time."""
-  from signal import SIGINT
   from libpb.event import event, post_event
   from libpb import stop
 
   post_event(stop)
-  event(SIGINT, "s").disconnect(sigint).connect(sigterm)
+  event(signal.SIGINT, "s").disconnect(sigint).connect(sigterm)
 
 def main():
   """The main event loop."""
-  from os import chdir, environ
-  from signal import signal, SIGINT, SIGTERM, SIG_IGN
   from libpb.env import flags
   from libpb.event import event
   from libpb.monitor import Top
@@ -77,18 +83,18 @@ def main():
   # Make sure environ is not polluted with make flags
   for key in ("__MKLVL__", "MAKEFLAGS", "MAKELEVEL", "MFLAGS", "MAKE_JOBS_FIFO"):
     try:
-      del environ[key]
+      del os.environ[key]
     except KeyError:
       pass
 
   # Change directory to / (root).  This is a workaround for bug misc/157543
-  chdir("/")
+  os.chdir("/")
 
   # Install signal handlers
-  signal(SIGINT, SIG_IGN)
-  event(SIGINT, "s").connect(sigint)
-  signal(SIGTERM, SIG_IGN)
-  event(SIGTERM, "s").connect(sigterm)
+  signal.signal(signal.SIGINT, signal.SIG_IGN)
+  event(signal.SIGINT, "s").connect(sigint)
+  signal.signal(signal.SIGTERM, signal.SIG_IGN)
+  event(signal.SIGTERM, "s").connect(sigterm)
 
   # Port delegate
   delegate = PortDelegate(options.package, options.upgrade, options.force)
@@ -100,23 +106,19 @@ def main():
   if not flags["no_op_print"]:
     Top().start()
   if options.profile:
-    from cProfile import runctx
-    runctx("run_loop(delegate.no_port, options)", globals(), locals(), options.profile)
+    cProfile.runctx("run_loop(delegate.no_port, options)", globals(), locals(), options.profile)
   else:
     run_loop(delegate.no_port, options)
 
 def mkdir(directory):
   """Make a given directory if needed."""
-  from os.path import exists, isdir
-  from os import mkdir
-
-  if exists(directory):
-    if not isdir(directory):
+  if os.path.exists(directory):
+    if not os.path.isdir(directory):
       print "%s: not a directory" % directory
       exit(1)
   else:
     try:
-      mkdir(directory)
+      os.mkdir(directory)
     except OSError, e:
       print "%s: unable to create directory (%s)" % (directory, e)
       exit(2)
@@ -140,40 +142,36 @@ def run_loop(no_port, options):
   except SystemExit:
     raise
   except BaseException:
-    from sys import stderr
-    from traceback import format_list, format_exc
     from libpb.debug import exception
-    from libpb.event import post_event, traceback
+    from libpb.event import post_event, traceback as event_traceback
     from libpb import stop
 
     msg = ""
-    for tb, name in traceback():
+    for tb, name in event_traceback():
       msg += "Traceback from %s (most recent call last):\n" % name
-      msg += "%s\n" % "".join(format_list(tb))
-    msg += format_exc()
+      msg += "%s\n" % "".join(traceback.format_list(tb))
+    msg += traceback.format_exc()
     exception()
 
     post_event(stop)
     try:
       run()
     finally:
-      stderr.write(msg)
+      sys.stderr.write(msg)
 
 def gen_parser():
   """Create the options parser object."""
-  from optparse import OptionParser
-
   usage = "\t%prog [-abnpruFN] [-c config] [-D variable] [-f file] "\
           "[variable=value] port ..."
 
-  parser = OptionParser(usage, version="%prog 0.1.2")
+  parser = optparse.OptionParser(usage, version="%prog 0.1.2")
 
   parser.add_option("-a", "--all", action="store_true", default=False,
-                    help="Add all installed ports to the list (aka `pkg_info" \
+                    help="Add all installed ports to the list (aka `pkg_info"
                     "-aoq`)")
 
   parser.add_option("--arch", action="store", type="string", default="",
-                    help="Set the architecture environment variables (for " \
+                    help="Set the architecture environment variables (for "
                     "cross building)")
 
   # batch option supersedes config option
@@ -181,7 +179,7 @@ def gen_parser():
                     default=False, help="Batch mode.  Skips the config stage.")
 
   parser.add_option("-c", "--config", action="callback", callback=parse_config,
-                    type="string", help="Specify which ports to configure " \
+                    type="string", help="Specify which ports to configure "
                     "(none, all, newer, changed) [default: changed]")
 
   parser.add_option("-C", dest="chroot", action="store", type="string",
@@ -191,21 +189,21 @@ def gen_parser():
                     help="Turn off extra diagnostic information (faster)")
 
   parser.add_option("--depend", action="store", type="string", default="",
-                    help="Comma separated methods to resolve dependencies " \
+                    help="Comma separated methods to resolve dependencies "
                     "(build, package) [default=build]")
 
   parser.add_option("-D", dest="make_env", action="append", metavar="variable",
-                    default=[], help="Define the given variable for make (i.e."\
+                    default=[], help="Define the given variable for make (i.e."
                     " add ``-D variable'' to the make calls).")
 
   parser.add_option("-f", "--ports-file", dest="ports_file", action="store",
                     type="string", default=False, help="Use ports from file.")
 
   parser.add_option("-F", "--fetch-only", dest="fetch", action="store_true",
-                    default=False, help="Only fetch the distribution files for"\
+                    default=False, help="Only fetch the distribution files for"
                     " the ports")
 
-  parser.add_option("--force", action="store_true", default=False, help="Force"\
+  parser.add_option("--force", action="store_true", default=False, help="Force"
                     " (re)installation of specified ports.")
 
   parser.add_option("--force-all", dest="forceA", action="store_true",
@@ -213,7 +211,7 @@ def gen_parser():
                     "ports and all its dependencies.")
 
   parser.add_option("-n", dest="no_opt_print", action="store_true",
-                    default=False, help="Display the commands that would have "\
+                    default=False, help="Display the commands that would have "
                     "been executed, but do not actually execute them.")
 
   parser.add_option("-N", dest="no_opt", action="store_true", default=False,
@@ -223,7 +221,7 @@ def gen_parser():
                     help="Create packages for specified ports.")
 
   parser.add_option("-P", "--package-all", dest="packageA", action="store_true",
-                    default=False, help="Create packages for all installed "\
+                    default=False, help="Create packages for all installed "
                     "ports")
 
   parser.add_option("--profile", action="store", default=False, type="string",
@@ -233,7 +231,7 @@ def gen_parser():
                     help="Upgrade specified ports.")
 
   parser.add_option("-U", "--upgrade-all", dest="upgradeA", action="store_true",
-                    default=False, help="Upgrade specified ports and all its "\
+                    default=False, help="Upgrade specified ports and all its "
                     "dependencies.")
 
   #parser.add_option("--index", action="store_true", default=False,
@@ -242,14 +240,12 @@ def gen_parser():
 
 def set_options(options):
   """Set all the global options."""
-  from os import environ
-  from re import match
   from libpb.env import env, flags
   from libpb.port.port import Port
 
   # Add all -D options
   for i in options.make_env:
-    if not match(VAR_NAME, i):
+    if not re.match(VAR_NAME, i):
       options.parser.error("incorrectly formatted variable name: %s" % i)
     env[i] = True
 
@@ -257,47 +253,41 @@ def set_options(options):
   for i in options.args[:]:
     if i.find('=') != -1:
       var, val = i.split('=', 1)
-      if not match(VAR_NAME, var):
+      if not re.match(VAR_NAME, var):
         options.parser.error("incorrectly formatted variable name: %s" % var)
       env[var] = val
       options.args.remove(i)
 
   # Force 'none' config mode if BATCH present
-  if "BATCH" in env or "BATCH" in environ or options.batch:
+  if "BATCH" in env or "BATCH" in os.environ or options.batch:
     flags["config"] = "none"
 
   # Add all installed ports to port list
   if options.all:
-    from subprocess import Popen, PIPE, STDOUT
-    pkg_info = Popen(["pkg_info", "-aoq"], stdin=None, stdout=PIPE, stderr=STDOUT, close_fds=True)
+    pkg_info = subprocess.Popen(["pkg_info", "-aoq"], stdin=None, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, close_fds=True)
     if pkg_info.wait() != 0:
-      from sys import stderr
-      stderr.write("%s\nerror: portbuilder: Unable to get installed ports list\n" % pkg_info.stdout.read())
+      sys.stderr.write("%s\nerror: portbuilder: Unable to get installed ports list\n" % pkg_info.stdout.read())
       exit(1)
     options.args.extend(pkg_info.stdout.read().split())
 
   # Architecture flag
   if options.arch:
-    from os import environ
-    environ["ARCH"] = options.arch
-    environ["UNAME_m"] = options.arch
-    environ["UNAME_p"] = options.arch
-    environ["MACHINE"] = options.arch
-    environ["MACHTYPE"] = options.arch
-    if options.arch == "i386" and "HAVE_COMPAT_IA32_KERN" in environ:
-      del environ["HAVE_COMPAT_IA32_KERN"]
+    os.environ["ARCH"] = options.arch
+    os.environ["UNAME_m"] = options.arch
+    os.environ["UNAME_p"] = options.arch
+    os.environ["MACHINE"] = options.arch
+    os.environ["MACHTYPE"] = options.arch
+    if options.arch == "i386" and "HAVE_COMPAT_IA32_KERN" in os.environ:
+      del os.environ["HAVE_COMPAT_IA32_KERN"]
 
   # Set chroot environment
   if options.chroot:
-    from os.path import isdir, join
-    from os import getcwd, getuid
-
     if options.chroot[-1] == '/':
       options.chroot = options.chroot[:-1]
-    if not isdir(options.chroot):
+    if not os.path.isdir(options.chroot):
       options.parser.error("chroot needs to be a valid directory")
-    flags["chroot"] = join(getcwd(), options.chroot)
-    if getuid() != 0:
+    flags["chroot"] = os.path.join(os.getcwd(), options.chroot)
+    if os.getuid() != 0:
       options.parser.error("chroot option only works with root account")
 
   # Debug mode
@@ -305,7 +295,7 @@ def set_options(options):
     flags["debug"] = True
 
   # Depend resolve methods
-  if not options.depend and "USE_PACKAGE_DEPENDS" in env or "USE_PACKAGE_DEPENDS" in environ:
+  if not options.depend and "USE_PACKAGE_DEPENDS" in env or "USE_PACKAGE_DEPENDS" in os.environ:
     options.depend = "package,build"
   if options.depend:
     depend = [i.strip() for i in options.depend.split(",")]
@@ -388,8 +378,7 @@ def parse_config(_option, _opt_str, value, _parser):
   from libpb.env import flags
 
   if value not in ("none", "all", "newer", "changed"):
-    from optparse import OptionValueError
-    raise OptionValueError("config must be one of (none, all, newer, changed)")
+    raise optparse.OptionValueError("config must be one of (none, all, newer, changed)")
   flags["config"] = value
 
 if __name__ == "__main__":

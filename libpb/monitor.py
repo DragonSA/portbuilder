@@ -3,6 +3,10 @@
 from __future__ import absolute_import
 
 from abc import ABCMeta, abstractmethod
+import curses
+import sys
+import time
+
 from .port.port import Port
 from .builder import Builder
 
@@ -88,11 +92,11 @@ class Top(Monitor):
 
   def __init__(self):
     """Initialise the top monitor."""
-    from time import time
     Monitor.__init__(self)
 
     self._offset = 0
-    self._time = time()
+    self._time = time.time()
+    self._curr_time = self._time
     self._stdscr = None
     self._stats = None
 
@@ -105,10 +109,7 @@ class Top(Monitor):
 
   def run(self):
     """Refresh the display."""
-    from time import time
-    from .env import flags
-
-    self._time = time()
+    self._curr_time = time.time()
     self._stdscr.erase()
     self._update_header(self._stdscr)
     self._update_rows(self._stdscr)
@@ -117,23 +118,19 @@ class Top(Monitor):
 
   def _init(self):
     """Initialise the curses library."""
-    from curses import initscr, cbreak, noecho
-    from sys import stdin
     from .event import event
 
-    self._stdscr = initscr()
+    self._stdscr = curses.initscr()
     self._stdscr.keypad(1)
     self._stdscr.nodelay(1)
     self._stdscr.clear()
-    cbreak()
-    noecho()
+    curses.cbreak()
+    curses.noecho()
 
-    event(stdin).connect(self._userinput)
+    event(sys.stdin).connect(self._userinput)
 
   def _deinit(self):
     """Shutdown the curses library."""
-    from curses import nocbreak, echo, endwin
-    from sys import stdin
     from .event import event
 
     self._stdscr.move(self._stdscr.getmaxyx()[0] - 1, 0)
@@ -141,16 +138,14 @@ class Top(Monitor):
     self._stdscr.refresh()
 
     self._stdscr.keypad(0)
-    nocbreak()
-    echo()
-    endwin()
+    curses.nocbreak()
+    curses.echo()
+    curses.endwin()
 
-    event(stdin, clear=True)
+    event(sys.stdin, clear=True)
 
   def _userinput(self):
     """Get user input and change display options."""
-    from curses import KEY_CLEAR, KEY_NPAGE, KEY_PPAGE, ascii
-
     run = False
     while True:
       ch = self._stdscr.getch()
@@ -172,12 +167,12 @@ class Top(Monitor):
           stop(kill=True, kill_clean=True)
           raise SystemExit(254)
         continue
-      elif ch == KEY_CLEAR or ch == ascii.FF:      # Redraw window
+      elif ch == curses.KEY_CLEAR or ch == curses.ascii.FF:      # Redraw window
         self._stdscr.clear()
-      elif ch == KEY_PPAGE:                        # Page up display
+      elif ch == curses.KEY_PPAGE:                        # Page up display
         self._skip -= self._stdscr.getmaxyx()[0] - self._offset - 2
         self._skip = max(0, self._skip)
-      elif ch == KEY_NPAGE:                        # Page down display
+      elif ch == curses.KEY_NPAGE:                        # Page down display
         self._skip += self._stdscr.getmaxyx()[0] - self._offset - 2
       else:                                        # Unknown input
         continue
@@ -188,7 +183,6 @@ class Top(Monitor):
 
   def _update_header(self, scr):
     """Update the header details."""
-    from time import strftime
     from .event import event_count
     from . import state
 
@@ -198,13 +192,13 @@ class Top(Monitor):
     for stage, stgname in STAGE:
       self._update_stage(scr, stgname, state[stage])
 
-    offset = self._time - self._time
+    offset = self._curr_time - self._time
     secs, mins, hours = offset % 60, offset / 60 % 60, offset / 60 / 60 % 60
     days = offset / 60 / 60 / 24
     # Display running time
     running = "running %i+%02i:%02i:%02i  " % (days, hours, mins, secs)
     # Display current time
-    running += strftime("%H:%M:%S")
+    running += time.strftime("%H:%M:%S")
     events, self._last_event_count = self._last_event_count, event_count()
     events = self._last_event_count - events - 1
     if events > 0:
@@ -298,14 +292,13 @@ class Top(Monitor):
     if Builder.ACTIVE == status[0]:
       status = status[1:]
       for port in ports(stages, Builder.ACTIVE):
-        time = port.working
-        if time:
-          offtime = self._time - time
-          time = '%3i:%02i' % (offtime / 60, offtime % 60)
-        else:
+        if not port.working:
           continue
+
+        offtime = self._curr_time - port.working
+        active = '%3i:%02i' % (offtime / 60, offtime % 60)
         scr.addnstr(offset, 0, ' %7s  active %s %s' %
-                    (STAGE_NAME[port.stage + 1], time, get_name(port)), columns)
+                    (STAGE_NAME[port.stage + 1], active, get_name(port)), columns)
         offset += 1
         lines -= 1
         if not lines:
@@ -321,13 +314,12 @@ class Top(Monitor):
         self._skip -= len(clean)
       else:
         for job in clean[self._skip:]:
-          time = port.working
-          if time:
-            offtime = self._time - time
-            time = '%3i:%02i' % (offtime / 60, offtime % 60)
+          if job.port.working:
+            offtime = self._curr_time - job.port.working
+            active = '%3i:%02i' % (offtime / 60, offtime % 60)
           else:
-            time = ' ' * 6
-          scr.addnstr(offset, 0, '   clean %7s  active %s %s' % (stage, time, get_name(job.port)), columns)
+            active = ' ' * 6
+          scr.addnstr(offset, 0, '   clean  active %s %s' % (active, get_name(job.port)), columns)
           offset += 1
           lines -= 1
           if not lines:
@@ -338,7 +330,6 @@ class Top(Monitor):
     for status in status:
       stg = 0 if status in (Builder.FAILED, Builder.DONE) else 1
       for port in ports(stages, status):
-        stage = STAGE_NAME[port.stage + stg]
         scr.addnstr(offset, 0, ' %7s %7s        %s' %
                     (STAGE_NAME[port.stage + stg], STATUS_NAME[status], get_name(port)), columns)
         offset += 1

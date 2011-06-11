@@ -2,15 +2,16 @@
 
 from __future__ import absolute_import
 
-from subprocess import Popen as _Popen
-from .signal import Signal
 import errno
+import os
+import subprocess
+
+from .signal import Signal
 
 __all__ = ["SUCCESS", "make_target"]
 
 SUCCESS = 0
 
-import subprocess
 # HACK !!!
 def _eintr_retry_call(func, *args):
   """HACK: do not wait for subprocesses to report ready.
@@ -26,7 +27,7 @@ def _eintr_retry_call(func, *args):
         continue
       raise
 subprocess._eintr_retry_call = _eintr_retry_call
-del subprocess, _eintr_retry_call
+del _eintr_retry_call
 
 def env2args(env):
   """Convert environment variables into make arguments."""
@@ -38,8 +39,6 @@ def env2args(env):
 
 def make_target(port, targets, pipe=None, **kwargs):
   """Build a make target and call a function when finished."""
-  from os.path import join
-  from subprocess import PIPE
   from .env import env as environ, env_master, flags
 
   if isinstance(port, str):
@@ -57,7 +56,7 @@ def make_target(port, targets, pipe=None, **kwargs):
   env.update(environ)
   env.update(kwargs)
 
-  args = ("make", "-C", join(env["PORTSDIR"], origin)) + targets
+  args = ("make", "-C", os.path.join(env["PORTSDIR"], origin)) + targets
   for key, value in env_master.items():
     # Remove default environment variables
     if env[key] == value:
@@ -69,13 +68,13 @@ def make_target(port, targets, pipe=None, **kwargs):
 
   if pipe is True:
     # Give access to subprocess output
-    stdin, stdout, stderr = PIPE, PIPE, PIPE
+    stdin, stdout, stderr = subprocess.PIPE, subprocess.PIPE, subprocess.PIPE
   elif pipe is False:
     # No piping of output (i.e. interactive)
     stdin, stdout, stderr = None, None, None
   elif not flags["no_op"]:
     # Pipe output to log_file
-    stdin = PIPE
+    stdin = subprocess.PIPE
     stdout = open(port.log_file, 'a')
     stderr = stdout
 
@@ -88,14 +87,13 @@ def make_target(port, targets, pipe=None, **kwargs):
 
   return make
 
-class Popen(_Popen, Signal):
+class Popen(subprocess.Popen, Signal):
   """A Popen class with signals that emits a signal on exit."""
 
   def __init__(self, target, origin, stdin, stdout, stderr):
-    from os import setsid
     from .event import event
 
-    _Popen.__init__(self, target, stdin=stdin, stdout=stdout, stderr=stderr, close_fds=True, preexec_fn=setsid)
+    subprocess.Popen.__init__(self, target, stdin=stdin, stdout=stdout, stderr=stderr, close_fds=True, preexec_fn=os.setsid)
     Signal.__init__(self, "Popen")
     self.origin = origin
 
@@ -118,12 +116,11 @@ class PopenNone(Signal):
   def __init__(self, args, origin):
     from .env import flags
     from .event import post_event
-    from subprocess import list2cmdline
 
     Signal.__init__(self)
     self.origin = origin
     if flags["no_op_print"]:
-      print list2cmdline(args)
+      print subprocess.list2cmdline(args)
 
     post_event(self.emit, self)
 
