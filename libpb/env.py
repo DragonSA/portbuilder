@@ -30,7 +30,7 @@ flags = {
   "log_file"    : "portbuilder",        # General log file
   "mode"        : "install",            # Mode of operation
   "no_op"       : False,                # Do nothing
-  "no_op_print" : False,                # Print commands that would have been executed
+  "no_op_print" : False,                # Print commands instead of execution
   "package"     : False,                # Package all installed ports
   "stage"       : Port.ABSENT           # The minimum level for build
 }
@@ -38,65 +38,72 @@ flags = {
 env_master = {}
 env_master.update(env)
 
+
 def _sysctl(name):
-  """Retrieve the string value of a sysctlbyname(3)."""
-  # TODO: create ctypes wrapper around sysctl(3)
-  sysctl = subprocess.Popen(("sysctl", "-n", name), stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-  if sysctl.wait() == 0:
-    return sysctl.stdout.read()[:-1]
-  else:
-    return ""
+    """Retrieve the string value of a sysctlbyname(3)."""
+    # TODO: create ctypes wrapper around sysctl(3)
+    sysctl = subprocess.Popen(("sysctl", "-n", name), stdout=subprocess.PIPE,
+                              stderr=subprocess.PIPE, close_fds=True)
+    if sysctl.wait() == 0:
+        return sysctl.stdout.read()[:-1]
+    else:
+        return ""
+
 
 def _get_os_version():
-  """Get the OS Version.  Based on how ports/Mk/bsd.port.mk sets OSVERSION"""
-  # XXX: platform specific code
-  for path in ("/usr/include/sys/param.h", "/usr/src/sys/sys/param.h"):
-    if os.path.isfile(path):
-      break
-  else:
-    path = None
+    """Get the OS Version.  Based on how ports/Mk/bsd.port.mk sets OSVERSION"""
+    # XXX: platform specific code
+    for path in ("/usr/include/sys/param.h", "/usr/src/sys/sys/param.h"):
+        if os.path.isfile(path):
+            break
+    else:
+        path = None
 
-  if path:
-    # We have a param.h
-    osversion = re.search('^#define\s+__FreeBSD_version\s+([0-9]*).*$', open(path, "r").read(), re.MULTILINE)
-    if osversion:
-      return osversion.groups()[0]
+    if path:
+        # We have a param.h
+        osversion = re.search('^#define\s+__FreeBSD_version\s+([0-9]*).*$',
+                              open(path, "r").read(), re.MULTILINE)
+        if osversion:
+            return osversion.groups()[0]
 
-  return _sysctl("kern.osreldate")
+    return _sysctl("kern.osreldate")
+
 
 def _setup_env():
-  """Update the env dictonary based on this programs environment flags."""
-  for i in env:
-    if i in os.environ:
-      env[i] = os.environ[i]
-  # TODO: set env_master from make -V and environ...
+    """Update the env dictonary based on this programs environment flags."""
+    for i in env:
+        if i in os.environ:
+            env[i] = os.environ[i]
+    # TODO: set env_master from make -V and environ...
 
-  # Cleanup some env variables
-  if env["PORTSDIR"][-1] == '/':
-    env["PORTSDIR"] = env["PORTSDIR"][:-1]
+    # Cleanup some env variables
+    if env["PORTSDIR"][-1] == '/':
+        env["PORTSDIR"] = env["PORTSDIR"][:-1]
 
-  # The following variables are conditionally set in ports/Mk/bsd.port.mk
-  uname = os.uname()
-  if "ARCH" not in os.environ:
-    os.environ["ARCH"] = uname[4]
-  if "OPSYS" not in os.environ:
-    os.environ["OPSYS"] = uname[0]
-  if "OSREL" not in os.environ:
-    os.environ["OSREL"] = uname[2].split('-', 1)[0].split('(', 1)[0]
-  if "OSVERSION" not in os.environ:
-    os.environ["OSVERSION"] = _get_os_version()
-  if uname[4] in ("amd64", "ia64") and "HAVE_COMPAT_IA32_KERN" not in os.environ:
-    # TODO: create ctypes wrapper around sysctl(3)
-    os.environ["HAVE_COMPAT_IA32_KERN"] = "YES" if _sysctl("compat.ia32.maxvmem") else ""
-  if "LINUX_OSRELEASE" not in os.environ:
-    os.environ["LINUX_OSRELEASE"] = _sysctl("compat.linux.osrelease")
-  if "UID" not in os.environ:
-    os.environ["UID"] = str(os.getuid())
-  if "CONFIGURE_MAX_CMD_LEN" not in os.environ:
-    os.environ["CONFIGURE_MAX_CMD_LEN"] = _sysctl("kern.argmax")
+    # Variables conditionally set in ports/Mk/bsd.port.mk
+    uname = os.uname()
+    if "ARCH" not in os.environ:
+        os.environ["ARCH"] = uname[4]
+    if "OPSYS" not in os.environ:
+        os.environ["OPSYS"] = uname[0]
+    if "OSREL" not in os.environ:
+        os.environ["OSREL"] = uname[2].split('-', 1)[0].split('(', 1)[0]
+    if "OSVERSION" not in os.environ:
+        os.environ["OSVERSION"] = _get_os_version()
+    if (uname[4] in ("amd64", "ia64") and
+        "HAVE_COMPAT_IA32_KERN" not in os.environ):
+        # TODO: create ctypes wrapper around sysctl(3)
+        has_compact = "YES" if _sysctl("compat.ia32.maxvmem") else ""
+        os.environ["HAVE_COMPAT_IA32_KERN"] = has_compact
+    if "LINUX_OSRELEASE" not in os.environ:
+        os.environ["LINUX_OSRELEASE"] = _sysctl("compat.linux.osrelease")
+    if "UID" not in os.environ:
+        os.environ["UID"] = str(os.getuid())
+    if "CONFIGURE_MAX_CMD_LEN" not in os.environ:
+        os.environ["CONFIGURE_MAX_CMD_LEN"] = _sysctl("kern.argmax")
 
-  # The following variables are also conditionally set in ports/Mk/bsd.port.subdir.mk
-  if "_OSVERSION" not in os.environ:
-    os.environ["_OSVERSION"] = uname[2]
+    # Variables conditionally set in ports/Mk/bsd.port.subdir.mk
+    if "_OSVERSION" not in os.environ:
+        os.environ["_OSVERSION"] = uname[2]
 
 _setup_env()

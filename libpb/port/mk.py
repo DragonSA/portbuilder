@@ -68,60 +68,62 @@ ports_attr["depends"].append(lambda x: ([x.remove(i) for i in x
                                          if x.count(i) > 1], x)[1])
 ports_attr["distfiles"].append(lambda x: [i.split(':', 1)[0] for i in x])
 
+
 def parse_options(optionstr):
-  """Convert options string into something easier to use."""
-  # TODO: make ordered dict
-  options = {}
-  order = 0
-  while len(optionstr):
-    # Get the name component
-    name, optionstr = optionstr.split(None, 1)
+    """Convert options string into something easier to use."""
+    # TODO: make ordered dict
+    options = {}
+    order = 0
+    while len(optionstr):
+        # Get the name component
+        name, optionstr = optionstr.split(None, 1)
 
-    # Get the description component
-    start = optionstr.index('"')
-    end = start
-    while True:
-      end = optionstr.index('"', end + 1)
-      if optionstr[end - 1] != '\\':
-        break
-    descr, optionstr = optionstr[start + 1:end], optionstr[end + 1:]
+        # Get the description component
+        start = optionstr.index('"')
+        end = start
+        while True:
+            end = optionstr.index('"', end + 1)
+            if optionstr[end - 1] != '\\':
+                break
+        descr, optionstr = optionstr[start + 1:end], optionstr[end + 1:]
 
-    # Get the default component
-    optionstr = optionstr.split(None, 1)
-    if len(optionstr) > 1:
-      dflt, optionstr = optionstr
-    else:
-      dflt, optionstr = optionstr[0], ""
-    #dflt = dflt == "on"
+        # Get the default component
+        optionstr = optionstr.split(None, 1)
+        if len(optionstr) > 1:
+            dflt, optionstr = optionstr
+        else:
+            dflt, optionstr = optionstr[0], ""
+        #dflt = dflt == "on"
 
-    options[name] = (descr, dflt, order)
-    order += 1
-  return options
+        options[name] = (descr, dflt, order)
+        order += 1
+    return options
 ports_attr["options"].append(parse_options)
 
+
 def parse_jobs_number(jobs_number):
-  """Convert jobs number into a number."""
-  if not jobs_number:
-    return 1
-  try:
-    return int(jobs_number[2:])
-  except ValueError:
-    from ..env import cpus
-    return cpus
+    """Convert jobs number into a number."""
+    if not jobs_number:
+        return 1
+    try:
+        return int(jobs_number[2:])
+    except ValueError:
+        from ..env import cpus
+        return cpus
 ports_attr["jobs_number"].append(parse_jobs_number)
 
-def strip_depends(depends):
-  """Remove $PORTSDIR from dependency paths."""
-  for depend in depends:
-    if depend.find(':') == -1:
-      raise RuntimeError("bad dependency line: '%s'" % depend)
-    obj, port = depend.split(':', 1)
-    if port.startswith(env["PORTSDIR"]):
-      port = port[len(env["PORTSDIR"]) + 1:]
-    else:
-      raise RuntimeError("bad dependency line: '%s'" % depend)
-    yield obj, port
 
+def strip_depends(depends):
+    """Remove $PORTSDIR from dependency paths."""
+    for depend in depends:
+        if depend.find(':') == -1:
+            raise RuntimeError("bad dependency line: '%s'" % depend)
+        obj, port = depend.split(':', 1)
+        if port.startswith(env["PORTSDIR"]):
+            port = port[len(env["PORTSDIR"]) + 1:]
+        else:
+            raise RuntimeError("bad dependency line: '%s'" % depend)
+        yield obj, port
 ports_attr["depend_build"].extend((strip_depends, tuple))
 ports_attr["depend_extract"].extend((strip_depends, tuple))
 ports_attr["depend_fetch"].extend((strip_depends, tuple))
@@ -130,157 +132,172 @@ ports_attr["depend_run"].extend((strip_depends, tuple))
 ports_attr["depend_patch"].extend((strip_depends, tuple))
 ports_attr["makefiles"].append(lambda x: [i for i in x if i != '..'])
 
+
 def status(port, changed=False, cache=dict()):
-  """Get the current status of the port."""
-  from os import listdir, path
-  from ..env import flags
-  from .port import Port
+    """Get the current status of the port."""
+    from os import listdir, path
+    from ..env import flags
+    from .port import Port
 
-  pkg_dbdir = flags["chroot"] + env["PKG_DBDIR"]
-  if changed or not cache.has_key('mtime') or path.getmtime(pkg_dbdir) != cache['mtime']:
-    count = 5
-    while True:
-      try:
-        cache['mtime'] = path.getmtime(pkg_dbdir)
-        cache['listdir'] = tuple(i for i in listdir(pkg_dbdir) if path.isdir(path.join(pkg_dbdir, i)))
-        break
-      except OSError:
-        # May happen on occation, retry
-        count -= 1
-        if not count:
-          raise
+    pkg_dbdir = flags["chroot"] + env["PKG_DBDIR"]
+    if (changed or not cache.has_key('mtime') or
+        path.getmtime(pkg_dbdir) != cache['mtime']):
+        count = 5
+        while True:
+            try:
+                cache['mtime'] = path.getmtime(pkg_dbdir)
+                cache['listdir'] = (tuple(i for i in listdir(pkg_dbdir)
+                                        if path.isdir(path.join(pkg_dbdir, i))))
+                break
+            except OSError:
+                # May happen on occation, retry
+                count -= 1
+                if not count:
+                    raise
 
-  pstatus = Port.ABSENT  #: Default status of the port
-  name = port.attr['name']
-  pkgname = port.attr['pkgname'].rsplit('-', 1)[0]  #: The ports name
+    pstatus = Port.ABSENT  #: Default status of the port
+    name = port.attr['name']
+    pkgname = port.attr['pkgname'].rsplit('-', 1)[0]  #: The ports name
 
-  for i in cache['listdir']:
-    # If the port's name matches that of a database
-    if i.rsplit('-', 1)[0] == pkgname or name in i:
-      content = path.join(pkg_dbdir, i, '+CONTENTS') #: The pkg's content file
-      porigin = None  #: Origin of the package
-      for j in open(content, 'r'):
-        if j.startswith('@comment ORIGIN:'):
-          porigin = j[16:-1].strip()
-          break
-        elif j.startswith('@name ') and j[6:-1].strip() != i:
-          porigin = None
-          break
+    for i in cache['listdir']:
+        # If the port's name matches that of a database
+        if i.rsplit('-', 1)[0] == pkgname or name in i:
+            #: The pkg's content file
+            content = path.join(pkg_dbdir, i, '+CONTENTS')
+            porigin = None  #: Origin of the package
+            for j in open(content, 'r'):
+                if j.startswith('@comment ORIGIN:'):
+                    porigin = j[16:-1].strip()
+                    break
+                elif j.startswith('@name ') and j[6:-1].strip() != i:
+                    porigin = None
+                    break
 
-      # If the pkg has the same origin get the maximum of the install status
-      if porigin == port.origin:
-        pstatus = max(pstatus, pkg_version(i, port.attr['pkgname']))
-  return pstatus
+            # If the pkg has the same origin get the maximum of the install
+            # status
+            if porigin == port.origin:
+                pstatus = max(pstatus, pkg_version(i, port.attr['pkgname']))
+    return pstatus
+
 
 def attr(origin):
-  """Retrieve a ports attributes by using the attribute queue."""
-  from ..job import AttrJob
-  from ..queue import attr_queue
+    """Retrieve a ports attributes by using the attribute queue."""
+    from ..job import AttrJob
+    from ..queue import attr_queue
 
-  attr = Attr(origin)
-  attr_queue.add(AttrJob(attr))
-  return attr
+    attr = Attr(origin)
+    attr_queue.add(AttrJob(attr))
+    return attr
+
 
 class Attr(Signal):
-  """Get the attributes for a given port"""
+    """Get the attributes for a given port"""
 
-  def __init__(self, origin):
-    Signal.__init__(self)
-    self.origin = origin
+    def __init__(self, origin):
+        Signal.__init__(self)
+        self.origin = origin
 
-  def get(self):
-    """Get the attributes from the port by invoking make"""
-    from ..make import make_target
+    def get(self):
+        """Get the attributes from the port by invoking make"""
+        from ..make import make_target
 
-    args = []  #: Arguments to be passed to the make target
-    # Pass all the arguments from ports_attr table
-    for i in ports_attr.itervalues():
-      args.append('-V')
-      args.append(i[0])
+        args = []  #: Arguments to be passed to the make target
+        # Pass all the arguments from ports_attr table
+        for i in ports_attr.itervalues():
+            args.append('-V')
+            args.append(i[0])
 
-    return make_target(self.origin, args, True).connect(self.parse_attr)
+        return make_target(self.origin, args, True).connect(self.parse_attr)
 
-  def parse_attr(self, make):
-    """Parse the attributes from a port and call the requested function."""
-    from ..make import SUCCESS
+    def parse_attr(self, make):
+        """Parse the attributes from a port and call the requested function."""
+        from ..make import SUCCESS
 
-    if make.wait() != SUCCESS:
-      from ..debug import error
-      error("libpb/port/mk/attr_stage2", ["Failed to get port %s attributes (err=%s)" % (self.origin, make.returncode),] + make.stderr.readlines())
-      self.emit(self.origin, None)
-      return
+        if make.wait() != SUCCESS:
+            from ..debug import error
+            error("libpb/port/mk/attr_stage2",
+                  ["Failed to get port %s attributes (err=%s)" %
+                   (self.origin, make.returncode),] + make.stderr.readlines())
+            self.emit(self.origin, None)
+            return
 
-    errs = make.stderr.readlines()
-    if len(errs):
-      from ..debug import error
-      error("libpb/port/mk/attr_stage2", ["Non-fatal errors in port %s attributes" % self.origin,] + errs)
+        errs = make.stderr.readlines()
+        if len(errs):
+            from ..debug import error
+            error("libpb/port/mk/attr_stage2",
+                  ["Non-fatal errors in port %s attributes" % self.origin,] +
+                    errs)
 
-    attr_map = {}
-    for name, value in ports_attr.iteritems():
-      if value[1] is str:
-        # Get the string (stripped)
-        attr_map[name] = make.stdout.readline().strip()
-      else:
-        # Pass the string through a special processing (like list/tuple)
-        attr_map[name] = value[1](make.stdout.readline().split())
-      # Apply all filters for the attribute
-      for i in value[2:]:
-        try:
-          attr_map[name] = i(attr_map[name])
-        except BaseException, e:
-          from ..debug import error
-          error("libpb/port/mk/attr_stage2", ("Failed to process port %s attributes" % self.origin,) + e.args)
-          self.emit(self.origin, None)
-          return
+        attr_map = {}
+        for name, value in ports_attr.iteritems():
+            if value[1] is str:
+                # Get the string (stripped)
+                attr_map[name] = make.stdout.readline().strip()
+            else:
+                # Pass the string through a special processing (like list/tuple)
+                attr_map[name] = value[1](make.stdout.readline().split())
+            # Apply all filters for the attribute
+            for i in value[2:]:
+                try:
+                    attr_map[name] = i(attr_map[name])
+                except BaseException, e:
+                    from ..debug import error
+                    error("libpb/port/mk/attr_stage2",
+                          ("Failed to process port %s attributes" %
+                           self.origin,) + e.args)
+                    self.emit(self.origin, None)
+                    return
 
-    self.emit(self.origin, attr_map)
+        self.emit(self.origin, attr_map)
+
 
 def pkg_version(old, new):
-  """Compare two package names and indicates the difference."""
-  from .port import Port
+    """Compare two package names and indicates the difference."""
+    from .port import Port
 
-  old = old.rsplit('-', 1)[1]  # Name and version components of the old pkg
-  new = new.rsplit('-', 1)[1]  # Name and version components of the new pkg
+    old = old.rsplit('-', 1)[1]  # Name and version components of the old pkg
+    new = new.rsplit('-', 1)[1]  # Name and version components of the new pkg
 
-  if old == new:
-    # The packages are the same
-    return Port.CURRENT
+    if old == new:
+        # The packages are the same
+        return Port.CURRENT
 
-  # Check the ports apoch
-  old, new, pstatus = cmp_attr(old, new, ',')
-  if pstatus:
-    return Port.CURRENT + pstatus
-
-  # Check the ports revision
-  old, new, pstatus = cmp_attr(old, new, '_')
-  if old == new and pstatus:
-    return Port.CURRENT + pstatus
-
-  # Check the ports version from left to right
-  old = old.split('.')
-  new = new.split('.')
-  for i in range(min(len(old), len(new))):
-    # Try numerical comparison, otherwise use str
-    try:
-      pstatus = cmp(int(old[i]), int(new[i]))
-    except ValueError:
-      pstatus = cmp(old[i], new[i])
-    # If there is a difference in this version level
+    # Check the ports apoch
+    old, new, pstatus = cmp_attr(old, new, ',')
     if pstatus:
-      return Port.CURRENT + pstatus
+        return Port.CURRENT + pstatus
 
-  # The difference between the number of version levels
-  return Port.CURRENT - cmp(len(old), len(new))
+    # Check the ports revision
+    old, new, pstatus = cmp_attr(old, new, '_')
+    if old == new and pstatus:
+        return Port.CURRENT + pstatus
+
+    # Check the ports version from left to right
+    old = old.split('.')
+    new = new.split('.')
+    for i in range(min(len(old), len(new))):
+        # Try numerical comparison, otherwise use str
+        try:
+            pstatus = cmp(int(old[i]), int(new[i]))
+        except ValueError:
+            pstatus = cmp(old[i], new[i])
+        # If there is a difference in this version level
+        if pstatus:
+            return Port.CURRENT + pstatus
+
+    # The difference between the number of version levels
+    return Port.CURRENT - cmp(len(old), len(new))
+
 
 def cmp_attr(old, new, sym):
-  """Compare the two attributes of the port."""
-  old = old.rsplit(sym, 1)  # The value of the old pkg
-  new = new.rsplit(sym, 1)  # The value of the new pkg
-  if len(old) > len(new):  # If old has version and new does not
-    return (old[0], new[0], 1)
-  elif len(old) < len(new): # If new has version and old does not
-    return (old[0], new[0], -1)
-  elif len(old) == len(new) == 1:  # If neither has version
-    return (old[0], new[0], 0)
-  else: #if len(old) == 2 and len(new) == 2 # Both have version
-    return (old[0], new[0], cmp(int(old[1]), int(new[1])))
+    """Compare the two attributes of the port."""
+    old = old.rsplit(sym, 1)  # The value of the old pkg
+    new = new.rsplit(sym, 1)  # The value of the new pkg
+    if len(old) > len(new):  # If old has version and new does not
+        return (old[0], new[0], 1)
+    elif len(old) < len(new): # If new has version and old does not
+        return (old[0], new[0], -1)
+    elif len(old) == len(new) == 1:  # If neither has version
+        return (old[0], new[0], 0)
+    else: #if len(old) == 2 and len(new) == 2 # Both have version
+        return (old[0], new[0], cmp(int(old[1]), int(new[1])))

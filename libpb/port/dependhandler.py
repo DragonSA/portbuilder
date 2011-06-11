@@ -8,257 +8,263 @@ from .port import Port
 
 __all__ = ['Dependent', 'Dependency']
 
+
 class DependHandler(object):
-  """Common declarations to both Dependent and Dependency."""
+    """Common declarations to both Dependent and Dependency."""
 
-  # The type of dependencies
-  BUILD   = 0  #: Build dependants
-  EXTRACT = 1  #: Extract dependants
-  FETCH   = 2  #: Fetch dependants
-  LIB     = 3  #: Library dependants
-  RUN     = 4  #: Run dependants
-  PATCH   = 5  #: Patch dependants
+    # The type of dependencies
+    BUILD   = 0
+    EXTRACT = 1
+    FETCH   = 2
+    LIB     = 3
+    RUN     = 4
+    PATCH   = 5
 
-  STAGE2DEPENDS = {
-    Port.CONFIG:     (),                           # The config dependencies
-    Port.DEPEND:     (),                           # The depend dependencies
-    Port.CHECKSUM:   (),                           # The checksum dependencies
-    Port.FETCH:      (FETCH,),                     # The fetch dependencies
-    Port.BUILD:      (EXTRACT, PATCH, LIB, BUILD), # The build dependencies
-    Port.INSTALL:    (LIB, RUN),                   # The install dependencies
-    Port.PACKAGE:    (),                           # The package dependencies
-    Port.PKGINSTALL: (LIB, RUN),                   # The install package dependencies
-  } #: The dependencies for a given stage
+    #: The dependencies for a given stage
+    STAGE2DEPENDS = {
+      Port.CONFIG:     (),
+      Port.DEPEND:     (),
+      Port.CHECKSUM:   (),
+      Port.FETCH:      (FETCH,),
+      Port.BUILD:      (EXTRACT, PATCH, LIB, BUILD),
+      Port.INSTALL:    (LIB, RUN),
+      Port.PACKAGE:    (),
+      Port.PKGINSTALL: (LIB, RUN),
+    }
+
 
 class Dependent(DependHandler):
-  """Tracks the dependants for a Port."""
+    """Tracks the dependants for a Port."""
 
-  # The dependent status
-  FAILURE  = -1  #: The port failed and/or cannot resolve dependants
-  UNRESOLV = 0   #: Port does not satisfy dependants
-  RESOLV   = 1   #: Dependents resolved
+    # The dependent status
+    FAILURE  = -1  #: The port failed and/or cannot resolve dependants
+    UNRESOLV = 0   #: Port does not satisfy dependants
+    RESOLV   = 1   #: Dependants resolved
 
-  def __init__(self, port):
-    """Initialise the databases of dependants."""
-    from ..env import flags
+    def __init__(self, port):
+        """Initialise the databases of dependants."""
+        from ..env import flags
 
-    DependHandler.__init__(self)
-    self._dependants = [[], [], [], [], [], []]  #: All dependants
-    self.port = port  #: The port whom we handle
-    self.priority = port.priority
-    self.propogate = True
-    if flags["mode"] == "install" and port.install_status > Port.ABSENT:
-      self.status = Dependent.RESOLV
-      # TODO: Change to actually check if we are resolved
-    else:
-      self.status = Dependent.UNRESOLV
+        DependHandler.__init__(self)
+        self._dependants = [[], [], [], [], [], []]  #: All dependants
+        self.port = port  #: The port whom we handle
+        self.priority = port.priority
+        self.propogate = True
+        if flags["mode"] == "install" and port.install_status > Port.ABSENT:
+            self.status = Dependent.RESOLV
+            # TODO: Change to actually check if we are resolved
+        else:
+            self.status = Dependent.UNRESOLV
 
-  def __repr__(self):
-    return "<Dependent(port=%s)>" % self.port.origin
+    def __repr__(self):
+        return "<Dependent(port=%s)>" % self.port.origin
 
-  def add(self, field, port, typ):
-    """Add a dependent to our list."""
-    if self.status == Dependent.RESOLV:
-      if not self._update(field, typ):
-        self.status = Dependent.UNRESOLV
-        self._notify_all()
+    def add(self, field, port, typ):
+        """Add a dependent to our list."""
+        if self.status == Dependent.RESOLV:
+            if not self._update(field, typ):
+                self.status = Dependent.UNRESOLV
+                self._notify_all()
 
-    self._dependants[typ].append((field, port))
+        self._dependants[typ].append((field, port))
 
-  def get(self, typ=None):
-    """Retrieve a list of dependants."""
-    if typ is None:
-      depends = set()
-      for i in self._dependants:
-        depends.update(j[1] for j in i)
-    elif isinstance(typ, int):
-      depends = set(j[1] for j in self._dependants[typ])
-    else:
-      depends = set()
-      for i in typ:
-        depends.update(j[1] for j in self._dependants[i])
+    def get(self, typ=None):
+        """Retrieve a list of dependants."""
+        if typ is None:
+            depends = set()
+            for i in self._dependants:
+                depends.update(j[1] for j in i)
+        elif isinstance(typ, int):
+            depends = set(j[1] for j in self._dependants[typ])
+        else:
+            depends = set()
+            for i in typ:
+                depends.update(j[1] for j in self._dependants[i])
 
-    return depends
+        return depends
 
-  @property
-  def failed(self):
-    """Shorthand for self.status() == Dependent.FAILURE."""
-    return self.status == Dependent.FAILURE
+    @property
+    def failed(self):
+        """Shorthand for self.status() == Dependent.FAILURE."""
+        return self.status == Dependent.FAILURE
 
-  def status_changed(self):
-    """Indicates that our port's status has changed."""
-    from ..env import flags
+    def status_changed(self):
+        """Indicates that our port's status has changed."""
+        from ..env import flags
 
-    if (self.propogate and self.port.failed) or (self.port.dependency and self.port.dependency.failed):
-      status = Dependent.FAILURE
-      # TODO: We might have failed and yet still satisfy our dependants
-    elif flags["fetch_only"]:
-      status = Dependent.RESOLV
-    elif self.port.install_status > flags["stage"]:
-      status = Dependent.RESOLV
-      if not self._verify():
-        # TODO: We may satisfy some dependants, but not others,
-        # If we still do not satisfy our dependants then haven't we failed?
-        status = Dependent.FAILURE
-    else:
-      status = Dependent.UNRESOLV
+        if ((self.propogate and self.port.failed) or
+            (self.port.dependency and self.port.dependency.failed)):
+            status = Dependent.FAILURE
+            # TODO: We might have failed and yet still satisfy our dependants
+        elif flags["fetch_only"]:
+            status = Dependent.RESOLV
+        elif self.port.install_status > flags["stage"]:
+            status = Dependent.RESOLV
+            if not self._verify():
+                # TODO: We may satisfy some dependants, but not others,
+                # If we still do not satisfy our dependants then haven't we
+                # failed?
+                status = Dependent.FAILURE
+        else:
+            status = Dependent.UNRESOLV
 
-    if status != self.status:
-      self.status = status
-      self._notify_all()
+        if status != self.status:
+            self.status = status
+            self._notify_all()
 
-  def _notify_all(self):
-    """Notify all dependants that we have changed status."""
-    for i in self.get():
-      i.dependency.update(self)
+    def _notify_all(self):
+        """Notify all dependants that we have changed status."""
+        for i in self.get():
+            i.dependency.update(self)
 
-  def _update(self, _field, typ):
-    """Check if a dependent has been resolved."""
-    from ..env import flags
+    def _update(self, _field, typ):
+        """Check if a dependent has been resolved."""
+        from ..env import flags
 
-    if flags["fetch_only"] and self.port.stage >= Port.FETCH:
-      return True
+        if flags["fetch_only"] and self.port.stage >= Port.FETCH:
+            return True
 
-    if typ == DependHandler.BUILD:
-      pass
-    elif typ == DependHandler.EXTRACT:
-      pass
-    elif typ == DependHandler.FETCH:
-      pass
-    elif typ == DependHandler.LIB:
-      pass
-    elif typ == DependHandler.RUN:
-      pass
-    elif typ == DependHandler.PATCH:
-      pass
+        if typ == DependHandler.BUILD:
+            pass
+        elif typ == DependHandler.EXTRACT:
+            pass
+        elif typ == DependHandler.FETCH:
+            pass
+        elif typ == DependHandler.LIB:
+            pass
+        elif typ == DependHandler.RUN:
+            pass
+        elif typ == DependHandler.PATCH:
+            pass
 
-    return self.port.install_status != Port.ABSENT
+        return self.port.install_status != Port.ABSENT
 
-  def _verify(self):
-    """Check that we actually satisfy all dependants."""
-    for i in range(len(self._dependants)):
-      for j in self._dependants[i]:
-        if not self._update(j[0], i):
-          return False
-    return True
+    def _verify(self):
+        """Check that we actually satisfy all dependants."""
+        for i in range(len(self._dependants)):
+            for j in self._dependants[i]:
+                if not self._update(j[0], i):
+                    return False
+        return True
+
 
 class Dependency(DependHandler):
-  """Tracks the dependencies for a Port."""
+    """Tracks the dependencies for a Port."""
 
-  def __init__(self, port, depends=None):
-    """Initialise the databases of dependencies."""
-    from . import get_port
+    def __init__(self, port, depends=None):
+        """Initialise the databases of dependencies."""
+        from . import get_port
 
-    DependHandler.__init__(self)
-    self._count = 0  #: The count of outstanding dependencies
-    self._dependencies = [[], [], [], [], [], []]  #: All dependencies
-    self._loading = 0
-    self.failed = False  #: If a dependency has failed
-    self.port = port  #: The port whom we handle
+        DependHandler.__init__(self)
+        self._count = 0  #: The count of outstanding dependencies
+        self._dependencies = [[], [], [], [], [], []]  #: All dependencies
+        self._loading = 0
+        self.failed = False  #: If a dependency has failed
+        self.port = port  #: The port whom we handle
 
-    if not depends:
-      depends = []
+        if not depends:
+            depends = []
 
-    def adder(field, typ):
-      """Create an adder to place resolved port on dependency list,"""
-      def do_add(port):
-        """Add port to dependency list."""
-        self._add(port, field, typ)
-      return do_add
+        def adder(field, typ):
+            """Create an adder to place resolved port on dependency list,"""
+            def do_add(port):
+                """Add port to dependency list."""
+                self._add(port, field, typ)
+            return do_add
 
-    for i in range(len(depends)):
-      for j in depends[i]:
-        self._loading += 1
-        get_port(j[1]).connect(adder(j[0], i))
-    if not self._loading:
-      self._update_priority()
-      self.port._finalise(Port.CONFIG, True)
+        for i in range(len(depends)):
+            for j in depends[i]:
+                self._loading += 1
+                get_port(j[1]).connect(adder(j[0], i))
+        if not self._loading:
+            self._update_priority()
+            self.port._finalise(Port.CONFIG, True)
 
-  def __repr__(self):
-    return "<Dependency(port=%s)>" % self.port.origin
+    def __repr__(self):
+        return "<Dependency(port=%s)>" % self.port.origin
 
-  def _add(self, port, field, typ):
-    """Add a port to our dependency list."""
-    self._loading -= 1
+    def _add(self, port, field, typ):
+        """Add a port to our dependency list."""
+        self._loading -= 1
 
-    if not isinstance(port, str):
-      status = port.dependent.status
-      if port not in self._dependencies[typ]:
-        self._dependencies[typ].append(port)
-        port.dependent.add(field, self.port, typ)
+        if not isinstance(port, str):
+            status = port.dependent.status
+            if port not in self._dependencies[typ]:
+                self._dependencies[typ].append(port)
+                port.dependent.add(field, self.port, typ)
 
-        if status != Dependent.RESOLV:
-          self._count += 1
+                if status != Dependent.RESOLV:
+                    self._count += 1
 
-    if isinstance(port, str) or status == Dependent.FAILURE:
-      if not self.failed and not self.port.dependent.failed:
-        self.failed = True
-        self.port.dependent.status_changed()
-      else:
-        self.failed = True
-    if self._loading == 0:
-      self._update_priority()
-      self.port._finalise(Port.CONFIG, not self.failed)
+        if isinstance(port, str) or status == Dependent.FAILURE:
+            if not self.failed and not self.port.dependent.failed:
+                self.failed = True
+                self.port.dependent.status_changed()
+            else:
+                self.failed = True
+        if self._loading == 0:
+            self._update_priority()
+            self.port._finalise(Port.CONFIG, not self.failed)
 
-  def get(self, typ=None):
-    """Retrieve a list of dependencies."""
-    if typ is None:
-      depends = set()
-      for i in self._dependencies:
-        depends.update(i)
-    elif isinstance(typ, int):
-      depends = set(self._dependencies[typ])
-    else:
-      depends = set()
-      for i in typ:
-        depends.update(self._dependencies[i])
+    def get(self, typ=None):
+        """Retrieve a list of dependencies."""
+        if typ is None:
+            depends = set()
+            for i in self._dependencies:
+                depends.update(i)
+        elif isinstance(typ, int):
+            depends = set(self._dependencies[typ])
+        else:
+            depends = set()
+            for i in typ:
+                depends.update(self._dependencies[i])
 
-    return depends
+        return depends
 
-  def check(self, stage):
-    """Check the dependency status for a given stage."""
-    # DependHandler status might change without Port's changing
-    bad = set()
-    for i in Dependency.STAGE2DEPENDS[stage]:
-      for j in self._dependencies[i]:
-        if j.dependent.status != Dependent.RESOLV:
-          bad.add(j)
-    return bad
+    def check(self, stage):
+        """Check the dependency status for a given stage."""
+        # DependHandler status might change without Port's changing
+        bad = set()
+        for i in Dependency.STAGE2DEPENDS[stage]:
+            for j in self._dependencies[i]:
+                if j.dependent.status != Dependent.RESOLV:
+                    bad.add(j)
+        return bad
 
-  def update(self, depend):
-    """Called when a dependency has changes status."""
-    status = depend.status
-    if status == Dependent.FAILURE:
-      self.failed = True
-      if not self.port.dependent.failed:
-        self.port.dependent.status_changed()
-      delta = -1
-    elif status == Dependent.RESOLV:
-      delta = 1
-    else: # depend.status() == DependHandler.UNRESOLV
-      delta = -1
+    def update(self, depend):
+        """Called when a dependency has changes status."""
+        status = depend.status
+        if status == Dependent.FAILURE:
+            self.failed = True
+            if not self.port.dependent.failed:
+                self.port.dependent.status_changed()
+            delta = -1
+        elif status == Dependent.RESOLV:
+            delta = 1
+        else: # depend.status() == DependHandler.UNRESOLV
+            delta = -1
 
-    self._count -= delta * \
-                  len([i for i in sum(self._dependencies, []) if i == depend])
-    if self._count < 0:
-      self._count = 0
-    if not self._count:
-      # Check that we do actually have all the dependencies met
-      # TODO: Remove, debug check
-      for i in self.get():
-        if i.dependent.status != Dependent.RESOLV:
-          self._count += 1
+        self._count -= (delta * len([i for i in sum(self._dependencies, [])
+                                             if i == depend]))
+        if self._count < 0:
+            self._count = 0
+        if not self._count:
+            # Check that we do actually have all the dependencies met
+            # TODO: Remove, debug check
+            for i in self.get():
+                if i.dependent.status != Dependent.RESOLV:
+                    self._count += 1
 
-  def _update_priority(self):
-    """Update the priority of all ports that are affected by this port,"""
-    update_list = collections.deque()
-    updated = set()
-    update_list.extend(self.get())
-    priority = self.port.dependent.priority
-    while len(update_list):
-      port = update_list.popleft()
-      if port not in updated:
-        port.dependent.priority += priority
-        if port.dependency is not None:
-          update_list.extend(port.dependency.get())
-        updated.add(port)
+    def _update_priority(self):
+        """Update the priority of all ports that are affected by this port,"""
+        update_list = collections.deque()
+        updated = set()
+        update_list.extend(self.get())
+        priority = self.port.dependent.priority
+        while len(update_list):
+            port = update_list.popleft()
+            if port not in updated:
+                port.dependent.priority += priority
+                if port.dependency is not None:
+                    update_list.extend(port.dependency.get())
+                updated.add(port)

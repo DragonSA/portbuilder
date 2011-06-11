@@ -192,6 +192,7 @@ Future release:
      - DEPRECIATION...
      - NO_BUILD option (and implement)
      - IS_INTERACTIVE
+     - NO_CHECKSUM
      - Restrictions
      - etc
    - Handlers:

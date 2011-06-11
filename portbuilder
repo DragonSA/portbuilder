@@ -12,375 +12,399 @@ import subprocess
 import sys
 import traceback
 
+CONFIG = ("none", "changed", "newer", "all")
 VAR_NAME = "^[a-zA-Z_][a-zA-Z0-9_]*$"
 
+
 class PortDelegate(object):
-  """Choose if a port should be build and with which builder."""
+    """Choose if a port should be build and with which builder."""
 
-  def __init__(self, package, upgrade, force):
-    """Initialise port delegate."""
-    self.package = package
-    self.upgrade = upgrade
-    self.force = force
-    self.no_port = []
+    def __init__(self, package, upgrade, force):
+        """Initialise port delegate."""
+        self.package = package
+        self.upgrade = upgrade
+        self.force = force
+        self.no_port = []
 
-  def __call__(self, port):
-    """Add a port to the required builder."""
-    from libpb.env import flags
-    from libpb.builder import depend
-    from libpb.port.dependhandler import Dependent
+    def __call__(self, port):
+        """Add a port to the required builder."""
+        from libpb.env import flags
+        from libpb.builder import depend
+        from libpb.port.dependhandler import Dependent
 
-    if isinstance(port, str):
-      self.no_port.append(port)
-      return
-    if not (flags["mode"] == "recursive" or self.force) and port.install_status > flags["stage"] or port in depend.ports:
-      return
-    if self.upgrade or self.force:
-      port.dependent.status = Dependent.UNRESOLV
-      port.force = True
-    if self.package:
-      from libpb.builder import package_builder
-      package_builder(port)
-    else:
-      from libpb.builder import install_builder
-      install_builder(port)
+        if isinstance(port, str):
+            self.no_port.append(port)
+            return
+        if (not (flags["mode"] == "recursive" or self.force) and
+            port.install_status > flags["stage"] or port in depend.ports):
+            return
+        if self.upgrade or self.force:
+            port.dependent.status = Dependent.UNRESOLV
+            port.force = True
+        if self.package:
+            from libpb.builder import package_builder
+            package_builder(port)
+        else:
+            from libpb.builder import install_builder
+            install_builder(port)
+
 
 def sigterm():
-  """Kill subprocesses and die."""
-  from libpb import stop
-
-  stop(kill=True, kill_clean=True)
-  raise SystemExit(254)
-
-def sigint():
-  """Ask politely for everything to stop at a convenient time."""
-  from libpb.event import event, post_event
-  from libpb import stop
-
-  post_event(stop)
-  event(signal.SIGINT, "s").disconnect(sigint).connect(sigterm)
-
-def main():
-  """The main event loop."""
-  from libpb.env import flags
-  from libpb.event import event
-  from libpb.monitor import Top
-  from libpb.port import get_port
-
-  # Process arguments
-  parser = gen_parser()
-  options, args = parser.parse_args()
-  options.args = args
-  options.parser = parser
-  set_options(options)
-
-  if len(args) == 0:
-    print parser.get_usage()
-    return
-
-  # Make sure log_dir is available
-  mkdir(flags["log_dir"])
-
-  # Make sure environ is not polluted with make flags
-  for key in ("__MKLVL__", "MAKEFLAGS", "MAKELEVEL", "MFLAGS", "MAKE_JOBS_FIFO"):
-    try:
-      del os.environ[key]
-    except KeyError:
-      pass
-
-  # Change directory to / (root).  This is a workaround for bug misc/157543
-  os.chdir("/")
-
-  # Install signal handlers
-  signal.signal(signal.SIGINT, signal.SIG_IGN)
-  event(signal.SIGINT, "s").connect(sigint)
-  signal.signal(signal.SIGTERM, signal.SIG_IGN)
-  event(signal.SIGTERM, "s").connect(sigterm)
-
-  # Port delegate
-  delegate = PortDelegate(options.package, options.upgrade, options.force)
-
-  # Execute the primary build target
-  for port in args:
-    get_port(port).connect(delegate)
-
-  if not flags["no_op_print"]:
-    Top().start()
-  if options.profile:
-    cProfile.runctx("run_loop(delegate.no_port, options)", globals(), locals(), options.profile)
-  else:
-    run_loop(delegate.no_port, options)
-
-def mkdir(directory):
-  """Make a given directory if needed."""
-  if os.path.exists(directory):
-    if not os.path.isdir(directory):
-      print "%s: not a directory" % directory
-      exit(1)
-  else:
-    try:
-      os.mkdir(directory)
-    except OSError, e:
-      print "%s: unable to create directory (%s)" % (directory, e)
-      exit(2)
-
-def run_loop(no_port, options):
-  """Run the main event loop, print nice messages if something goes wrong."""
-  from libpb.event import run
-
-  try:
-    run()
-
-    if options.no_opt_print:
-      # All ports not configured, run all queues
-      from libpb.queue import queues
-      for queue in queues:
-        queue.load = 1
-      run()
-
-    if no_port:
-      print "Unable to locate ports: %s" % no_port
-  except SystemExit:
-    raise
-  except BaseException:
-    from libpb.debug import exception
-    from libpb.event import post_event, traceback as event_traceback
+    """Kill subprocesses and die."""
     from libpb import stop
 
-    msg = ""
-    for tb, name in event_traceback():
-      msg += "Traceback from %s (most recent call last):\n" % name
-      msg += "%s\n" % "".join(traceback.format_list(tb))
-    msg += traceback.format_exc()
-    exception()
+    stop(kill=True, kill_clean=True)
+    raise SystemExit(254)
+
+
+def sigint():
+    """Ask politely for everything to stop at a convenient time."""
+    from libpb.event import event, post_event
+    from libpb import stop
 
     post_event(stop)
+    event(signal.SIGINT, "s").disconnect(sigint).connect(sigterm)
+
+
+def main():
+    """The main event loop."""
+    from libpb.env import flags
+    from libpb.event import event
+    from libpb.monitor import Top
+    from libpb.port import get_port
+
+    # Process arguments
+    parser = gen_parser()
+    options, args = parser.parse_args()
+    options.args = args
+    options.parser = parser
+    set_options(options)
+
+    if len(args) == 0:
+        print parser.get_usage()
+        return
+
+    # Make sure log_dir is available
+    mkdir(flags["log_dir"])
+
+    # Make sure environ is not polluted with make flags
+    for key in ("__MKLVL__", "MAKEFLAGS", "MAKELEVEL", "MFLAGS",
+                "MAKE_JOBS_FIFO"):
+        try:
+            del os.environ[key]
+        except KeyError:
+            pass
+
+    # Change directory to / (root).  This is a workaround for bug misc/157543
+    os.chdir("/")
+
+    # Install signal handlers
+    signal.signal(signal.SIGINT, signal.SIG_IGN)
+    event(signal.SIGINT, "s").connect(sigint)
+    signal.signal(signal.SIGTERM, signal.SIG_IGN)
+    event(signal.SIGTERM, "s").connect(sigterm)
+
+    # Port delegate
+    delegate = PortDelegate(options.package, options.upgrade, options.force)
+
+    # Execute the primary build target
+    for port in args:
+        get_port(port).connect(delegate)
+
+    if not flags["no_op_print"]:
+        Top().start()
+    if options.profile:
+        cProfile.runctx("run_loop(delegate.no_port, options)", globals(),
+                        locals(), options.profile)
+    else:
+        run_loop(delegate.no_port, options)
+
+
+def mkdir(directory):
+    """Make a given directory if needed."""
+    if os.path.exists(directory):
+        if not os.path.isdir(directory):
+            print "%s: not a directory" % directory
+            exit(1)
+    else:
+        try:
+            os.mkdir(directory)
+        except OSError, e:
+            print "%s: unable to create directory (%s)" % (directory, e)
+            exit(2)
+
+
+def run_loop(no_port, options):
+    """Run the main event loop, print nice messages if something goes wrong."""
+    from libpb.event import run
+
     try:
-      run()
-    finally:
-      sys.stderr.write(msg)
+        run()
+
+        if options.no_opt_print:
+            # All ports not configured, run all queues
+            from libpb.queue import queues
+            for queue in queues:
+                queue.load = 1
+            run()
+
+        if no_port:
+            print "Unable to locate ports: %s" % no_port
+    except SystemExit:
+        raise
+    except BaseException:
+        from libpb.debug import exception
+        from libpb.event import post_event, traceback as event_traceback
+        from libpb import stop
+
+        msg = ""
+        for tb, name in event_traceback():
+            msg += "Traceback from %s (most recent call last):\n" % name
+            msg += "%s\n" % "".join(traceback.format_list(tb))
+        msg += traceback.format_exc()
+        exception()
+
+        post_event(stop)
+        try:
+            run()
+        finally:
+            sys.stderr.write(msg)
+
 
 def gen_parser():
-  """Create the options parser object."""
-  usage = "\t%prog [-abnpruFN] [-c config] [-D variable] [-f file] "\
-          "[variable=value] port ..."
+    """Create the options parser object."""
+    usage = "\t%prog [-abnpruFN] [-c config] [-D variable] [-f file] "\
+            "[variable=value] port ..."
 
-  parser = optparse.OptionParser(usage, version="%prog 0.1.2")
+    parser = optparse.OptionParser(usage, version="%prog 0.1.2")
 
-  parser.add_option("-a", "--all", action="store_true", default=False,
-                    help="Add all installed ports to the list (aka `pkg_info"
-                    "-aoq`)")
+    parser.add_option("-a", "--all", action="store_true", default=False,
+                      help="Add all installed ports to the list (aka `pkg_info"
+                      "-aoq`)")
 
-  parser.add_option("--arch", action="store", type="string", default="",
-                    help="Set the architecture environment variables (for "
-                    "cross building)")
+    parser.add_option("--arch", action="store", type="string", default="",
+                      help="Set the architecture environment variables (for "
+                      "cross building)")
 
-  # batch option supersedes config option
-  parser.add_option("-b", "--batch", dest="batch", action="store_true",
-                    default=False, help="Batch mode.  Skips the config stage.")
+    # batch option supersedes config option
+    parser.add_option("-b", "--batch", dest="batch", action="store_true",
+                      default=False, help="Batch mode.  Skips the config "
+                      "stage")
 
-  parser.add_option("-c", "--config", action="callback", callback=parse_config,
-                    type="string", help="Specify which ports to configure "
-                    "(none, all, newer, changed) [default: changed]")
+    parser.add_option("-c", "--config", action="callback", type="string",
+                      callback=parse_config, help="Specify which ports to "
+                      "configure (%s) [default: changed]" %
+                      (", ".join(CONFIG)))
 
-  parser.add_option("-C", dest="chroot", action="store", type="string",
-                    default="", help="Build ports in chroot environment.")
+    parser.add_option("-C", dest="chroot", action="store", type="string",
+                      default="", help="Build ports in chroot environment")
 
-  parser.add_option("-d", "--debug", action="store_false", default=True,
-                    help="Turn off extra diagnostic information (faster)")
+    parser.add_option("-d", "--debug", action="store_false", default=True,
+                      help="Turn off extra diagnostic information (faster)")
 
-  parser.add_option("--depend", action="store", type="string", default="",
-                    help="Comma separated methods to resolve dependencies "
-                    "(build, package) [default=build]")
+    parser.add_option("--depend", action="store", type="string", default="",
+                      help="Comma separated methods to resolve dependencies "
+                      "(build, package) [default=build]")
 
-  parser.add_option("-D", dest="make_env", action="append", metavar="variable",
-                    default=[], help="Define the given variable for make (i.e."
-                    " add ``-D variable'' to the make calls).")
+    parser.add_option("-D", dest="make_env", action="append", default=[],
+                      metavar="variable", help="Define the given variable for "
+                      "make (i.e. add ``-D variable'' to the make calls)")
 
-  parser.add_option("-f", "--ports-file", dest="ports_file", action="store",
-                    type="string", default=False, help="Use ports from file.")
+    parser.add_option("-f", "--ports-file", dest="ports_file", action="store",
+                      type="string", default=False, help="Use ports from file")
 
-  parser.add_option("-F", "--fetch-only", dest="fetch", action="store_true",
-                    default=False, help="Only fetch the distribution files for"
-                    " the ports")
+    parser.add_option("-F", "--fetch-only", dest="fetch", action="store_true",
+                      default=False, help="Only fetch the distribution files "
+                      "for the ports")
 
-  parser.add_option("--force", action="store_true", default=False, help="Force"
-                    " (re)installation of specified ports.")
+    parser.add_option("--force", action="store_true", default=False,
+                      help="Force (re)installation of specified ports.")
 
-  parser.add_option("--force-all", dest="forceA", action="store_true",
-                    default=False, help="Force (re)installation of specified "
-                    "ports and all its dependencies.")
+    parser.add_option("--force-all", dest="forceA", action="store_true",
+                      default=False, help="Force (re)installation of "
+                      "specified ports and all its dependencies.")
 
-  parser.add_option("-n", dest="no_opt_print", action="store_true",
-                    default=False, help="Display the commands that would have "
-                    "been executed, but do not actually execute them.")
+    parser.add_option("-n", dest="no_opt_print", action="store_true",
+                      default=False, help="Display the commands that would "
+                      "have been executed, but do not actually execute them.")
 
-  parser.add_option("-N", dest="no_opt", action="store_true", default=False,
-                    help="Do not execute any commands.")
+    parser.add_option("-N", dest="no_opt", action="store_true", default=False,
+                      help="Do not execute any commands.")
 
-  parser.add_option("-p", "--package", action="store_true", default=False,
-                    help="Create packages for specified ports.")
+    parser.add_option("-p", "--package", action="store_true", default=False,
+                      help="Create packages for specified ports.")
 
-  parser.add_option("-P", "--package-all", dest="packageA", action="store_true",
-                    default=False, help="Create packages for all installed "
-                    "ports")
+    parser.add_option("-P", "--package-all", dest="packageA", default=False,
+                      action="store_true", help="Create packages for all "
+                      "installed ports")
 
-  parser.add_option("--profile", action="store", default=False, type="string",
-                    help="Produce a profile of a run")
+    parser.add_option("--profile", action="store", default=False,
+                      type="string", help="Produce a profile of a run")
 
-  parser.add_option("-u", "--upgrade", action="store_true", default=False,
-                    help="Upgrade specified ports.")
+    parser.add_option("-u", "--upgrade", action="store_true", default=False,
+                      help="Upgrade specified ports.")
 
-  parser.add_option("-U", "--upgrade-all", dest="upgradeA", action="store_true",
-                    default=False, help="Upgrade specified ports and all its "
-                    "dependencies.")
+    parser.add_option("-U", "--upgrade-all", dest="upgradeA", default=False,
+                      action="store_true", help="Upgrade specified ports and "
+                      "all its dependencies.")
 
-  #parser.add_option("--index", action="store_true", default=False,
-                    #help="Create the INDEX file for the ports infrastructure.")
-  return parser
+    #parser.add_option("--index", action="store_true", default=False,
+    #                  help="Create the INDEX file for the ports "
+    #                  "infrastructure.")
+
+    return parser
+
 
 def set_options(options):
-  """Set all the global options."""
-  from libpb.env import env, flags
-  from libpb.port.port import Port
+    """Set all the global options."""
+    from libpb.env import env, flags
+    from libpb.port.port import Port
 
-  # Add all -D options
-  for i in options.make_env:
-    if not re.match(VAR_NAME, i):
-      options.parser.error("incorrectly formatted variable name: %s" % i)
-    env[i] = True
+    # Add all -D options
+    for i in options.make_env:
+        if not re.match(VAR_NAME, i):
+            options.parser.error("incorrectly formatted variable name: %s" % i)
+        env[i] = True
 
-  # Add other make env options (aka variable=value)
-  for i in options.args[:]:
-    if i.find('=') != -1:
-      var, val = i.split('=', 1)
-      if not re.match(VAR_NAME, var):
-        options.parser.error("incorrectly formatted variable name: %s" % var)
-      env[var] = val
-      options.args.remove(i)
+    # Add other make env options (aka variable=value)
+    for i in options.args[:]:
+        if i.find('=') != -1:
+            var, val = i.split('=', 1)
+            if not re.match(VAR_NAME, var):
+                options.parser.error("incorrectly formatted variable name: "
+                                     "%s" % var)
+            env[var] = val
+            options.args.remove(i)
 
-  # Force 'none' config mode if BATCH present
-  if "BATCH" in env or "BATCH" in os.environ or options.batch:
-    flags["config"] = "none"
+    # Force 'none' config mode if BATCH present
+    if "BATCH" in env or "BATCH" in os.environ or options.batch:
+        flags["config"] = "none"
 
-  # Add all installed ports to port list
-  if options.all:
-    pkg_info = subprocess.Popen(["pkg_info", "-aoq"], stdin=None, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, close_fds=True)
-    if pkg_info.wait() != 0:
-      sys.stderr.write("%s\nerror: portbuilder: Unable to get installed ports list\n" % pkg_info.stdout.read())
-      exit(1)
-    options.args.extend(pkg_info.stdout.read().split())
+    # Add all installed ports to port list
+    if options.all:
+        pkg_info = subprocess.Popen(
+            ["pkg_info", "-aoq"], stdin=None, stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT, close_fds=True)
+        if pkg_info.wait() != 0:
+            sys.stderr.write("%s\nerror: portbuilder: Unable to get installed "
+                             "ports list\n" % pkg_info.stdout.read())
+            exit(1)
+        options.args.extend(pkg_info.stdout.read().split())
 
-  # Architecture flag
-  if options.arch:
-    os.environ["ARCH"] = options.arch
-    os.environ["UNAME_m"] = options.arch
-    os.environ["UNAME_p"] = options.arch
-    os.environ["MACHINE"] = options.arch
-    os.environ["MACHTYPE"] = options.arch
-    if options.arch == "i386" and "HAVE_COMPAT_IA32_KERN" in os.environ:
-      del os.environ["HAVE_COMPAT_IA32_KERN"]
+    # Architecture flag
+    if options.arch:
+        os.environ["ARCH"] = options.arch
+        os.environ["UNAME_m"] = options.arch
+        os.environ["UNAME_p"] = options.arch
+        os.environ["MACHINE"] = options.arch
+        os.environ["MACHTYPE"] = options.arch
+        if options.arch == "i386" and "HAVE_COMPAT_IA32_KERN" in os.environ:
+            del os.environ["HAVE_COMPAT_IA32_KERN"]
 
-  # Set chroot environment
-  if options.chroot:
-    if options.chroot[-1] == '/':
-      options.chroot = options.chroot[:-1]
-    if not os.path.isdir(options.chroot):
-      options.parser.error("chroot needs to be a valid directory")
-    flags["chroot"] = os.path.join(os.getcwd(), options.chroot)
-    if os.getuid() != 0:
-      options.parser.error("chroot option only works with root account")
+    # Set chroot environment
+    if options.chroot:
+        if options.chroot[-1] == '/':
+            options.chroot = options.chroot[:-1]
+        if not os.path.isdir(options.chroot):
+            options.parser.error("chroot needs to be a valid directory")
+        flags["chroot"] = os.path.join(os.getcwd(), options.chroot)
+        if os.getuid() != 0:
+            options.parser.error("chroot option only works with root account")
 
-  # Debug mode
-  if options.debug:
-    flags["debug"] = True
+    # Debug mode
+    if options.debug:
+        flags["debug"] = True
 
-  # Depend resolve methods
-  if not options.depend and "USE_PACKAGE_DEPENDS" in env or "USE_PACKAGE_DEPENDS" in os.environ:
-    options.depend = "package,build"
-  if options.depend:
-    depend = [i.strip() for i in options.depend.split(",")]
-    for i in depend:
-      if depend.count(i) > 1:
-        options.parser.error("multiple depend method specified")
-      elif i not in ("build", "package"):
-        options.parser.error("unknown depend method")
-    flags["depend"] = depend
+    # Depend resolve methods
+    if "USE_PACKAGE_DEPENDS" in env or "USE_PACKAGE_DEPENDS" in os.environ:
+        options.depend = "package,build"
+    if options.depend:
+        depend = [i.strip() for i in options.depend.split(",")]
+        for i in depend:
+            if depend.count(i) > 1:
+                options.parser.error("multiple depend method specified")
+            elif i not in ("build", "package"):
+                options.parser.error("unknown depend method")
+        flags["depend"] = depend
 
-  # Fetch only options:
-  if options.fetch:
-    from libpb.env import cpus
-    from libpb.queue import checksum_queue
+    # Fetch only options:
+    if options.fetch:
+        from libpb.env import cpus
+        from libpb.queue import checksum_queue
 
-    flags["fetch_only"] = True
-    checksum_queue.load = cpus
+        flags["fetch_only"] = True
+        checksum_queue.load = cpus
 
-  # Fetch ports list from file
-  if options.ports_file:
-    try:
-      options.args.extend(read_port_file(options.ports_file))
-    except IOError:
-      options.parser.error("unable to open file: %s" % options.ports_file)
+    # Fetch ports list from file
+    if options.ports_file:
+        try:
+            options.args.extend(read_port_file(options.ports_file))
+        except IOError:
+            options.parser.error("unable to open file: %s" % options.ports_file)
 
-  # Force build and install of ports
-  if options.force and len(options.args) > 1:
-    flags["mode"] = "recursive"
+    # Force build and install of ports
+    if options.force and len(options.args) > 1:
+        flags["mode"] = "recursive"
 
-  # Force build and install of all ports
-  if options.forceA:
-    flags["stage"] = max(flags["stage"], Port.NEWER)
-    flags["mode"] = "recursive"
+    # Force build and install of all ports
+    if options.forceA:
+        flags["stage"] = max(flags["stage"], Port.NEWER)
+        flags["mode"] = "recursive"
 
-  # ! (-n & -N)
-  if options.no_opt and options.no_opt_print:
-    options.parser.error("-n and -N are mutually exclusive")
+    # ! (-n & -N)
+    if options.no_opt and options.no_opt_print:
+        options.parser.error("-n and -N are mutually exclusive")
 
-  # No operations and print (-n)
-  if options.no_opt_print:
-    from libpb.queue import queues
+    # No operations and print (-n)
+    if options.no_opt_print:
+        from libpb.queue import queues
 
-    flags["no_op"] = True
-    flags["no_op_print"] = True
-    # Configure all ports before printing commands
-    for queue in queues[1:]:
-      queue.load = 0
+        flags["no_op"] = True
+        flags["no_op_print"] = True
+        # Configure all ports before printing commands
+        for queue in queues[1:]:
+            queue.load = 0
 
-  # No operations (-N)
-  if options.no_opt:
-    flags["no_op"] = True
+    # No operations (-N)
+    if options.no_opt:
+        flags["no_op"] = True
 
-  # Package all installed ports
-  if options.packageA:
-    flags["package"] = True
-    options.package = True
+    # Package all installed ports
+    if options.packageA:
+        flags["package"] = True
+        options.package = True
 
-  # Upgrade ports
-  if options.upgrade and len(options.args) > 1:
-    flags["mode"] = "recursive"
+    # Upgrade ports
+    if options.upgrade and len(options.args) > 1:
+        flags["mode"] = "recursive"
 
-  # Upgrade all ports
-  if options.upgradeA:
-    flags["stage"] = max(flags["stage"], Port.OLDER)
-    flags["mode"] = "recursive"
+    # Upgrade all ports
+    if options.upgradeA:
+        flags["stage"] = max(flags["stage"], Port.OLDER)
+        flags["mode"] = "recursive"
+
 
 def read_port_file(ports_file):
-  """Get ports from a file."""
-  ports = []
-  for i in open(ports_file, "r"):
-    try:
-      i = i[:i.index('#')]
-    except ValueError:
-      pass
-    ports.extend(i.split())
-  return ports
+    """Get ports from a file."""
+    ports = []
+    for i in open(ports_file, "r"):
+        try:
+            i = i[:i.index('#')]
+        except ValueError:
+            pass
+        ports.extend(i.split())
+    return ports
+
 
 def parse_config(_option, _opt_str, value, _parser):
-  """Set the config requirements."""
-  from libpb.env import flags
+    """Set the config requirements."""
+    from libpb.env import flags
 
-  if value not in ("none", "all", "newer", "changed"):
-    raise optparse.OptionValueError("config must be one of (none, all, newer, changed)")
-  flags["config"] = value
+    if value not in CONFIG:
+        raise optparse.OptionValueError("config must be one of (%s)" %
+                                        (", ".join(CONFIG)))
+    flags["config"] = value
+
 
 if __name__ == "__main__":
-  main()
+    main()
