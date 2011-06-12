@@ -29,7 +29,7 @@ class PortDelegate(object):
     def __call__(self, port):
         """Add a port to the required builder."""
         from libpb.env import flags
-        from libpb.builder import depend
+        from libpb.builder import depend, install_builder, package_builder
         from libpb.port.dependhandler import Dependent
 
         if isinstance(port, str):
@@ -42,11 +42,11 @@ class PortDelegate(object):
             port.dependent.status = Dependent.UNRESOLV
             port.force = True
         if self.package:
-            from libpb.builder import package_builder
             package_builder(port)
+            job = install_builder.add(port)
         else:
-            from libpb.builder import install_builder
-            install_builder(port)
+            job = install_builder(port)
+        depend.register(job)
 
 
 def sigterm():
@@ -168,7 +168,7 @@ def run_loop(no_port, options):
         try:
             run()
         finally:
-            sys.stderr.write(msg)
+            sys.stderr.write(msg + "\n")
 
 
 def gen_parser():
