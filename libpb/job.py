@@ -3,6 +3,8 @@
 from __future__ import absolute_import
 
 from abc import abstractmethod, ABCMeta
+import time
+
 from .signal import Signal, SignalProperty
 
 __all__ = ["Job", "PortJob", "StalledJob"]
@@ -93,6 +95,7 @@ class CleanJob(Job):
     def work(self):
         """Clean a port."""
         from .make import make_target
+        self.port.working = time.time()
         make = make_target(self.port, "clean", NOCLEANDEPENDS=True)
         make.connect(self._cleaned)
         self.pid = make.pid
@@ -114,6 +117,7 @@ class PortJob(Job):
         self.pid = None
         self.port = port
         self.stage = stage
+        self._stage_done = False
 
     def __repr__(self):
         return "<PortJob(port=%s, stage=%i)>" % (self.port.origin, self.stage)
@@ -142,6 +146,8 @@ class PortJob(Job):
 
     def stage_done(self, port=None):
         """Handle the completion of a port stage."""
+        assert not self._stage_done
+        self._stage_done = True
         if port is None:
             from .event import post_event
             post_event(self.done)

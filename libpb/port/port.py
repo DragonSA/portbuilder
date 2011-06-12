@@ -12,7 +12,7 @@ from ..signal import SignalProperty
 __all__ = ["Port"]
 
 # TODO:
-# Non-privleged mode
+# Non-privileged mode
 # remove NO_DEPENDS once thoroughly tested???
 # handle IS_INTERACTIVE
 
@@ -146,24 +146,23 @@ class Port(object):
 
     def clean(self):
         """Clean the ports working directory and log file."""
-        if self.stage >= Port.BUILD:
-            from ..env import flags
+        from ..env import flags
+
+        assert not self.working or flags["mode"] == "clean"
+        if Port.BUILD <= self.stage < Port.PKGINSTALL:
             from ..job import CleanJob
             from ..queue import clean_queue
-            assert not self.working or flags["mode"] == "clean"
 
-            if self.stage != Port.PKGINSTALL:
-                self.working = time.time()
-                clean_queue.add(CleanJob(self).connect(self._cleaned))
-            else:
-                self._cleaned()
+            clean_queue.add(CleanJob(self).connect(self._cleaned))
+        else:
+            self._cleaned()
 
     def _cleaned(self, job=None):
         """Mark the port as clean."""
         self.working = False
         if job and not job.status:
             self.failed = True
-        if not self.failed and self.stage >= Port.BUILD:
+        if not self.failed:
             if os.path.isfile(self.log_file):
                 os.unlink(self.log_file)
 
