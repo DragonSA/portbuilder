@@ -41,8 +41,8 @@ class Job(Signal):
         The method may throw StalledJob, indicating the job should be placed on
         the stalled queue and another run in its place."""
         self.__manager = manager
-        self.started.emit(self)
         self.work()
+        self.started.emit(self)
 
     def done(self):
         """Utility method to indicate the work has completed."""
