@@ -177,8 +177,9 @@ class Dependency(DependHandler):
                 self._loading += 1
                 get_port(j[1]).connect(adder(j[0], i))
         if not self._loading:
+            from ..event import post_event
             self._update_priority()
-            self.port._finalise(Port.CONFIG, True)
+            post_event(self.port._finalise, Port.CONFIG, True)
 
     def __repr__(self):
         return "<Dependency(port=%s)>" % self.port.origin
