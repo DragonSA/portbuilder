@@ -298,11 +298,11 @@ class Top(Monitor):
         else:
             stages = state.stages
         if self._failed_only:
-            status = (Builder.FAILED)
+            status = (Builder.FAILED,)
         elif self._idle:
             status = tuple(status[0] for status in STATUS)
         else:
-            status = (Builder.ACTIVE)
+            status = (Builder.ACTIVE,)
 
         if Builder.ACTIVE == status[0]:
             status = status[1:]
@@ -335,11 +335,13 @@ class Top(Monitor):
                     if job.port.working:
                         offtime = self._curr_time - job.port.working
                         active = '%3i:%02i' % (offtime / 60, offtime % 60)
+                        state = "active"
                     else:
                         active = ' ' * 6
+                        state = "queued"
                     scr.addnstr(
-                            offset, 0, '   clean  active %s %s' %
-                            (active, get_name(job.port)), columns)
+                            offset, 0, '   clean  %s %s %s' %
+                            (state, active, get_name(job.port)), columns)
                     offset += 1
                     lines -= 1
                     if not lines:
