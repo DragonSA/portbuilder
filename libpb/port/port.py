@@ -147,12 +147,13 @@ class Port(object):
     def clean(self):
         """Clean the ports working directory and log file."""
         if self.stage >= Port.BUILD:
-            assert not self.working
+            from ..env import flags
             from ..job import CleanJob
             from ..queue import clean_queue
+            assert not self.working or flags["mode"] == "clean"
 
-            self.working = time.time()
             if self.stage != Port.PKGINSTALL:
+                self.working = time.time()
                 clean_queue.add(CleanJob(self).connect(self._cleaned))
             else:
                 self._cleaned()
