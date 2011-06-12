@@ -253,12 +253,12 @@ class Top(Monitor):
             self._offset += 1
         self._skip = min(self._skip, ports - 1)
 
-    def _update_stage(self, scr, stage_name, stats):
+    def _update_stage(self, scr, stage_name, stage):
         """Update various stage details."""
         msg = []
-        for stat, status in STATUS[:1]:
-            if stats.status[stat]:
-                msg.append("%i %s" % (len(stats[stat]), status))
+        for state, status in STATUS[:-1]:
+            if stage.status[state]:
+                msg.append("%i %s" % (len(stage[state]), status))
 
         if msg:
             scr.addstr(
@@ -286,7 +286,7 @@ class Top(Monitor):
                         stat = stat[self._skip:]
                         self._skip = 0
                 for port in stat:
-                    yield port
+                    yield port, stage.stage
 
         skip = self._skip
         lines, columns = scr.getmaxyx()
@@ -306,7 +306,7 @@ class Top(Monitor):
 
         if Builder.ACTIVE == status[0]:
             status = status[1:]
-            for port in ports(stages, Builder.ACTIVE):
+            for port, stage in ports(stages, Builder.ACTIVE):
                 if not port.working:
                     continue
 
@@ -314,7 +314,7 @@ class Top(Monitor):
                 active = '%3i:%02i' % (offtime / 60, offtime % 60)
                 scr.addnstr(
                         offset, 0, ' %7s  active %s %s' %
-                        (STAGE_NAME[port.stage + 1], active, get_name(port)),
+                        (STAGE_NAME[stage], active, get_name(port)),
                         columns)
                 offset += 1
                 lines -= 1
@@ -348,11 +348,10 @@ class Top(Monitor):
                 self._skip = 0
 
         for status in status:
-            stg = 0 if status in (Builder.FAILED, Builder.DONE) else 1
-            for port in ports(stages, status):
+            for port, stage in ports(stages, status):
                 scr.addnstr(
                         offset, 0, ' %7s %7s        %s' %
-                        (STAGE_NAME[port.stage + stg], STATUS_NAME[status],
+                        (STAGE_NAME[stage], STATUS_NAME[status],
                          get_name(port)), columns)
                 offset += 1
                 lines -= 1
