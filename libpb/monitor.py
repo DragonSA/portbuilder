@@ -3,7 +3,7 @@
 from __future__ import absolute_import
 
 from abc import ABCMeta, abstractmethod
-import curses
+import curses, curses.ascii
 import sys
 import time
 
@@ -283,7 +283,7 @@ class Top(Monitor):
                         self._skip -= len(stat)
                         continue
                     else:
-                        stat = stat[skip:]
+                        stat = stat[self._skip:]
                         self._skip = 0
                 for port in stat:
                     yield port
@@ -328,7 +328,7 @@ class Top(Monitor):
                          clean_queue.queue)
             else:
                 clean = clean_queue.active
-            if len(clean) > self._skip:
+            if self._skip >= len(clean):
                 self._skip -= len(clean)
             else:
                 for job in clean[self._skip:]:
@@ -360,4 +360,9 @@ class Top(Monitor):
                     self._skip = skip
                     return
 
-        self._skip = skip
+        # make sure at least one port is visible
+        if self._skip:
+            self._skip = max(0, skip - self._skip - 1)
+            self._update_rows(scr)
+        else:
+            self._skip = skip
