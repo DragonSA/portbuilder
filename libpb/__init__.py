@@ -152,7 +152,7 @@ def stop(kill=False, kill_clean=False):
                 if kill:
                     os.killpg(pid, signal.SIGKILL)
                 else:
-                    os.kill(pid, signal.SIGTERM)
+                    os.killpg(pid, signal.SIGTERM)
             except OSError:
                 pass
 
