@@ -78,16 +78,17 @@ class DependLoader(object):
         """Find a method to resolve the port."""
         while True:
             method = self.method[port]
-            self.method[port] = self._next(self.method[port])
             port.dependent.propogate = not self.method[port]
-            if method is None:
+            if not method:
                 # No method left, port failed to resolve
                 del self.method[port]
                 port.failed = True
                 port.dependent.status_changed()
                 return False
-            if self._resolve(port, method):
-                return True
+            else:
+                self.method[port] = self._next(self.method[port])
+                if self._resolve(port, method):
+                    return True
 
     def _resolve(self, port, method):
         """Try resolve the port using various methods."""
@@ -104,6 +105,8 @@ class DependLoader(object):
                 job = install_builder(port)
         elif method == "package":
             if not os.path.isfile(flags["chroot"] + port.attr["pkgfile"]):
+                pkginstall_builder.update.emit(pkginstall_builder,
+                                               Builder.FAILED, port)
                 return False
             job = pkginstall_builder(port)
         else:
@@ -355,6 +358,8 @@ class StageBuilder(Builder):
         elif not failed:
             self.succeeded.append(job.port)
             self.update.emit(self, Builder.SUCCEEDED, job.port)
+        if failed:
+            self.update.emit(self, Builder.FAILED, job.port)
 
     def _depend_resolv(self, port):
         """Update dependency structures for resolved dependency."""
@@ -381,6 +386,12 @@ class StageBuilder(Builder):
         elif port.failed or port.dependency.failed:
             from .event import post_event
 
+            if not port.dependent.propogate:
+                if port in self.ports:
+                    del self._pending[port]
+                    self.ports[port].stage_done()
+                return True
+
             if port in self._depends:
                 # Inform all dependants that they have failed (because of us)
                 for deps in self._depends.pop(port):
@@ -392,7 +403,6 @@ class StageBuilder(Builder):
                 # We only fail on at this stage if previous stage knows about
                 # failure
                 self.failed.append(port)
-                self.update.emit(self, Builder.FAILED, port)
                 if port in self.ports:
                     del self._pending[port]
                     self.ports[port].stage_done()

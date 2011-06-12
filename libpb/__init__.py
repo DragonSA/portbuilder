@@ -61,7 +61,7 @@ class StateTracker(object):
                 elif port in self.pending:
                     self.pending.remove(port)
                 if status == Builder.FAILED:
-                    if port.stage == self.stage:
+                    if port.stage == self.stage and port.dependent.propogate:
                         self.failed.append(port)
                 elif status == Builder.DONE and port.stage == self.stage:
                     self.done.append(port)
