@@ -16,10 +16,11 @@ class StateTracker(object):
     class Stage(object):
         """Information about each stage of the build process."""
 
-        def __init__(self, builder, next_stage=None):
+        def __init__(self, builder, state):
             """Initialise the Stage's state."""
             self.builder = builder
             self.stage = builder.stage
+            self._state = state
             self.active  = []
             self.queued  = []
             self.pending = []
@@ -28,8 +29,7 @@ class StateTracker(object):
             self.status = (self.pending, self.queued, self.active, self.failed,
                            (), self.done)
 
-            self._ports = set()
-            self._next_stage = next_stage
+            self.ports = set()
 
             builder.update.connect(self._update)
 
@@ -42,10 +42,10 @@ class StateTracker(object):
             from .builder import Builder
 
             if status == Builder.ADDED:
-                bisect.insort(self.pending, port)
-                self._ports.add(port)
-                if self._next_stage is not None:
-                    self._next_stage.previous_stage_started(port)
+                assert port not in self.ports
+                if self._state.stage_started(self, port):
+                    bisect.insort(self.pending, port)
+                self.ports.add(port)
             elif status == Builder.QUEUED:
                 self.pending.remove(port)
                 bisect.insort(self.queued, port)
@@ -53,43 +53,31 @@ class StateTracker(object):
                 self.queued.remove(port)
                 self.active.append(port)
             else:
+                self.ports.remove(port)
                 if port in self.active:
                     self.active.remove(port)
                 elif port in self.queued:
                     self.queued.remove(port)
-                else:
+                elif port in self.pending:
                     self.pending.remove(port)
-                self._ports.remove(port)
                 if status == Builder.FAILED:
                     if port.stage == self.stage:
                         self.failed.append(port)
                 elif status == Builder.DONE and port.stage == self.stage:
                     self.done.append(port)
-                if self._next_stage is not None:
-                    self._next_stage.previous_stage_finished(port)
+                self._state.stage_finished(self, port)
 
         def cleanup(self):
             """Disconnect from signals."""
             self.builder.update.disconnect(self._update)
 
-        def previous_stage_started(self, port):
-            """Handle a port starting a previous (superseding) stage."""
-            if port in self._ports:
-                self.pending.remove(port)
-
-        def previous_stage_finished(self, port):
-            """Handle a port finishing a previous (superseding) stage."""
-            if port in self._ports:
-                bisect.insort(self.pending, port)
-
     def __init__(self):
         """Initialise the StateTracker."""
         from .builder import builders, depend_builder
 
-        self.stages = [StateTracker.Stage(builders[-1])]
-        for builder in reversed(builders[:-1]):
-            self.stages.append(StateTracker.Stage(builder, self.stages[-1]))
-        self.stages.reverse()
+        self.stages = []
+        for builder in builders:
+            self.stages.append(StateTracker.Stage(builder, self))
 
         self._resort = False
         depend_builder.update.connect(self._sort)
@@ -112,6 +100,27 @@ class StateTracker(object):
                 stage.pending.sort()
                 stage.queued.sort()
             self._resort = False
+
+    def stage_started(self, stage, port):
+        stage_no = stage.stage
+        for stage in self.stages[:stage_no - 1]:
+            if port in stage.ports:
+                return False
+        for stage in self.stages[stage_no:]:
+            if port in stage.ports:
+                stage.pending.remove(port)
+                break
+        return True
+
+    def stage_finished(self, stage, port):
+        for stage in self.stages[stage.stage:]:
+            if port in stage.ports:
+                assert port not in stage.pending
+                if self._resort:
+                    stage.pending.append(port)
+                else:
+                    bisect.insort(stage.pending, port)
+                break
 
     def _sort(self, _builder, status, _port):
         """Handle changes that require a resort (due to changes in priority)"""
