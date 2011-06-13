@@ -106,6 +106,8 @@ class DependLoader(object):
         elif method == "package":
             if not os.path.isfile(flags["chroot"] + port.attr["pkgfile"]):
                 pkginstall_builder.update.emit(pkginstall_builder,
+                                               Builder.ADDED, port)
+                pkginstall_builder.update.emit(pkginstall_builder,
                                                Builder.FAILED, port)
                 return False
             job = pkginstall_builder(port)
