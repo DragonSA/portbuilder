@@ -64,7 +64,7 @@ class Monitor(object):
 
 
 STAGE_NAME = ("config", "config", "depend", "chcksm", "fetch", "build",
-              "install", "package", "pkginst", "error")
+              "install", "package", "pkginst")
 STAGE = (
     (Port.CHECKSUM,   "Checksum"),
     (Port.DEPEND,     "Depend"),
@@ -112,10 +112,17 @@ class Top(Monitor):
 
     def run(self):
         """Refresh the display."""
+        from .env import flags
+        from . import state
+
+        if flags["fetch_only"]:
+            stages = state[:Port.FETCH + 1]
+        else:
+            stages = state.stages
         self._curr_time = time.time()
         self._stdscr.erase()
-        self._update_header(self._stdscr)
-        self._update_rows(self._stdscr)
+        self._update_header(self._stdscr, stages)
+        self._update_rows(self._stdscr, stages)
         self._stdscr.move(self._offset, 0)
         self._stdscr.refresh()
 
@@ -191,16 +198,15 @@ class Top(Monitor):
             # Redraw display if required
             self.run()
 
-    def _update_header(self, scr):
+    def _update_header(self, scr, stages):
         """Update the header details."""
         from .event import event_count
-        from . import state
 
         self._offset = 0
         self._update_ports(scr)
-        self._update_summary(scr)
-        for stage, stgname in STAGE:
-            self._update_stage(scr, stgname, state[stage])
+        self._update_summary(scr, stages)
+        for stage in stages:
+            self._update_stage(scr, stage)
 
         offset = self._curr_time - self._time
         secs, mins, hours = offset % 60, offset / 60 % 60, offset / 60 / 60 % 60
@@ -233,27 +239,25 @@ class Top(Monitor):
 
         self._offset += 1
 
-    def _update_summary(self, scr):
+    def _update_summary(self, scr, stages):
         """Update the summary information."""
-        from . import state
-
         msg = dict((status[1], 0) for status in STATUS)
         ports = 0
-        for stage in state.stages:
+        for stage in stages:
             for stat, status in STATUS:
                 msg[status] += len(stage[stat])
-                ports += len(stage[stat])
+                if stat not in (Builder.FAILED, Builder.DONE):
+                    ports += len(stage[stat])
 
-        if ports:
-            msg = ", ".join("%i %s" % (msg[status[1]], status[1])
-                            for status in STATUS if msg[status[1]])
-            scr.addstr(
-                    self._offset, 0, "%i port%s remaining: %s" %
-                    (ports, "s" if ports > 1 else " ", msg))
-            self._offset += 1
+        msg = ", ".join("%i %s" % (msg[status[1]], status[1])
+                        for status in STATUS if msg[status[1]])
+        scr.addstr(
+                self._offset, 0, "%i port%s remaining: %s" %
+                (ports, " " if ports == 1 else "s", msg))
+        self._offset += 1
         self._skip = min(self._skip, ports - 1)
 
-    def _update_stage(self, scr, stage_name, stage):
+    def _update_stage(self, scr, stage):
         """Update various stage details."""
         msg = []
         for state, status in STATUS[:-1]:
@@ -261,16 +265,15 @@ class Top(Monitor):
                 msg.append("%i %s" % (len(stage[state]), status))
 
         if msg:
+            stage_name = STAGE_NAME[stage.stage]
             scr.addstr(
                     self._offset, 0, "%s:%s%s" %
                     (stage_name, " " * (9 - len(stage_name)), ", ".join(msg)))
             self._offset += 1
 
-    def _update_rows(self, scr):
+    def _update_rows(self, scr, stages):
         """Update the rows of port information."""
-        from .env import flags
         from .queue import clean_queue
-        from . import state
 
         scr.addstr(self._offset + 1, 2, ' STAGE   STATE   TIME PACKAGE')
 
@@ -292,11 +295,6 @@ class Top(Monitor):
         lines, columns = scr.getmaxyx()
         offset = self._offset + 2
         lines -= offset
-        state.sort()
-        if flags["fetch_only"]:
-            stages = state[:Port.FETCH+1]
-        else:
-            stages = state.stages
         if self._failed_only:
             status = (Builder.FAILED,)
         elif self._idle:
