@@ -383,6 +383,10 @@ def set_options(options):
         flags["stage"] = max(flags["stage"], Port.OLDER)
         flags["mode"] = "recursive"
 
+    # Profile option
+    if options.profile:
+        options.profile = os.path.join(os.getcwd(), options.profile)
+
 
 def read_port_file(ports_file):
     """Get ports from a file."""
