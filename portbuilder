@@ -68,7 +68,7 @@ def sigint():
 
 def main():
     """The main event loop."""
-    from libpb.env import flags
+    from libpb.env import flags, setup_env
     from libpb.event import event
     from libpb.monitor import Top
     from libpb.port import get_port
@@ -94,6 +94,9 @@ def main():
             del os.environ[key]
         except KeyError:
             pass
+
+    # Cache the environment variables used by ports/Mk/bsd.*.mk
+    setup_env()
 
     # Change directory to / (root).  This is a workaround for bug misc/157543
     os.chdir("/")

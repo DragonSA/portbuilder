@@ -8,7 +8,7 @@ import subprocess
 
 from .port.port import Port
 
-__all__ = ["CPUS", "env", "env_master", "flags"]
+__all__ = ["CPUS", "env", "env_master", "flags", "setup_env"]
 
 CPUS = os.sysconf("SC_NPROCESSORS_ONLN")
 
@@ -53,7 +53,8 @@ def _sysctl(name):
 def _get_os_version():
     """Get the OS Version.  Based on how ports/Mk/bsd.port.mk sets OSVERSION"""
     # XXX: platform specific code
-    for path in ("/usr/include/sys/param.h", "/usr/src/sys/sys/param.h"):
+    for path in (flags["chroot"] + "/usr/include/sys/param.h", 
+                 flags["chroot"] + "/usr/src/sys/sys/param.h"):
         if os.path.isfile(path):
             break
     else:
@@ -69,7 +70,7 @@ def _get_os_version():
     return _sysctl("kern.osreldate")
 
 
-def _setup_env():
+def setup_env():
     """Update the env dictonary based on this programs environment flags."""
     for i in env:
         if i in os.environ:
@@ -105,5 +106,3 @@ def _setup_env():
     # Variables conditionally set in ports/Mk/bsd.port.subdir.mk
     if "_OSVERSION" not in os.environ:
         os.environ["_OSVERSION"] = uname[2]
-
-_setup_env()
