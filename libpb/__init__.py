@@ -91,7 +91,16 @@ class StateTracker(object):
 
     def __getitem__(self, stage):
         """Get the Stage object for stage."""
-        return self.stages[stage - 1]
+	if isinstance(stage, slice):
+		stop = stage.stop - 1
+		if stage.start is not None:
+			start = stage.start - 1
+		else:
+			start = None
+		stage = slice(start, stop, stage.step)
+		return self.stages[stage]
+	else:
+        	return self.stages[stage - 1]
 
     def sort(self):
         """Do any sorting required for the various stages."""
