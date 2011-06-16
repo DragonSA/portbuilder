@@ -391,6 +391,8 @@ class StageBuilder(Builder):
             if not port.dependent.propogate:
                 if port in self.ports:
                     del self._pending[port]
+                    for depends in (d for d in self._depends.values() if port in d):
+                        depends.remove(port)
                     self.ports[port].stage_done()
                 return True
 
@@ -402,7 +404,7 @@ class StageBuilder(Builder):
                         deps not in self.failed):
                         post_event(self._port_failed, deps)
             if not self.prev_builder or port not in self.prev_builder.ports:
-                # We only fail on at this stage if previous stage knows about
+                # We only fail at this stage if previous stage knows about
                 # failure
                 self.failed.append(port)
                 if port in self.ports:
