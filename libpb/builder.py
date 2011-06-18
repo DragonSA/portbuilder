@@ -78,7 +78,6 @@ class DependLoader(object):
         """Find a method to resolve the port."""
         while True:
             method = self.method[port]
-            port.dependent.propogate = not self.method[port]
             if not method:
                 # No method left, port failed to resolve
                 del self.method[port]
@@ -87,6 +86,7 @@ class DependLoader(object):
                 return False
             else:
                 self.method[port] = self._next(self.method[port])
+                port.dependent.propogate = not self.method[port]
                 if self._resolve(port, method):
                     return True
 
