@@ -176,8 +176,8 @@ def run_loop(no_port, options):
 
 def gen_parser():
     """Create the options parser object."""
-    usage = "\t%prog [-abnpruFN] [-c config] [-D variable] [-f file] "\
-            "[variable=value] port ..."
+    usage = ("\t%prog [-abdnpruFNU] [-c config] [-C chroot] [-D variable] "
+             "[-f file] [long-options] [variable=value] port ...")
 
     parser = optparse.OptionParser(usage, version="%prog 0.1.2")
 
@@ -206,8 +206,8 @@ def gen_parser():
                       help="Turn off extra diagnostic information (faster)")
 
     parser.add_option("--depend", action="store", type="string", default="",
-                      help="Comma separated methods to resolve dependencies "
-                      "(build, package) [default=build]")
+                      help="Comma separated list of methods to resolve "
+                      "dependencies (build, package) [default=build]")
 
     parser.add_option("-D", dest="make_env", action="append", default=[],
                       metavar="variable", help="Define the given variable for "
@@ -242,7 +242,8 @@ def gen_parser():
                       "installed ports")
 
     parser.add_option("--profile", action="store", default=False,
-                      type="string", help="Produce a profile of a run")
+                      type="string", help="Produce a profile of a run saved "
+                      "to file PROFILE")
 
     parser.add_option("-u", "--upgrade", action="store_true", default=False,
                       help="Upgrade specified ports.")
