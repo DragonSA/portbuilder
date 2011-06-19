@@ -91,16 +91,16 @@ class StateTracker(object):
 
     def __getitem__(self, stage):
         """Get the Stage object for stage."""
-	if isinstance(stage, slice):
-		stop = stage.stop - 1
-		if stage.start is not None:
-			start = stage.start - 1
-		else:
-			start = None
-		stage = slice(start, stop, stage.step)
-		return self.stages[stage]
-	else:
-        	return self.stages[stage - 1]
+        if isinstance(stage, slice):
+                stop = stage.stop - 1
+                if stage.start is not None:
+                        start = stage.start - 1
+                else:
+                        start = None
+                stage = slice(start, stop, stage.step)
+                return self.stages[stage]
+        else:
+                return self.stages[stage - 1]
 
     def sort(self):
         """Do any sorting required for the various stages."""
@@ -111,6 +111,7 @@ class StateTracker(object):
             self._resort = False
 
     def stage_started(self, stage, port):
+        """Indicate if the stage is the currently primary for port."""
         stage_no = stage.stage
         for stage in self.stages[:stage_no - 1]:
             if port in stage.ports:
@@ -122,6 +123,7 @@ class StateTracker(object):
         return True
 
     def stage_finished(self, stage, port):
+        """Transfer primary stage to the next stage handler."""
         for stage in self.stages[stage.stage:]:
             if port in stage.ports:
                 assert port not in stage.pending

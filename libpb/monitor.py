@@ -362,6 +362,6 @@ class Top(Monitor):
         # make sure at least one port is visible
         if self._skip:
             self._skip = max(0, skip - self._skip - 1)
-            self._update_rows(scr)
+            self._update_rows(scr, stages)
         else:
             self._skip = skip
