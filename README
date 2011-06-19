@@ -30,23 +30,28 @@ tree.  For example, to build all of KDE specify x11/kde4, or for VLC specify
 multimedia/vlc
 
 
-Usage:  port.py [-bdnpruFN] [-c config] [-D variable] [-f file] [variable=value] port ...
+Usage:  portbuilder [-abdnpruFNU] [-c config] [-C chroot] [-D variable]
+                    [-f file] [long-options] [variable=value] port ...
 
 Options:
   --version             show program's version number and exit
   -h, --help            show this help message and exit
+  -a, --all             Add all installed ports to the list (aka `pkg_info-
+                        aoq`)
   --arch=ARCH           Set the architecture environment variables (for cross
                         building)
-  -b, --batch           Batch mode.  Skips the config stage.
+  -b, --batch           Batch mode.  Skips the config stage
   -c CONFIG, --config=CONFIG
-                        Specify which ports to configure (none, all, newer,
-                        changed) [default: changed]
-  -C CHROOT             Build ports in chroot environment.
-  -d, --debug           Turn on extra diagnostic information (slower)
+                        Specify which ports to configure (none, changed,
+                        newer, all) [default: changed]
+  -C CHROOT             Build ports in chroot environment
+  -d, --debug           Turn off extra diagnostic information (faster)
+  --depend=DEPEND       Comma separated list of methods to resolve
+                        dependencies (build, package) [default=build]
   -D variable           Define the given variable for make (i.e. add ``-D
-                        variable'' to the make calls).
+                        variable'' to the make calls)
   -f PORTS_FILE, --ports-file=PORTS_FILE
-                        Use ports from file.
+                        Use ports from file
   -F, --fetch-only      Only fetch the distribution files for the ports
   --force               Force (re)installation of specified ports.
   --force-all           Force (re)installation of specified ports and all its
@@ -56,6 +61,7 @@ Options:
   -N                    Do not execute any commands.
   -p, --package         Create packages for specified ports.
   -P, --package-all     Create packages for all installed ports
+  --profile=PROFILE     Produce a profile of a run saved to file PROFILE
   -u, --upgrade         Upgrade specified ports.
   -U, --upgrade-all     Upgrade specified ports and all its dependencies.
 
@@ -63,29 +69,33 @@ Options:
 EXAMPLES
 --------
 Install KDE 4 and Xorg:
-# ./port.py x11/kde4 x11/xorg
+# portbuilder x11/kde4 x11/xorg
 
 Install all ports specified in a file (# comments respected)
 # cat /root/ports
 print/cups      # For printing
 devel/svk       # For development
 ^C
-# ./port.py -f /root/ports
+# portbuilder -f /root/ports
 
 Fetch all the files required to update all ports in a file
-# ./port.py -Fuf /root/ports
+# portbuilder -Fuf /root/ports
 
 Reconfigure and upgrade all ports (and their dependencies) in a file
-# ./port.py -c all -Uf /root/ports
+# portbuilder -c all -Uf /root/ports
 
 Display the commands that will upgrade all installed ports
-# ./port.py -anUf
+# portbuilder -anU
 
 Simulate the above (using the Top display) without printing the commands
-# ./port.py -aNUf
+# portbuilder -aNU
 
 Rebuild strigi with debug symbols
-# ./port.py --force deskutils/strigi -DWITH_DEBUG
+# portbuilder --force deskutils/strigi -DWITH_DEBUG
+
+Build all ports, specified in a file, in an i386 chroot environment, using
+packages were possible
+# portbuilder --arch=i386 -C /scratchpad -f /root/ports -DUSE_PACKAGE_DEPENDS
 
 
 INTERFACE
@@ -105,16 +115,17 @@ q    - Quit portbuilder (once to send SIGTERM to all jobs,
 
 NOTES
 -----
- * Build log files are stored in /tmp/pypkg, check there if a port failed.
+ * Build log files are stored in /tmp/portbuilder, check there if a port failed.
  * Ensure the program runs as root, or has write access to build area (and
-   /usr/ports/distfiles if ports need to fetch) and can su without password.
- * The load per stage can be seen under pyports/queue.py (at end of file).
+   /usr/ports/distfiles if ports need to fetch).
+ * The load per stage can be seen under libpb/queue.py (at end of file).
    Default values (build load can be as high as cpus * 3 - 1, or more):
-      config   = cpus * 2
-      checksum = 1
+      attr     = CPUS * 2
+      config   = 1
+      clean    = 1
+      checksum = max(CPUS // 2, 1)
       fetch    = 1
-      build    = cpus * 2
+      build    = CPUS * 2
       install  = 1
       package  = 1
- * The project and program needs a name.
- * Suggestions/criticisms welcome.
+   NOTE: pkginstall stage shares the install queue

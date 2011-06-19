@@ -8,6 +8,11 @@ Pylint:
  - enable pylint E0611,W0404
  - verify module level names (e.g. libpb/events)
 
+Low Handing Fruit:
+ - fine tune queue lengths
+ - manual page
+ - wiki page
+
 Future release:
  - Speed up port_version()
  - Add options for either individually executing make targets or in baulk
@@ -23,8 +28,6 @@ Future release:
  - handle alternative dependencies
  - update @pkgdep lines
  - add `-x` (and `-X` recursive) to exclude ports
- - fine tune queue lengths
- - add option to set queue lengths
  - directly call pkg_delete when uninstalling port (install/pkginstall?)
  - rework DependHandlers to use sets, dictionaries
  - build-only dependencies:
@@ -42,6 +45,7 @@ Future release:
  - Logging infrastructure (for messages for user)
  - Rename logging files for ports based on their unique-name
  - manual page(s)
+ - ensure only one instance of portbuilder builds per chroot
 
 0.1.8 - Milestone 8 (Finish command line controller):
  - modules:
@@ -75,7 +79,6 @@ Future release:
      - Remove /[workers] from output
  - report on failures
  - pypkg:
-   - Add -j option (fine tune concurrency)
    - Allow fuzzy port specification
    - Implement most of portupgrade
    - Handle passwords properly
@@ -164,6 +167,9 @@ Future release:
  - make port/mk to using pkg_* interface (vs direct file inspection)
  - make compatible with pkgng
  - display skipped ports (with toggle)
+ - add -j options to control queue loads
+ - create a clean_builder
+ - clean ports before trying other depend methods
 
 0.1.3 - Milestone 3 (Target Builders):
  * Finish call documentation
