@@ -1,4 +1,4 @@
-X.Y.Z: YYYY MMM DD:
+0.1.3: 2011 June 19:
  * Implemented a kqueue (external) event handler
  * Remove the use of callback (use Signal instead)
  * Add multiple methods (with fallback) to resolve a port
