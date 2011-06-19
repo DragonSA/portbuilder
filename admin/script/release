@@ -9,6 +9,7 @@ __EOF
 
 }
 
+
 prepare_release() {
 
   echo "3. Prepare Release"
@@ -23,7 +24,7 @@ prepare_release() {
   port
 
   echo "3.4) Commit changes"
-  cat > /tmp/portbuilder-prepare-$TAG.msg << __EOF
+  (cat << __EOF
 Prepare for release of $TAG
 
 Update:
@@ -37,57 +38,58 @@ Update:
    - COMMENT
    - pkg-plist
 __EOF
-  git commit -evF /tmp/portbuilder-prepare-$TAG.msg
+  ) | git commit -F -
 
 }
+
 
 do_release() {
 
   echo "4. Tag and Release"
 
   echo "4.1) Create release tarball (excluding ./port)"
-  git archive 'master^{tree}' --prefix=portbuilder-$TAG/ | xz -9 > /tmp/portbuilder-$TAG.tar.xz
+  git archive 'master^{tree}' --prefix=portbuilder-$TAG/ | xz -9 > portbuilder-$TAG.tar.xz
 
   echo "4.2) Update port distinfo (and commit data)"
-  (cd port;
-    make makesum DISTDIR=/tmp
-  )
+  make -C $PWD/port makesum DISTDIR=$PWD
   git add port/distinfo
-  cat > /tmp/portbuilder-distinfo-$TAG.msg << __EOF
-Update distinfo with release tarball
+  (cat << __EOF
+Update distinfo for $TAG release tarball
 __EOF
-  git commit -evF /tmp/portbuilder-distinfo-$TAG.msg
+  ) | git commit -F -
 
   echo "4.3) Tag annotated release (with ChangeLog for comment)"
-  python -c "import sys; exec sys.stdin.read()" > /tmp/portbuilder-tag-$TAG.msg << __EOF
+  (python -c "import sys; exec sys.stdin.read()" << __EOF
 print "Tag release for version $TAG\n"
 lines = []
-for line in open("README", "r"):
+for line in open("ChangeLog", "r"):
   if line == "\n":
     break
   else:
     lines.append(line)
 print "".join(lines)[:-1]
 __EOF
-  git tag -sF /tmp/portbuilder-tag-$TAG.msg $TAG
+  ) | git tag -sF - $TAG
 
   git archive "$TAG^{tree}" --prefix=portbuilder-$TAG/ | xz -9 > /tmp/portbuilder-check-$TAG.tar.xz
-  if [ `sha256 -q /tmp/portbuilder-$TAG.tar.xz` != `sha256 -q /tmp/portbuilder-check-$TAG.tar.xz` ]
+  if [ `sha256 -q portbuilder-$TAG.tar.xz` != `sha256 -q /tmp/portbuilder-check-$TAG.tar.xz` ]
   then
     echo "!!!> Release tarball not the same as tags content"
   fi
+  rm /tmp/portbuilder-check-$TAG.tar.xz
 
   echo "4.4) Post release cleanup:"
   echo "4.4.1) Add entry for next release in ChangeLog"
-  (echo "X.Y.Z: YYYY MMM DD:"; echo; cat ChangeLog) > /tmp/portbuilder-ChangeLog-$TAG
+  (echo "X.Y.Z - YYYY MMM DD:"; echo; cat ChangeLog) > /tmp/portbuilder-ChangeLog-$TAG
   mv /tmp/portbuilder-ChangeLog-$TAG ChangeLog
-  cat > /tmp/portbuilder-post-$TAG.msg << __EOF
+  git add ChangeLog
+  (cat << __EOF
 Add template entry for next release's ChangeLog
 __EOF
-  git add ChangeLog
-  git commit -evF /tmp/portbuilder-post-$TAG.msg
+  ) | git commit -F -
 
 }
+
 
 versioning() {
 
@@ -112,6 +114,7 @@ versioning() {
 
 }
 
+
 setup_py() {
 
   echo "3.2.1) Update packages"
@@ -132,6 +135,7 @@ setup_py() {
   rm -r build /tmp/portbuilder.install
 
 }
+
 
 port() {
 
@@ -156,7 +160,7 @@ __EOF
   git add port/pkg-descr
 
   echo "3.3.2) Update comment (from setup.py)"
-  COMMENT=`sed -n -e 's/.*description="\(.*\)".*/\1/p' setup.py`
+  COMMENT=`sed -n -e 's/  *description="\(.*\)".*/\1/p' setup.py`
   sed -i '' -e "s/^COMMENT=	.*/COMMENT=	${COMMENT}/" port/Makefile
   git add port/Makefile
 
