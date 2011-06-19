@@ -60,11 +60,11 @@ class StateTracker(object):
                     self.queued.remove(port)
                 elif port in self.pending:
                     self.pending.remove(port)
-                if status == Builder.FAILED:
-                    if port.stage == self.stage and port.dependent.propogate:
+                if self.stage == port.stage:
+                    if status == Builder.FAILED and port.dependent.propogate:
                         self.failed.append(port)
-                elif status == Builder.DONE and port.stage == self.stage:
-                    self.done.append(port)
+                    elif status == Builder.DONE:
+                        self.done.append(port)
                 self._state.stage_finished(self, port)
 
         def cleanup(self):
