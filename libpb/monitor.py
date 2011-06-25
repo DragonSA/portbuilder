@@ -115,10 +115,11 @@ class Top(Monitor):
         from .env import flags
         from . import state
 
+        state.sort()
         if flags["fetch_only"]:
             stages = state[:Port.FETCH + 1]
         else:
-            stages = state.stages
+            stages = tuple(state[i[0]] for i in STAGE)
         self._curr_time = time.time()
         self._stdscr.erase()
         self._update_header(self._stdscr, stages)
