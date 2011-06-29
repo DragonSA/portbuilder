@@ -42,7 +42,8 @@ class StateTracker(object):
             from .builder import Builder
 
             if status == Builder.ADDED:
-                assert port not in self.ports
+                assert (port not in self.ports and port not in self.failed and
+                        port not in self.done)
                 if self._state.stage_started(self, port):
                     bisect.insort(self.pending, port)
                 self.ports.add(port)
@@ -58,7 +59,7 @@ class StateTracker(object):
                     self.active.remove(port)
                 elif port in self.queued:
                     self.queued.remove(port)
-                elif port in self.pending:
+                else: #if port in self.pending:
                     self.pending.remove(port)
                 if self.stage == port.stage:
                     if status == Builder.FAILED and port.dependent.propogate:
@@ -126,7 +127,8 @@ class StateTracker(object):
         """Transfer primary stage to the next stage handler."""
         for stage in self.stages[stage.stage:]:
             if port in stage.ports:
-                assert port not in stage.pending
+                assert (port not in stage.pending and port not in stage.done and
+                        port not in stage.failed)
                 if self._resort:
                     stage.pending.append(port)
                 else:
