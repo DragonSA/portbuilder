@@ -127,6 +127,9 @@ class PortJob(Job):
         """Priority of port.  Port's priority may change without notice."""
         return self.port.dependent.priority
 
+    def __lt__(self, other):
+        return self.port.dependent.priority > other.port.dependent.priority
+
     def work(self):
         """Run the required port stage."""
         from .port.port import Port
