@@ -35,12 +35,12 @@ class PortDelegate(object):
         if isinstance(port, str):
             self.no_port.append(port)
             return
-        if (not (flags["mode"] == "recursive" or self.force) and
-            port.install_status > flags["stage"] or port in depend.ports):
+        if ((not (flags["mode"] == "recursive" or self.force) and
+             port.install_status > flags["stage"]) or port in depend.ports):
             return
         if self.upgrade or self.force:
             port.dependent.status = Dependent.UNRESOLV
-            port.force = True
+            port.force = self.force
         if self.package:
             package_builder(port)
             job = install_builder.add(port)
