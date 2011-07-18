@@ -42,8 +42,9 @@ class PortDelegate(object):
             port.dependent.status = Dependent.UNRESOLV
             port.force = self.force
         if self.package:
-            package_builder(port)
-            job = install_builder.add(port)
+            job = package_builder(port)
+            if port in install_builder.ports:
+                job = install_builder.ports[port]
         else:
             job = install_builder(port)
         depend.register(job)

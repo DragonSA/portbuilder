@@ -32,7 +32,7 @@ class DependLoader(object):
             from .signal import Signal
 
             job = Signal()
-            post_event(signal.emit, port)
+            post_event(job.emit, port)
             return job
         else:
             from .env import flags
@@ -96,11 +96,16 @@ class DependLoader(object):
 
         if port.stage > Port.DEPEND:
             port.reset()
+        elif port.failed:
+            return False
         if method == "build":
             if flags["package"]:
                 # Connect to install job and give package_builder ownership
-                package_builder(port)
-                job = install_builder.add(port)
+                job = package_builder(port)
+                if port in install_builder.ports:
+                    # Use the install job if it exists otherwise use the package
+                    # job.
+                    job = install_builder.ports[port]
             else:
                 job = install_builder(port)
         elif method == "package":
