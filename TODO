@@ -170,6 +170,8 @@ Future release:
  - add -j options to control queue loads
  - create a clean_builder
  - clean ports before trying other depend methods
+ - indicate progress of each stage (i.e. fetched, built)
+ - allow ports to be reinserted into build queue (and connect up)
 
 0.1.3 - Milestone 3 (Target Builders):
  * Finish call documentation
