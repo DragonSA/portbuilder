@@ -18,4 +18,10 @@ USE_PYTHON=	2.6+
 USE_PYDISTUTILS=	yes
 USE_XZ=		yes
 
+post-install:
+	${MKDIR} ${DOCSDIR}
+.for file in BUGS ChangeLog COPYRIGHT README
+	${INSTALL_DATA} ${WRKSRC}/${file} ${DOCSDIR}
+.endfor
+
 .include <bsd.port.mk>

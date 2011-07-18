@@ -41,5 +41,10 @@ bin/portbuilder
 %%PYTHON_SITELIBDIR%%/libpb/signal.py
 %%PYTHON_SITELIBDIR%%/libpb/signal.pyc
 %%PYTHON_SITELIBDIR%%/libpb/signal.pyo
+%%DOCSDIR%%/BUGS
+%%DOCSDIR%%/ChangeLog
+%%DOCSDIR%%/COPYRIGHT
+%%DOCSDIR%%/README
+@dirrm %%DOCSDIR%%
 @dirrm %%PYTHON_SITELIBDIR%%/libpb/port
 @dirrm %%PYTHON_SITELIBDIR%%/libpb
