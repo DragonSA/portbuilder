@@ -220,7 +220,7 @@ class Top(Monitor):
         events = self._last_event_count - events - 1
         if events > 0:
             # Display pending events
-            running = "events %i  " % events + running
+            running = "event%s %i  " % ("s" if events > 1 else "", events) + running
         scr.addstr(0, scr.getmaxyx()[1] - len(running) - 1, running)
 
     def _update_ports(self, scr):
