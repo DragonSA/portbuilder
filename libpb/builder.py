@@ -372,7 +372,7 @@ class StageBuilder(Builder):
         """Update dependency structures for resolved dependency."""
         if not self._port_failed(port):
             for port in self._depends.pop(port):
-                if port not in self.failed:
+                if not self._port_failed(port):
                     self._pending[port] -= 1
                     if not self._pending[port]:
                         self._port_ready(port)
@@ -420,43 +420,48 @@ class StageBuilder(Builder):
 
     def _port_ready(self, port):
         """Add a port to the stage queue."""
-        from .port.dependhandler import Dependent
-        from .env import flags
-
+        assert not self._pending[port]
+        assert not port.failed or port.dependency.failed
+        assert not port.dependency.check(self.stage)
         del self._pending[port]
-        if (port.failed or port.dependency.failed or
-            port.dependency.check(self.stage)):
-            # port cannot build
-            self.ports[port].stage_done()
-        elif self.stage == Port.PACKAGE:
-            # Checks specific for package building
-            if port.stage < Port.INSTALL:
-                self.ports[port].stage_done()
-            else:
-                assert(port.stage == Port.INSTALL)
-                self._build_port(port)
-        else:
-            # Checks for self.stage <= Port.INSTALL ||
-            #            self.stage == Port.PKGINSTALL
-            if port.dependent.status == Dependent.RESOLV:
-                # port does not need to build
-                self.ports[port].stage_done()
-            elif port.install_status > flags["stage"] and not port.force:
-                # port already up to date, does not need to build
-                port.dependent.status_changed()
-                self.ports[port].stage_done()
-            else:
-                self._build_port(port)
-
-    def _build_port(self, port):
-        """Actually build the port."""
-        assert port.stage >= self.stage - 1 or self.stage == Port.PKGINSTALL
-        if port.stage < self.stage:
+        if self._port_check(port):
+            assert port.stage == self.stage - 1
             self.update.emit(self, Builder.QUEUED, port)
             self.ports[port].started.connect(self._started)
             self.queue.add(self.ports[port])
-        else:
+
+    def _port_check(self, port):
+        """Check if the port should build this stage."""
+        from .port.dependhandler import Dependent
+        from .env import flags
+
+        if port.dependent.status == Dependent.RESOLV:
+            # port does not need to build
+            raise RuntimeError("%i %s" % (self.stage, port))
             self.ports[port].stage_done()
+        elif port.install_status > flags["stage"] and not port.force:
+            # port already up to date, does not need to build
+            port.dependent.status_changed()
+            self.ports[port].stage_done()
+        elif port.stage >= self.stage:
+            self.ports[port].stage_done()
+        else:
+            return True
+        return False
+
+
+class PackageBuilder(StageBuilder):
+    """Implement Package specific checks."""
+
+    def _port_check(self, port):
+        """Check if the port should build this stage."""
+        if port.stage < self.stage - 1:
+            port.dependent.status_changed()
+            self.ports[port].stage_done()
+            return False
+        else:
+            assert port.stage == self.stage - 1
+            return True
 
 
 depend = DependLoader()
@@ -466,7 +471,7 @@ checksum_builder   = StageBuilder(Port.CHECKSUM)
 fetch_builder      = StageBuilder(Port.FETCH,   checksum_builder)
 build_builder      = StageBuilder(Port.BUILD,   fetch_builder)
 install_builder    = StageBuilder(Port.INSTALL, build_builder)
-package_builder    = StageBuilder(Port.PACKAGE, install_builder)
+package_builder    = PackageBuilder(Port.PACKAGE, install_builder)
 pkginstall_builder = StageBuilder(Port.PKGINSTALL)
 builders = (config_builder, depend_builder, checksum_builder, fetch_builder,
             build_builder, install_builder, package_builder, pkginstall_builder)
