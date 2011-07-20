@@ -233,7 +233,7 @@ class Dependency(DependHandler):
         return bad
 
     def update(self, depend):
-        """Called when a dependency has changes status."""
+        """Called when a dependency has changed status."""
         status = depend.status
         if status == Dependent.FAILURE:
             self.failed = True

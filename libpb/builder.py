@@ -421,7 +421,7 @@ class StageBuilder(Builder):
     def _port_ready(self, port):
         """Add a port to the stage queue."""
         assert not self._pending[port]
-        assert not port.failed or port.dependency.failed
+        assert not port.failed or port.dependency.fail
         assert not port.dependency.check(self.stage)
         del self._pending[port]
         if self._port_check(port):
@@ -437,7 +437,6 @@ class StageBuilder(Builder):
 
         if port.dependent.status == Dependent.RESOLV:
             # port does not need to build
-            raise RuntimeError("%i %s" % (self.stage, port))
             self.ports[port].stage_done()
         elif port.install_status > flags["stage"] and not port.force:
             # port already up to date, does not need to build

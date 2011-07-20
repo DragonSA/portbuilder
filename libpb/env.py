@@ -53,7 +53,7 @@ def _sysctl(name):
 def _get_os_version():
     """Get the OS Version.  Based on how ports/Mk/bsd.port.mk sets OSVERSION"""
     # XXX: platform specific code
-    for path in (flags["chroot"] + "/usr/include/sys/param.h", 
+    for path in (flags["chroot"] + "/usr/include/sys/param.h",
                  flags["chroot"] + "/usr/src/sys/sys/param.h"):
         if os.path.isfile(path):
             break

@@ -159,16 +159,16 @@ class Top(Monitor):
         """Get user input and change display options."""
         run = False
         while True:
-            ch = self._stdscr.getch()
-            if ch == -1:
+            char = self._stdscr.getch()
+            if char == -1:
                 break
-            elif ch == ord('f'):
+            elif char == ord('f'):
                 # Toggle fetch only display
                 self._failed_only = not self._failed_only
-            elif ch == ord('i') or ch == ord('I'):
+            elif char == ord('i') or char == ord('I'):
                 # Toggle showing idle
                 self._idle = not self._idle
-            elif ch == ord('q'):
+            elif char == ord('q'):
                 # Quit
                 from . import stop
 
@@ -181,14 +181,14 @@ class Top(Monitor):
                     stop(kill=True, kill_clean=True)
                     raise SystemExit(254)
                 continue
-            elif ch == curses.KEY_CLEAR or ch == curses.ascii.FF:
+            elif char == curses.KEY_CLEAR or char == curses.ascii.FF:
                 # Redraw window
                 self._stdscr.clear()
-            elif ch == curses.KEY_PPAGE:
+            elif char == curses.KEY_PPAGE:
                 # Page up display
                 self._skip -= self._stdscr.getmaxyx()[0] - self._offset - 2
                 self._skip = max(0, self._skip)
-            elif ch == curses.KEY_NPAGE:
+            elif char == curses.KEY_NPAGE:
                 # Page down display
                 self._skip += self._stdscr.getmaxyx()[0] - self._offset - 2
             else:
