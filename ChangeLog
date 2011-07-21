@@ -1,4 +1,10 @@
 X.Y.Z - YYYY MMM DD:
+ * Install project meta files, for port
+ * Add copyright notice (FreeBSD style BSD license)
+ * Fixes:
+   * Ordering of ports in Top-style monitor
+   * Upgrading multiple ports with -u flag (-U is preferred)
+   * Many fixes to the build logic (depend resolution and stage checks)
 
 0.1.3: 2011 June 19:
  * Implemented a kqueue (external) event handler

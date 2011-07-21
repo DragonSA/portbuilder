@@ -1,7 +1,7 @@
-Conflicting/alternative dependencies:
+[01300] Conflicting/alternative dependencies:
     Conflicting and alternative dependencies are currently not handled.
 
-Spurious builds when using update (-u):
+[01310] Spurious builds when using update (-u):
     When multiple ports are specified for update (non-recursive) it could cause
     extra ports to be installed.  This may happen if a dependency is installed
     but it has an uninstalled dependency (e.g. options changed).  That
