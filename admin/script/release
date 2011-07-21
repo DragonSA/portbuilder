@@ -93,7 +93,7 @@ __EOF
 
 versioning() {
 
-  OLD_TAG=`git tag | tail -n 1 | sed 's/\./\\\./g'`
+  OLD_TAG=`git tag | grep '^[0-9]' | tail -n 1 | sed 's/\./\\\./g'`
 
   echo "3.1.1) Update version in ./setup.py"
   sed -i '' -e "s/$OLD_TAG/$TAG/g" setup.py
