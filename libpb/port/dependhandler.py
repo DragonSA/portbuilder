@@ -28,7 +28,7 @@ class DependHandler(object):
       Port.FETCH:      (FETCH,),
       Port.BUILD:      (EXTRACT, PATCH, LIB, BUILD),
       Port.INSTALL:    (LIB, RUN),
-      Port.PACKAGE:    (),
+      Port.PACKAGE:    (LIB, RUN),
       Port.PKGINSTALL: (LIB, RUN),
     }
 
