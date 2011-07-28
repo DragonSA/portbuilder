@@ -88,6 +88,9 @@ Add template entry for next release's ChangeLog
 __EOF
   ) | git commit -F -
 
+  echo "4.5) Create patch for FreeBSD port"
+  diff -uNr /usr/ports/ports-mgmt/portbuilder port | sed 's/^+++ port/+++ portbuilder/g' > portbuilder-$TAG.diff
+
 }
 
 

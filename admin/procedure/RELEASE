@@ -5,6 +5,7 @@ Prior to a release all pending work should be finished and imported:
 1.1) Pull relevant branches
 1.2) Run pylint
 
+
 2. Documentation
 ----------------
 Update documentation:
@@ -25,6 +26,7 @@ Update documentation:
 2.4.2) Update examples (and add relevant ones)
 
 2.5) Commit changes
+
 
 3. Prepare Release
 ------------------
@@ -48,6 +50,7 @@ Prepare the code for release:
 
 3.4) Commit changes
 
+
 4. Tag and Release
 ------------------
 Tag and release portbuilder
@@ -57,6 +60,7 @@ Tag and release portbuilder
 4.3) Tag annotated release (with ChangeLog for comment)
 4.4) Post release cleanup:
 4.4.1) Add entry for next release in ChangeLog
-4.5) Push all changes to github
-4.6) Upload release tarball to github
-4.7) Update FreeBSD port
+4.5) Create patch for FreeBSD port
+4.6) Push all changes to github
+4.7) Upload release tarball to github
+4.8) Update FreeBSD port
