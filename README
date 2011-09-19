@@ -104,6 +104,7 @@ Portbuilder offers a user interface similar to the top(1) program.  The
 interface should be intuitive however some commands are provided:
 
 ^L   - Redraw screen
+d    - Toggle displaying ports with failed dependencies
 f    - Toggle displaying only failed (and skipped) ports
 i    - Toggle displaying only idle ports
 PgDn - Scroll down display

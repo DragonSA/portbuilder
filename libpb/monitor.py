@@ -66,8 +66,8 @@ class Monitor(object):
 STAGE_NAME = ("config", "config", "depend", "chcksm", "fetch", "build",
               "install", "package", "pkginst")
 STAGE = (
-    (Port.CHECKSUM,   "Checksum"),
     (Port.DEPEND,     "Depend"),
+    (Port.CHECKSUM,   "Checksum"),
     (Port.FETCH,      "Fetch"),
     (Port.BUILD,      "Build"),
     (Port.INSTALL,    "Install"),
@@ -104,6 +104,7 @@ class Top(Monitor):
         self._stats = None
 
         self._failed_only = False
+        self._indirect = False
         self._idle = True
         self._skip = 0
         self._quit = 0
@@ -162,10 +163,13 @@ class Top(Monitor):
             char = self._stdscr.getch()
             if char == -1:
                 break
+            elif char == ord('d'):
+                # Toggle showing indirect failures
+                self._indirect = not self._indirect
             elif char == ord('f'):
                 # Toggle fetch only display
                 self._failed_only = not self._failed_only
-            elif char == ord('i') or char == ord('I'):
+            elif char == ord('i'):
                 # Toggle showing idle
                 self._idle = not self._idle
             elif char == ord('q'):
@@ -249,6 +253,8 @@ class Top(Monitor):
                 msg[status] += len(stage[stat])
                 if stat not in (Builder.FAILED, Builder.DONE):
                     ports += len(stage[stat])
+                if stat == Builder.FAILED and not self._indirect:
+                    msg[status] -= len([i for i in stage[stat] if not i.failed])
 
         msg = ", ".join("%i %s" % (msg[status[1]], status[1])
                         for status in STATUS if msg[status[1]])
@@ -263,7 +269,10 @@ class Top(Monitor):
         msg = []
         for state, status in STATUS[:-1]:
             if stage.status[state]:
-                msg.append("%i %s" % (len(stage[state]), status))
+                length = len(stage[state])
+                if state == Builder.FAILED and not self._indirect:
+                    length -= len([i for i in stage[state] if not i.failed])
+                msg.append("%i %s" % (length, status))
 
         if msg:
             stage_name = STAGE_NAME[stage.stage]
@@ -283,13 +292,19 @@ class Top(Monitor):
             for stage in reversed(stages):
                 stat = stage[status]
                 if self._skip:
-                    if self._skip >= len(stat):
-                        self._skip -= len(stat)
+                    length = len(stat)
+                    if status == Builder.FAILED and not self._indirect:
+                        length -= len([i for i in stat if not i.failed])
+                    if self._skip >= length:
+                        self._skip -= length
                         continue
                     else:
                         stat = stat[self._skip:]
                         self._skip = 0
                 for port in stat:
+                    if (status == Builder.FAILED and not self._indirect and
+                        not port.failed):
+                        continue
                     yield port, stage.stage
 
         skip = self._skip
