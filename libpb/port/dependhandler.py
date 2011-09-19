@@ -158,7 +158,8 @@ class Dependency(DependHandler):
         DependHandler.__init__(self)
         self._count = 0  #: The count of outstanding dependencies
         self._dependencies = [[], [], [], [], [], []]  #: All dependencies
-        self._loading = 0
+        self._loading = 0  #: Number of dependencies left to load
+        self._bad = 0  #: Number of bad dependencies
         self.failed = False  #: If a dependency has failed
         self.port = port  #: The port whom we handle
 
@@ -196,6 +197,9 @@ class Dependency(DependHandler):
 
                 if status != Dependent.RESOLV:
                     self._count += 1
+        else:
+            self._bad += 1
+
 
         if isinstance(port, str) or status == Dependent.FAILURE:
             if not self.failed and not self.port.dependent.failed:
@@ -203,9 +207,10 @@ class Dependency(DependHandler):
                 self.port.dependent.status_changed()
             else:
                 self.failed = True
+
         if self._loading == 0:
             self._update_priority()
-            self.port._finalise(Port.CONFIG, not self.failed)
+            self.port._finalise(Port.CONFIG, not self._bad)
 
     def get(self, typ=None):
         """Retrieve a list of dependencies."""
