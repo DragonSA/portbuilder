@@ -175,6 +175,8 @@ Future release:
  - rename builders (module name provides a hint to their purpose)
  - start moving library imports to module level (vs method/function)
  - make portbuilder indicate what is happening before Top monitor starts
+ - handle queue with stalled job and no active job (not possible with current code)
+ - make builds more persistent (i.e. no abort on dependency failure)
 
 0.1.3 - Milestone 3 (Target Builders):
  * Finish call documentation
