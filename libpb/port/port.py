@@ -119,9 +119,10 @@ class Port(object):
         """Initialise the port with the required information."""
         from .mk import status
         from .dependhandler import Dependent
+        from ..env import flags
 
         self.attr = attr
-        self.log_file = None
+        self.log_file = os.path.join(flags["log_dir"], self.attr["pkgname"])
         self.failed = False
         self.force = False
         self.load = attr["jobs_number"]
@@ -162,7 +163,7 @@ class Port(object):
         self.working = False
         if job and not job.status:
             self.failed = True
-        if not self.failed and self.log_file and os.path.isfile(self.log_file):
+        if not self.failed and os.path.isfile(self.log_file):
             os.unlink(self.log_file)
 
     def reset(self):
@@ -227,15 +228,19 @@ class Port(object):
 
     def _load_attr(self, _origin, attr):
         """Load the attributes for this port."""
+        from ..env import flags
+
         self.attr = attr
+        log_file = self.log_file
+        self.log_file = os.path.join(flags["log_dir"], self.attr["pkgname"])
+        if log_file != self.log_file and os.path.isfile(log_file):
+            os.rename(log_file, self.log_file)
         self._finalise(self.stage, attr is not None)
 
     def _pre_depend(self):
         """Create a dependency object for this port."""
-        from ..env import flags
         from .dependhandler import Dependency
 
-        self.log_file = os.path.join(flags["log_dir"], self.attr["pkgname"])
         self.priority = self._get_priority()
         self.dependent.priority += self.priority
         depends = ("depend_build", "depend_extract", "depend_fetch",
