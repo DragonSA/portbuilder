@@ -24,7 +24,6 @@ class PortDelegate(object):
         self.package = package
         self.upgrade = upgrade
         self.force = force
-        self.no_port = []
 
     def __call__(self, port):
         """Add a port to the required builder."""
@@ -33,7 +32,6 @@ class PortDelegate(object):
         from libpb.port.dependhandler import Dependent
 
         if isinstance(port, str):
-            self.no_port.append(port)
             return
         if ((not (flags["mode"] == "recursive" or self.force) and
              port.install_status > flags["stage"]) or port in depend.ports):
@@ -99,9 +97,6 @@ def main():
     # Cache the environment variables used by ports/Mk/bsd.*.mk
     setup_env()
 
-    # Change directory to / (root).  This is a workaround for bug misc/157543
-    os.chdir("/")
-
     # Install signal handlers
     signal.signal(signal.SIGINT, signal.SIG_IGN)
     event(signal.SIGINT, "s").connect(sigint)
@@ -118,10 +113,10 @@ def main():
     if not flags["no_op_print"]:
         Top().start()
     if options.profile:
-        cProfile.runctx("run_loop(delegate.no_port, options)", globals(),
+        cProfile.runctx("run_loop(options)", globals(),
                         locals(), options.profile)
     else:
-        run_loop(delegate.no_port, options)
+        run_loop(options)
 
 
 def mkdir(directory):
@@ -138,7 +133,7 @@ def mkdir(directory):
             exit(2)
 
 
-def run_loop(no_port, options):
+def run_loop(options):
     """Run the main event loop, print nice messages if something goes wrong."""
     from libpb.event import run
 
@@ -151,9 +146,7 @@ def run_loop(no_port, options):
             for queue in queues:
                 queue.load = 1
             run()
-
-        if no_port:
-            print "Unable to locate ports: %s" % no_port
+        report()
     except SystemExit:
         raise
     except BaseException:
@@ -172,7 +165,58 @@ def run_loop(no_port, options):
         try:
             run()
         finally:
+            report()
             sys.stderr.write(msg + "\n")
+
+def report():
+    """Print report about failed ports"""
+    from libpb.port.port import Port
+    from libpb.monitor import STAGE
+    from libpb.port import get_ports
+
+    stage = dict((k, v.lower()) for k, v in STAGE)
+
+    noport, failed, didepends, independs = [], [], [], []
+    for port in get_ports():
+        if not isinstance(port, Port):
+            noport.append(port)
+        elif port.failed:
+            failed.append(port)
+        elif port.dependency and port.dependency.failed:
+            for depend in port.dependency.get():
+                if depend.failed:
+                    didepends.append(port)
+                    break
+            else:
+                independs.append(port)
+
+    noport.sort()
+    failed.sort()
+    didepends.sort()
+    independs.sort()
+
+    # TODO independs
+
+    if len(didepends):
+        def bad_depends(ports):
+            """Return all bad dependencies by pkgname."""
+            for port in ports.dependency.get():
+                if not isinstance(port, Port):
+                    yield port
+                elif port.failed:
+                    yield port.attr["pkgname"]
+        print ("Failed due to direct dependency:\n\t%s" %
+            "\n\t".join("%s (%s)" % (i.attr["pkgname"],
+                                     ", ".join(bad_depends(i))) for i in
+                                        reversed(didepends)))
+
+    if len(failed):
+        print ("Failed to complete port:\n\t%s" %
+            "\n\t".join("%s (%s)" % (i.attr["pkgname"],
+                                     stage[i.stage]) for i in reversed(failed)))
+
+    if len(noport):
+        print "No port found for:\n\t%s" % "\n\t".join(noport)
 
 
 def gen_parser():
