@@ -162,9 +162,8 @@ class Port(object):
         self.working = False
         if job and not job.status:
             self.failed = True
-        if not self.failed:
-            if os.path.isfile(self.log_file):
-                os.unlink(self.log_file)
+        if not self.failed and self.log_file and os.path.isfile(self.log_file):
+            os.unlink(self.log_file)
 
     def reset(self):
         """Reset the ports state, and stage."""
