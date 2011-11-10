@@ -157,7 +157,7 @@ class EventManager(object):
 
     def _queue(self, timeout=None):
         """Run any events returned by kqueue."""
-        for ev in self._kq.control(None, 2, timeout):
+        for ev in self._kq.control(None, 16, timeout):
             event = (ev.ident, ev.filter)
             if event in self._kq_events:
                 if (ev.filter == select.KQ_FILTER_PROC and
