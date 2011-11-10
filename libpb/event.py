@@ -3,6 +3,7 @@
 Provides a framework for calling functions asynchronously."""
 from __future__ import absolute_import
 
+import errno
 import collections
 import select
 
@@ -157,7 +158,16 @@ class EventManager(object):
 
     def _queue(self, timeout=None):
         """Run any events returned by kqueue."""
-        for ev in self._kq.control(None, 16, timeout):
+        while True:
+            # Retry self._kq_control if the system call was interrupted
+            try:
+                events = self._kq.control(None, 16, timeout)
+                break
+            except OSError, e:
+                if e.errno == errno.EINTR:
+                    continue
+                raise
+        for ev in events:
             event = (ev.ident, ev.filter)
             if event in self._kq_events:
                 if (ev.filter == select.KQ_FILTER_PROC and
