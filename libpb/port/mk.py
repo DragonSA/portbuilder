@@ -29,6 +29,7 @@ ports_attr = {
 "depend_lib":     ["LIB_DEPENDS",     tuple], # The port's library dependencies
 "depend_run":     ["RUN_DEPENDS",     tuple], # The port's run dependencies
 "depend_patch":   ["PATCH_DEPENDS",   tuple], # The port's patch dependencies
+"depend_package": ["PKG_DEPENDS",     tuple], # The port's package dependencies
 
 # Sundry port information
 "category":   ["CATEGORIES", tuple], # The port's categories

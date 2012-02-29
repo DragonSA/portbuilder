@@ -19,6 +19,7 @@ class DependHandler(object):
     LIB     = 3
     RUN     = 4
     PATCH   = 5
+    PKG     = 6
 
     #: The dependencies for a given stage
     STAGE2DEPENDS = {
@@ -26,10 +27,10 @@ class DependHandler(object):
       Port.DEPEND:     (),
       Port.CHECKSUM:   (),
       Port.FETCH:      (FETCH,),
-      Port.BUILD:      (EXTRACT, PATCH, LIB, BUILD),
-      Port.INSTALL:    (LIB, RUN),
-      Port.PACKAGE:    (LIB, RUN),
-      Port.PKGINSTALL: (LIB, RUN),
+      Port.BUILD:      (EXTRACT, PATCH, LIB, BUILD, PKG),
+      Port.INSTALL:    (LIB, RUN, PKG),
+      Port.PACKAGE:    (LIB, RUN, PKG),
+      Port.PKGINSTALL: (LIB, RUN, PKG),
     }
 
 
@@ -46,7 +47,7 @@ class Dependent(DependHandler):
         from ..env import flags
 
         DependHandler.__init__(self)
-        self._dependants = [[], [], [], [], [], []]  #: All dependants
+        self._dependants = [[], [], [], [], [], [], []]  #: All dependants
         self.port = port  #: The port whom we handle
         self.priority = port.priority
         self.propogate = True
@@ -136,6 +137,8 @@ class Dependent(DependHandler):
             pass
         elif typ == DependHandler.PATCH:
             pass
+        elif typ == DependHandler.PKG:
+            pass
 
         return self.port.install_status != Port.ABSENT
 
@@ -157,7 +160,7 @@ class Dependency(DependHandler):
 
         DependHandler.__init__(self)
         self._count = 0  #: The count of outstanding dependencies
-        self._dependencies = [[], [], [], [], [], []]  #: All dependencies
+        self._dependencies = [[], [], [], [], [], [], []]  #: All dependencies
         self._loading = 0  #: Number of dependencies left to load
         self._bad = 0  #: Number of bad dependencies
         self.failed = False  #: If a dependency has failed

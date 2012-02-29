@@ -244,7 +244,7 @@ class Port(object):
         self.priority = self._get_priority()
         self.dependent.priority += self.priority
         depends = ("depend_build", "depend_extract", "depend_fetch",
-                   "depend_lib", "depend_run", "depend_patch")
+                   "depend_lib", "depend_run", "depend_patch", "depend_package")
         self.dependency = Dependency(self, [self.attr[i] for i in depends])
 
     def _pre_checksum(self):
