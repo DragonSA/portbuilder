@@ -33,10 +33,29 @@ flags = {
   "no_op_print" : False,                # Print commands instead of execution
   "package"     : False,                # Package all installed ports
   "stage"       : Port.ABSENT           # The minimum level for build
+  "pkg_sys"     : "pkg"                 # The package system used ('pkg(ng)?')
 }
 
 env_master = {}
 env_master.update(env)
+
+
+def _make_env(*env):
+    """
+    Retrieve the environment variables as defined in make.conf.
+
+    If the variable is not defined in make,conf then the os.environ value is
+    used if present.
+    """
+    make = ["make", "-f/dev/null"] + ["-V%s" % i for i in env]
+    if flags["chroot"]:
+        make = ["chroot", flags["chroot"]] + make
+    make = subprocess.Popen(make, stdout=subprocess.PIPE,
+                            stderr=subprocess.PIPE, close_fds=True)
+    if make.wait() == 0:
+        return dict((i, j.strip()) for i, j in zip(env, make.readlines()))
+    else:
+        return dict((i, "") for i in env)
 
 
 def _sysctl(name):
@@ -71,11 +90,21 @@ def _get_os_version():
 
 
 def setup_env():
-    """Update the env dictonary based on this programs environment flags."""
+    """Update the env dictionary based on this programs environment flags."""
     for i in env:
         if i in os.environ:
             env[i] = os.environ[i]
-    # TODO: set env_master from make -V and environ...
+
+    make_env = _make_env("WITH_PKGNG", "PKG_DBDIR", "PORTSDIR")
+
+    # Update env_master with predefined values from make.conf
+    for k, v in make_env.values():
+        if v:
+            env_master[k] = v
+
+    # Switch to using pkgng if WITH_PKGNG is present
+    if make_env["WITH_PKGNG"] or "WITH_PKGNG" in env:
+        flags["pkg_sys"] = "pkgng"
 
     # Cleanup some env variables
     if env["PORTSDIR"][-1] == '/':
