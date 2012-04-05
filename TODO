@@ -153,18 +153,19 @@ Future release:
    - Add sudo support
    - Make to class
    - Fix the use of prefexing...
+ - refactor jobs (and move jobs to better locations)
 
 0.1.4 - Milestone 4 (Command line controller):
  - Create target to build INDEX
  - Port:
-   - Add the describe method (same as the ports make version)
+   - Add the describe method (same as the ports version)
  - Create progress monitor type 2 (aka stat mode)
  - Implement build logging for the ports
  - Fix preparation for stages
  - Implement logging (using logging library?)
  - Use Port when referring to defined flags (i.e. INSTALL, BUILD)
  - Use MOVED for port.mk.status (fallback)
- - make port/mk to using pkg_* interface (vs direct file inspection)
+ - pkg_mgmt interface (vs direct file inspection)
  - make compatible with pkgng
  - display skipped ports (with toggle)
  - add -j options to control queue loads
@@ -177,6 +178,17 @@ Future release:
  - make portbuilder indicate what is happening before Top monitor starts
  - handle queue with stalled job and no active job (not possible with current code)
  - make builds more persistent (i.e. no abort on dependency failure)
+ - refactor signal/event code (into own library)
+   - signal / event
+   - job / queue
+   - subprocess (and others)
+   ? split into own project
+ - support `reinstall' target
+ - refactor/improve make.conf dynamic configuration:
+   - refactor existing dynamic configuration
+   - support DEPENDS_PRECLEAN
+   - support DEPENDS_CLEAN
+   - support NODEPENDSCLEAN
 
 0.1.3 - Milestone 3 (Target Builders):
  * Finish call documentation
