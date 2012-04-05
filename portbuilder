@@ -79,7 +79,7 @@ def main():
     options.parser = parser
     set_options(options)
 
-    if len(args) == 0:
+    if len(options.args) == 0:
         print parser.get_usage()
         return
 
@@ -107,7 +107,7 @@ def main():
     delegate = PortDelegate(options.package, options.upgrade, options.force)
 
     # Execute the primary build target
-    for port in args:
+    for port in options.args:
         get_port(port).connect(delegate)
 
     if not flags["no_op_print"]:
@@ -286,6 +286,10 @@ def gen_parser():
                       action="store_true", help="Create packages for all "
                       "installed ports")
 
+    parser.add_option("--pkgng", dest="pkgng", default=False,
+                      action="store_true", help="Use pkgng as the package
+                      manager.")
+
     parser.add_option("--profile", action="store", default=False,
                       type="string", help="Produce a profile of a run saved "
                       "to file PROFILE")
@@ -324,6 +328,8 @@ def set_options(options):
                                      "%s" % var)
             env[var] = val
             options.args.remove(i)
+
+    menv = make_env("USE_PACKAGE_DEPENDS", "WITH_PKGNG")
 
     # Force 'none' config mode if BATCH present
     if "BATCH" in env or "BATCH" in os.environ or options.batch:
@@ -365,13 +371,13 @@ def set_options(options):
         flags["debug"] = True
 
     # Depend resolve methods
-    if "USE_PACKAGE_DEPENDS" in env or "USE_PACKAGE_DEPENDS" in os.environ:
+    if "USE_PACKAGE_DEPENDS" in menv:
         options.depend = "package,build"
     if options.depend:
         depend = [i.strip() for i in options.depend.split(",")]
         for i in depend:
             if depend.count(i) > 1:
-                options.parser.error("multiple depend method specified")
+                options.parser.error("depend method specified multiple times")
             elif i not in ("build", "package"):
                 options.parser.error("unknown depend method")
         flags["depend"] = depend
@@ -420,7 +426,7 @@ def set_options(options):
 
     # Package all installed ports
     if options.packageA:
-        flags["package"] = True
+        flags["target"] = ["package"]
         options.package = True
 
     # Upgrade ports
