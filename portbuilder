@@ -308,7 +308,23 @@ def load_defaults():
 
     Requires flags["chroot"] to be initialised.
     """
-    menv = make_env("BATCH", "USE_PACKAGE_DEPENDS", "WITH_DEBUG", "WITH_PKGNG")
+    menv = make_env(
+            # DEPENDS_TARGET modifiers
+            "DEPENDS_CLEAN", "DEPENDS_PRECLEAN", "DEPENDS_TARGET",
+            "BATCH", , "USE_PACKAGE_DEPENDS", "WITH_DEBUG", "WITH_PKGNG"
+        )
+
+    # DEPENDS_TARGET / flags["target"] modifiers
+    if menv["DEPENDS_TARGET"]:
+        flags["target"] = menv["DEPENDS_TARGET"].split()
+        for i in flags["target"]:
+            if i not in ("clean", "install", "reinstall", "package"):
+                raise ValueError("unsupported DEPENDS_TARGET: '%s'" % i)
+    else:
+        if menv["DEPENDS_CLEAN"]:
+            flags["target"] = flags["target"] + ["clean"]
+        if menv["DEPENDS_PRECLEAN"]:
+            flags["target"] = ["clean"] + flags["target"]
 
     if menv["BATCH"]:
         flags["config"] = "none"
