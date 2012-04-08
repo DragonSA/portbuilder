@@ -77,6 +77,8 @@ def main():
     options, args = parser.parse_args()
     options.args = args
     options.parser = parser
+    set_early_options(options)
+    load_defaults()
     set_options(options)
 
     if len(options.args) == 0:
@@ -85,14 +87,6 @@ def main():
 
     # Make sure log_dir is available
     mkdir(flags["log_dir"])
-
-    # Make sure environ is not polluted with make flags
-    for key in ("__MKLVL__", "MAKEFLAGS", "MAKELEVEL", "MFLAGS",
-                "MAKE_JOBS_FIFO"):
-        try:
-            del os.environ[key]
-        except KeyError:
-            pass
 
     # Cache the environment variables used by ports/Mk/bsd.*.mk
     setup_env()
@@ -308,10 +302,30 @@ def gen_parser():
     return parser
 
 
-def set_options(options):
-    """Set all the global options."""
+def load_defaults():
+    """
+    Load the defaults as specified from /etc/make.conf.
+
+    Requires flags["chroot"] to be initialised.
+    """
+    menv = make_env("BATCH", "USE_PACKAGE_DEPENDS", "WITH_DEBUG", "WITH_PKGNG")
+
+    if menv["BATCH"]:
+        flags["config"] = "none"
+    if menv["USE_PACKAGE_DEPENDS"]:
+        flags["depend"] = ["package", "build"]
+    if menv["WITH_DEBUG"]:
+        flags["debug"] = True
+    if menv["WITH_PKGNG"]:
+        flags["pkg_mgmt"] = "pkgng"
+
+
+def set_early_options(options):
+    """
+    Set global options, required before calling initialising defaults from
+    port's defaults.
+    """
     from libpb.env import env, flags
-    from libpb.port.port import Port
 
     # Add all -D options
     for i in options.make_env:
@@ -329,10 +343,24 @@ def set_options(options):
             env[var] = val
             options.args.remove(i)
 
-    menv = make_env("USE_PACKAGE_DEPENDS", "WITH_PKGNG")
+    # Set chroot environment
+    if options.chroot:
+        if options.chroot[-1] == '/':
+            options.chroot = options.chroot[:-1]
+        if not os.path.isdir(options.chroot):
+            options.parser.error("chroot needs to be a valid directory")
+        flags["chroot"] = os.path.join(os.getcwd(), options.chroot)
+        if os.getuid() != 0:
+            options.parser.error("chroot option only works with root account")
 
-    # Force 'none' config mode if BATCH present
-    if "BATCH" in env or "BATCH" in os.environ or options.batch:
+
+def set_options(options):
+    """Set all the global options."""
+    from libpb.env import env, flags
+    from libpb.port.port import Port
+
+    # Force 'none' config mode if in batch mode
+    if options.batch:
         flags["config"] = "none"
 
     # Add all installed ports to port list
@@ -347,6 +375,9 @@ def set_options(options):
         options.args.extend(pkg_info.stdout.read().split())
 
     # Architecture flag
+    if not options.arch and "ARCH" in os.environ:
+        # Try prevent some foot shooting
+        options.arch = os.environ["ARCH"]
     if options.arch:
         os.environ["ARCH"] = options.arch
         os.environ["UNAME_m"] = options.arch
@@ -356,29 +387,17 @@ def set_options(options):
         if options.arch == "i386" and "HAVE_COMPAT_IA32_KERN" in os.environ:
             del os.environ["HAVE_COMPAT_IA32_KERN"]
 
-    # Set chroot environment
-    if options.chroot:
-        if options.chroot[-1] == '/':
-            options.chroot = options.chroot[:-1]
-        if not os.path.isdir(options.chroot):
-            options.parser.error("chroot needs to be a valid directory")
-        flags["chroot"] = os.path.join(os.getcwd(), options.chroot)
-        if os.getuid() != 0:
-            options.parser.error("chroot option only works with root account")
-
     # Debug mode
     if options.debug:
         flags["debug"] = True
 
     # Depend resolve methods
-    if "USE_PACKAGE_DEPENDS" in menv:
-        options.depend = "package,build"
     if options.depend:
         depend = [i.strip() for i in options.depend.split(",")]
         for i in depend:
             if depend.count(i) > 1:
                 options.parser.error("depend method specified multiple times")
-            elif i not in ("build", "package"):
+            elif i not in ("build", "package", "repo"):
                 options.parser.error("unknown depend method")
         flags["depend"] = depend
 

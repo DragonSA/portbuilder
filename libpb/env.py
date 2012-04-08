@@ -177,6 +177,14 @@ def setup_env():
     if env["PORTSDIR"][-1] == '/':
         env["PORTSDIR"] = env["PORTSDIR"][:-1]
 
+    # Make sure environ is not polluted with make flags
+    for key in ("__MKLVL__", "MAKEFLAGS", "MAKELEVEL", "MFLAGS",
+                "MAKE_JOBS_FIFO"):
+        try:
+            del os.environ[key]
+        except KeyError:
+            pass
+
     # Variables conditionally set in ports/Mk/bsd.port.mk
     uname = os.uname()
     if "ARCH" not in os.environ:
