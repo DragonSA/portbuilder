@@ -1,4 +1,4 @@
-"""Environment variables."""
+"""Environment variables, to track the state of libpb and the ports."""
 
 from __future__ import absolute_import
 
@@ -21,6 +21,68 @@ env_master = {
   "PORTSDIR"  : PORTSDIR,   # Ports directory
 }
 
+###############################################################################
+# LIBPB STATE FLAGS
+###############################################################################
+# chroot - The chroot directory to use.  If blank then the current root
+#       (i.e. /) is used.  A mixture of `chroot' and direct file inspection is
+#       used when an actual chroot is specified.
+#
+# config - The criteria required before prompting the user with configuring a
+#       port.  The currently supported options are:
+#               none    - never prompt (use the currently set options)
+#               changed - only prompt if the options have changed
+#               newer   - only prompt if the port is newer than when the port
+#                       was last configured
+#               always  - always prompt
+#
+# debug - Collect and display extra debugging information about  when a slot
+#       was connected and when a signal was emitted.  Results in slower
+#       performance and higher memory usage.
+#
+# depend - The methods used to resolve a dependency.  Multiple methods may be
+#       specified in a sequence but a method may only be used once.  Currently
+#       supported methods are:
+#               build   - build the dependency from a port
+#               package - install the dependency from the local package
+#                       repository (${PKGREPOSITORY})
+#               repo    - install the dependency from a repository (TODO)
+#
+# fetch_only - Only fetch a port's distfiles.
+#
+# log_dir - Directory where the log files, of the port build, and for
+#       portbuilder, are stored.
+#
+# log_file - The log file for portbuilder
+#
+# mode - The current mode of operation.  The currently supported modes are:
+#               install   - act when all port's direct dependencies are resolved
+#               recursive - act when all port's direct and indirect dependencies
+#                       are resolved
+#               clean     - only cleanup of ports are allowed (used for early
+#                       program termination)
+#
+# no_op - Do not do anything (and behave as if the command was successful).
+#
+# no_op_print - When no_op is True, print the commands that would have been
+#       executed.
+#
+# pkg_mgmt - The package management tools used.  The currently supported tools
+#       are:
+#               pkg     - The package tools shipped with FreeBSD base
+#               pkgng   - The next generation package tools shipped with ports
+#
+# stage - The minimum install stage required before a port will be build.  This
+#       impacts when a dependency is considered resolved.
+#
+# target - The dependency targets when building a port required by a dependant.
+#       The currently supported targets are:
+#               install   - install the port
+#               reinstall - alias for install
+#               package   - package the port
+#               clean     - clean the port, may be specified before and/or
+#                       after the install/package target indicating that the
+#                       port should cleaned before or after, respectively.
 flags = {
   "chroot"      : "",                   # Chroot directory of system
   "config"      : "changed",            # Configure ports based on criteria
@@ -75,21 +137,23 @@ def _get_os_version():
     for path in (flags["chroot"] + "/usr/include/sys/param.h",
                  flags["chroot"] + "/usr/src/sys/sys/param.h"):
         if os.path.isfile(path):
-            break
-    else:
-        path = None
-
-    if path:
-        # We have a param.h
-        osversion = re.search('^#define\s+__FreeBSD_version\s+([0-9]*).*$',
-                              open(path, "r").read(), re.MULTILINE)
-        if osversion:
-            return osversion.groups()[0]
-
+            # We have a param.h
+            osversion = re.search('^#define\s+__FreeBSD_version\s+([0-9]*).*$',
+                                open(path, "r").read(), re.MULTILINE)
+            if osversion:
+                return osversion.groups()[0]
     return _sysctl("kern.osreldate")
 
 
 def make_env(env, *args):
+    """
+    Retrieve the default make flags, available either from make.conf or from
+    the environment.
+
+    This function needs to be called after flags["chroot"] has been set but
+    ideally before other flags are modified.  This function should be called
+    at least once.
+    """
     master_keys = master_env.keys()
     make_env = _make_env(env, args + master_keys)
 
