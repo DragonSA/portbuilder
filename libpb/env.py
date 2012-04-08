@@ -159,10 +159,10 @@ def make_env(env, *args):
 
     # Update env_master with predefined values from make.conf
     for k, v in zip(master_keys, make_env[-len(master_keys):]):
-        if v:
-            env_master[k] = v
-            if k not in env:
-                env[k] = v
+        if k in env:
+            env_master[k] = None
+        elif v:
+            env[k] = env_master[k] = v
 
     return dict((k, v) for k, v in zip(args, make_env))
 
