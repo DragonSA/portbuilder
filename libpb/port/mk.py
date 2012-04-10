@@ -6,7 +6,7 @@ from libpb import pkg
 from ..env import env
 from ..signal import Signal
 
-__all__ = ["Attr", "attr", "status"]
+__all__ = ["Attr", "attr"]
 
 ports_attr = {
 # Port naming
@@ -133,53 +133,6 @@ ports_attr["depend_lib"].extend((strip_depends, tuple))
 ports_attr["depend_run"].extend((strip_depends, tuple))
 ports_attr["depend_patch"].extend((strip_depends, tuple))
 ports_attr["makefiles"].append(lambda x: [i for i in x if i != '..'])
-
-
-def status(port, changed=False, cache=dict()):
-    """Get the current status of the port."""
-    from os import listdir, path
-    from ..env import flags
-    from .port import Port
-
-    pkg_dbdir = flags["chroot"] + env["PKG_DBDIR"]
-    if (changed or not cache.has_key('mtime') or
-        path.getmtime(pkg_dbdir) != cache['mtime']):
-        count = 5
-        while True:
-            try:
-                cache['mtime'] = path.getmtime(pkg_dbdir)
-                cache['listdir'] = (tuple(i for i in listdir(pkg_dbdir)
-                                        if path.isdir(path.join(pkg_dbdir, i))))
-                break
-            except OSError:
-                # May happen on occation, retry
-                count -= 1
-                if not count:
-                    raise
-
-    pstatus = Port.ABSENT  #: Default status of the port
-    name = port.attr['name']
-    pkgname = port.attr['pkgname'].rsplit('-', 1)[0]  #: The ports name
-
-    for i in cache['listdir']:
-        # If the port's name matches that of a database
-        if i.rsplit('-', 1)[0] == pkgname or name in i:
-            #: The pkg's content file
-            content = path.join(pkg_dbdir, i, '+CONTENTS')
-            porigin = None  #: Origin of the package
-            for j in open(content, 'r'):
-                if j.startswith('@comment ORIGIN:'):
-                    porigin = j[16:-1].strip()
-                    break
-                elif j.startswith('@name ') and j[6:-1].strip() != i:
-                    porigin = None
-                    break
-
-            # If the pkg has the same origin get the maximum of the install
-            # status
-            if porigin == port.origin:
-                pstatus = max(pstatus, pkg.version(i, port.attr['pkgname']))
-    return pstatus
 
 
 def attr(origin):

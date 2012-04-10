@@ -119,7 +119,6 @@ class Port(object):
 
     def __init__(self, origin, attr):
         """Initialise the port with the required information."""
-        from .mk import status
         from .dependhandler import Dependent
         from ..env import flags
 
@@ -133,7 +132,7 @@ class Port(object):
         self.working = False
 
         self.stage = Port.ZERO
-        self.install_status = status(self)
+        self.install_status = pkg.db.status(self)
 
         self.dependency = None
         self.dependent = Dependent(self)
@@ -266,7 +265,7 @@ class Port(object):
             return True
         distdir = self.attr["distdir"]
         for i in distfiles:
-            if not os.path.isfile(os.path.join(flags["chroot"], distdir, i)):
+            if not os.path.isfile(os.path.join(flags["chroot"] + distdir, i)):
                 # If file does not exist then it failed
                 self._bad_checksum.add(i)
                 return True
@@ -336,17 +335,14 @@ class Port(object):
 
     def _post_install(self, _make, status):
         """Update the install status."""
+        if self.install_status != Port.ABSENT:
+            pkg.db.remove(self)
         if status:
-            from ..env import flags
-            from .mk import status
-
-            if flags["no_op"]:
-                self.install_status = Port.CURRENT
-            else:
-                self.install_status = status(self, True)
+            pkg.db.add(self)
         else:
             # TODO???
-            self.install_status = Port.ABSENT
+            pass
+        self.install_status = pkg.db.status(self)
         return status
 
     def _pre_package(self):
@@ -386,6 +382,8 @@ class Port(object):
                 self.stage = Port.PKGINSTALL
                 self.working = False
                 self.stage_completed.emit(self)
+            else:
+                pkg.db.remove(self)
             self.dependent.status_changed()
             if not status:
                 return
@@ -396,17 +394,13 @@ class Port(object):
         """Report if the port successfully installed from it's package."""
         from ..env import flags
         from ..make import SUCCESS
-        from .mk import status
 
         self.working = False
-        if flags["no_op"]:
-            success = True
-            self.install_status = Port.CURRENT
-        else:
-            success = pkg_add.wait() == SUCCESS
-            if success:
-                self.install_status = status(self, True)
+        success = pkg_add.wait() == SUCCESS
+        if success:
+            pkg.db.add(self)
 
+        self.install_status = pkg.db.status(self)
         self.failed = not success
         self.stage = Port.PKGINSTALL
         self.stage_completed.emit(self)

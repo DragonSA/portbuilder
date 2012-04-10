@@ -4,6 +4,8 @@ tools.
 """
 from __future__ import absolute_import
 
+import subprocess
+
 from libpb import env, make, port
 
 __all__ = ["add", "version"]
@@ -20,9 +22,31 @@ def add(port):
     else:
         logfile = open(self.log_file, "a")
         pkg_add = make.Popen(args, self, stdin=subprocess.PIPE, stdout=logfile,
-                             stderr=logfile)
+                             stderr=logfile, close_fds=True)
         pkg_add.stdin.close()
     return pkg_add
+
+
+def info():
+    """List all installed packages with their respective port origin."""
+    args = ("pkg_info", "-aoQ")
+    if env.flags["chroot"]:
+        args = ("chroot", env.flags["chroot"]) + args
+    pkg_info = subprocess.Popen(
+        args, stdin=subprocess.PIPE, stdout.subprocess.PIPE,
+        stderr=subprocess.STDOUT, close_fds=True)
+    pkg_info.stdin.close()
+
+    if pkg_info.wait() != 0:
+        return {}
+    pkgdb = {}
+    for pkg_port in pkg_info.stdout.readlines():
+        pkg, origin = pkg_port.split(':')
+        if origin in pkgdb:
+            pkgdb[origin].add(pkg)
+        else:
+            pkgdb[origin] = set([pkg])
+    return pkgdb
 
 
 def version(old, new):
@@ -76,3 +100,41 @@ def cmp_attr(old, new, sym):
     else: #if len(old) == 2 and len(new) == 2 # Both have version
         pstatus = cmp(int(old[1]), int(new[1]))
     return (old[0], new[1], pstatus)
+
+
+def PKGDB(object):
+    """A package database that tracks the installed status of packages."""
+
+    def __init__(self):
+        self.db = info()
+
+    def add(self, port):
+        """Indicate that a port has been installed."""
+        if port.origin in self.db:
+            self.db[port.origin].add(port.attr['pkgname'])
+        else:
+            self.db[port.origin] = set([port.attr['pkgname'])
+
+    def remove(self, port):
+        """Indicate that a port has been uninstalled."""
+        if port.origin in self.db:
+            pkgname = port.attr['pkgname'].rsplit('-', 1)[0]
+            pkgs = set()
+            for pkg in self.db[port.origin]:
+                if pkg.rsplit('-', 1)[0] == pkgname:
+                    pkgs.add(pkg)
+            self.db[port.origin] -= remove
+
+    def status(self, port):
+        """Query the install status of a port."""
+        Port = port.port.Port
+
+        pstatus = Port.ABSENT
+        if port.origin in self.db:
+            pkgname = port.attr['pkgname'].rsplit('-', 1)[0]
+            for pkg in self.db[port.origin]:
+                if pkg.rsplit('-', 1)[0] == pkgname:
+                    pstatus = max(pstatus, version(pkg, port.attr['pkgname']))
+        return pstatus
+
+db = PKGDB()
