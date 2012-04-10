@@ -6,6 +6,7 @@ from contextlib import contextmanager
 import os
 import subprocess
 import time
+from .. import pkg
 
 from ..signal import SignalProperty
 
@@ -358,6 +359,7 @@ class Port(object):
 
     def pkginstall(self):
         """Prepare to install the port from it's package."""
+        # TODO: proper asserts (valid stage).
         from ..env import flags
         from ..make import make_target
 
@@ -387,23 +389,7 @@ class Port(object):
             if not status:
                 return
 
-        if flags["chroot"]:
-            args = ("pkg_add", "-C", flags["chroot"], self.attr["pkgfile"])
-        else:
-            args = ("pkg_add", self.attr["pkgfile"])
-
-        if flags["no_op"]:
-            from ..make import PopenNone
-
-            pkg_add = PopenNone(args, self)
-        else:
-            from ..make import Popen
-
-            logfile = open(self.log_file, "a")
-            pkg_add = Popen(args, self, stdin=subprocess.PIPE, stdout=logfile,
-                            stderr=logfile)
-            pkg_add.stdin.close()
-        return pkg_add.connect(self._post_pkginstall)
+        return pkg.add(self).connect(self._post_pkginstall)
 
     def _post_pkginstall(self, pkg_add):
         """Report if the port successfully installed from it's package."""
