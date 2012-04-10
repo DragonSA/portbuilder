@@ -34,7 +34,7 @@ Future release:
    - uninstall after use
    - install from packages
 
-0.1.9 - Milestone 9 (Sundry modules):
+0.7 - Milestone 9 (Sundry modules):
  - modules:
    - cache
    - cache/cachedb
@@ -47,7 +47,7 @@ Future release:
  - manual page(s)
  - ensure only one instance of portbuilder builds per chroot
 
-0.1.8 - Milestone 8 (Finish command line controller):
+0.6 - Milestone 8 (Finish command line controller):
  - modules:
    - exit
    - monitor
@@ -85,14 +85,14 @@ Future release:
    - Allow option for no-interactive
    - Add no cache option
 
-0.1.7 - Milestone 7 (Finish Target Builders):
+0.5 - Milestone 7 (Finish Target Builders):
  - modules:
    - queue
    - target
  - Refine and condense code
  - Implement proper and complete logging (and comments)
 
-0.1.6 - Milestone 6 (Finish Dependent Handling):
+0.4 - Milestone 6 (Finish Dependent Handling):
  - modules:
    - port/dependhandler
  - Refine and condense code
@@ -112,7 +112,7 @@ Future release:
    - When doing individual checks, cache as they can be duplicated
    - Check for conflicts (and handle)
 
-0.1.5 - Milestone 5 (Finish basic ports infrastructure):
+0.3 - Milestone 5 (Finish basic ports infrastructure):
  - modules:
    - make
    - port/arch
@@ -156,7 +156,7 @@ Future release:
  - refactor jobs (and move jobs to better locations)
  - implement background loading of pkgdb (non-blocking IO)
 
-0.1.4 - Milestone 4 (Command line controller):
+0.2 - Milestone 4 (Command line controller):
  - Create target to build INDEX
  - Port:
    - Add the describe method (same as the ports version)
