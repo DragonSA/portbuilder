@@ -5,6 +5,8 @@ from __future__ import absolute_import
 from abc import ABCMeta, abstractmethod
 import os
 
+from libpb import env
+
 from .port.port import Port
 from .signal import SignalProperty
 
@@ -317,7 +319,7 @@ class StageBuilder(Builder):
                 self._add(port)
             return job
 
-    def _add(self, port):
+    def _add(self, port, pending=0):
         """Add a ports dependencies and prior stage to be built."""
         from .env import flags
 
@@ -330,7 +332,7 @@ class StageBuilder(Builder):
         depends = port.dependency.check(self.stage)
 
         # Add all outstanding ports to be installed
-        self._pending[port] = len(depends)
+        self._pending[port] = len(depends) + pending
         for p in depends:
             if p not in self._depends:
                 self._depends[p] = set()
@@ -363,7 +365,8 @@ class StageBuilder(Builder):
             if not failed:
                 self.done.append(job.port)
                 self.update.emit(self, Builder.DONE, job.port)
-            job.port.clean()
+            if env.flags["target"][-1] == "clean":
+                job.port.clean()
         elif not failed:
             self.succeeded.append(job.port)
             self.update.emit(self, Builder.SUCCEEDED, job.port)
@@ -451,6 +454,23 @@ class StageBuilder(Builder):
         return False
 
 
+class BuildBuilder(StageBuilder):
+    """Implement build stage specific handling."""
+
+    def _add(self, port, pending=0):
+        """Add a port to be built."""
+        if env.flags["target"][0] == "clean":
+            pending += 1
+        super(BuildBuilder, self)._add(port, pending)
+        port.clean(force=True).connect(self._port_clean)
+
+    def _port_clean(self, job):
+        """A port has finished cleaning."""
+        self._pending[job.port] -= 1
+        if not self._pending[job.port]:
+            self._port_ready(job.port)
+
+
 class PackageBuilder(StageBuilder):
     """Implement Package specific checks."""
 
@@ -470,7 +490,7 @@ config_builder     = ConfigBuilder()
 depend_builder     = DependBuilder()
 checksum_builder   = StageBuilder(Port.CHECKSUM)
 fetch_builder      = StageBuilder(Port.FETCH,   checksum_builder)
-build_builder      = StageBuilder(Port.BUILD,   fetch_builder)
+build_builder      = BuilderBuilder(Port.BUILD,   fetch_builder)
 install_builder    = StageBuilder(Port.INSTALL, build_builder)
 package_builder    = PackageBuilder(Port.PACKAGE, install_builder)
 pkginstall_builder = StageBuilder(Port.PKGINSTALL)
