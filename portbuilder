@@ -74,6 +74,8 @@ def main():
     from libpb.monitor import Top
     from libpb.port import get_port
 
+    pkg.db.load()
+
     # Process arguments
     parser = gen_parser()
     options, args = parser.parse_args()

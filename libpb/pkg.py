@@ -106,7 +106,7 @@ def PKGDB(object):
     """A package database that tracks the installed status of packages."""
 
     def __init__(self):
-        self.db = info()
+        self.db = {}
 
     def add(self, port):
         """Indicate that a port has been installed."""
@@ -114,6 +114,10 @@ def PKGDB(object):
             self.db[port.origin].add(port.attr['pkgname'])
         else:
             self.db[port.origin] = set([port.attr['pkgname'])
+
+    def load(self):
+        """(Re)Load the package database."""
+        self.db = info()
 
     def remove(self, port):
         """Indicate that a port has been uninstalled."""
