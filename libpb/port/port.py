@@ -7,7 +7,7 @@ import os
 import subprocess
 import time
 
-from libpb import pkg
+from libpb import env, pkg
 
 from ..signal import SignalProperty
 
@@ -146,22 +146,23 @@ class Port(object):
     def __repr__(self):
         return "<Port(%s)>" % (self.origin)
 
-    def clean(self):
+    def clean(self, force=False):
         """Clean the ports working directory and log file."""
         from ..env import flags
 
         assert not self.working or flags["mode"] == "clean"
-        if Port.BUILD <= self.stage < Port.PKGINSTALL:
+        if Port.BUILD <= self.stage < Port.PKGINSTALL or force:
             from ..job import CleanJob
             from ..queue import clean_queue
 
-            clean_queue.add(CleanJob(self).connect(self._cleaned))
+            job = CleanJob(self).connect(self._cleaned)
+            clean_queue.add(job)
+            return job
         else:
             self._cleaned()
 
     def _cleaned(self, job=None):
         """Mark the port as clean."""
-        self.working = False
         if job and not job.status:
             self.failed = True
         if not self.failed and os.path.isfile(self.log_file):
@@ -317,8 +318,7 @@ class Port(object):
 
     def _pre_build(self):
         """Build the port."""
-        return self._make_target(["clean","all"], BATCH=True,
-                                 NOCLEANDEPENDS=True, NO_DEPENDS=True)
+        return self._make_target(("all",), BATCH=True, NO_DEPENDS=True)
 
     @staticmethod
     def _post_build(_make, status):
