@@ -12,6 +12,8 @@ import subprocess
 import sys
 import traceback
 
+from libpb import pkg
+
 CONFIG = ("none", "changed", "newer", "all")
 VAR_NAME = "^[a-zA-Z_][a-zA-Z0-9_]*$"
 
@@ -71,6 +73,8 @@ def main():
     from libpb.event import event
     from libpb.monitor import Top
     from libpb.port import get_port
+
+    pkg.db.load()
 
     # Process arguments
     parser = gen_parser()
@@ -381,14 +385,7 @@ def set_options(options):
 
     # Add all installed ports to port list
     if options.all:
-        pkg_info = subprocess.Popen(
-            ["pkg_info", "-aoq"], stdin=None, stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT, close_fds=True)
-        if pkg_info.wait() != 0:
-            sys.stderr.write("%s\nerror: portbuilder: Unable to get installed "
-                             "ports list\n" % pkg_info.stdout.read())
-            exit(1)
-        options.args.extend(pkg_info.stdout.read().split())
+        options.args.extend(pkg.db.db.keys())
 
     # Architecture flag
     if not options.arch and "ARCH" in os.environ:

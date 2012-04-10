@@ -2,10 +2,11 @@
 
 from __future__ import absolute_import
 
+from libpb import pkg
 from ..env import env
 from ..signal import Signal
 
-__all__ = ["Attr", "attr", "status", "pkg_version"]
+__all__ = ["Attr", "attr"]
 
 ports_attr = {
 # Port naming
@@ -134,53 +135,6 @@ ports_attr["depend_patch"].extend((strip_depends, tuple))
 ports_attr["makefiles"].append(lambda x: [i for i in x if i != '..'])
 
 
-def status(port, changed=False, cache=dict()):
-    """Get the current status of the port."""
-    from os import listdir, path
-    from ..env import flags
-    from .port import Port
-
-    pkg_dbdir = flags["chroot"] + env["PKG_DBDIR"]
-    if (changed or not cache.has_key('mtime') or
-        path.getmtime(pkg_dbdir) != cache['mtime']):
-        count = 5
-        while True:
-            try:
-                cache['mtime'] = path.getmtime(pkg_dbdir)
-                cache['listdir'] = (tuple(i for i in listdir(pkg_dbdir)
-                                        if path.isdir(path.join(pkg_dbdir, i))))
-                break
-            except OSError:
-                # May happen on occation, retry
-                count -= 1
-                if not count:
-                    raise
-
-    pstatus = Port.ABSENT  #: Default status of the port
-    name = port.attr['name']
-    pkgname = port.attr['pkgname'].rsplit('-', 1)[0]  #: The ports name
-
-    for i in cache['listdir']:
-        # If the port's name matches that of a database
-        if i.rsplit('-', 1)[0] == pkgname or name in i:
-            #: The pkg's content file
-            content = path.join(pkg_dbdir, i, '+CONTENTS')
-            porigin = None  #: Origin of the package
-            for j in open(content, 'r'):
-                if j.startswith('@comment ORIGIN:'):
-                    porigin = j[16:-1].strip()
-                    break
-                elif j.startswith('@name ') and j[6:-1].strip() != i:
-                    porigin = None
-                    break
-
-            # If the pkg has the same origin get the maximum of the install
-            # status
-            if porigin == port.origin:
-                pstatus = max(pstatus, pkg_version(i, port.attr['pkgname']))
-    return pstatus
-
-
 def attr(origin):
     """Retrieve a ports attributes by using the attribute queue."""
     from ..job import AttrJob
@@ -251,54 +205,3 @@ class Attr(Signal):
 
         self.emit(self.origin, attr_map)
 
-
-def pkg_version(old, new):
-    """Compare two package names and indicates the difference."""
-    from .port import Port
-
-    old = old.rsplit('-', 1)[1]  # Name and version components of the old pkg
-    new = new.rsplit('-', 1)[1]  # Name and version components of the new pkg
-
-    if old == new:
-        # The packages are the same
-        return Port.CURRENT
-
-    # Check the ports apoch
-    old, new, pstatus = cmp_attr(old, new, ',')
-    if pstatus:
-        return Port.CURRENT + pstatus
-
-    # Check the ports revision
-    old, new, pstatus = cmp_attr(old, new, '_')
-    if old == new and pstatus:
-        return Port.CURRENT + pstatus
-
-    # Check the ports version from left to right
-    old = old.split('.')
-    new = new.split('.')
-    for i in range(min(len(old), len(new))):
-        # Try numerical comparison, otherwise use str
-        try:
-            pstatus = cmp(int(old[i]), int(new[i]))
-        except ValueError:
-            pstatus = cmp(old[i], new[i])
-        # If there is a difference in this version level
-        if pstatus:
-            return Port.CURRENT + pstatus
-
-    # The difference between the number of version levels
-    return Port.CURRENT - cmp(len(old), len(new))
-
-
-def cmp_attr(old, new, sym):
-    """Compare the two attributes of the port."""
-    old = old.rsplit(sym, 1)  # The value of the old pkg
-    new = new.rsplit(sym, 1)  # The value of the new pkg
-    if len(old) > len(new):  # If old has version and new does not
-        return (old[0], new[0], 1)
-    elif len(old) < len(new): # If new has version and old does not
-        return (old[0], new[0], -1)
-    elif len(old) == len(new) == 1:  # If neither has version
-        return (old[0], new[0], 0)
-    else: #if len(old) == 2 and len(new) == 2 # Both have version
-        return (old[0], new[0], cmp(int(old[1]), int(new[1])))

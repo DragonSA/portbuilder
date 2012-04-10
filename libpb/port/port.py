@@ -7,6 +7,8 @@ import os
 import subprocess
 import time
 
+from libpb import pkg
+
 from ..signal import SignalProperty
 
 __all__ = ["Port"]
@@ -117,7 +119,6 @@ class Port(object):
 
     def __init__(self, origin, attr):
         """Initialise the port with the required information."""
-        from .mk import status
         from .dependhandler import Dependent
         from ..env import flags
 
@@ -131,7 +132,7 @@ class Port(object):
         self.working = False
 
         self.stage = Port.ZERO
-        self.install_status = status(self)
+        self.install_status = pkg.db.status(self)
 
         self.dependency = None
         self.dependent = Dependent(self)
@@ -264,7 +265,7 @@ class Port(object):
             return True
         distdir = self.attr["distdir"]
         for i in distfiles:
-            if not os.path.isfile(os.path.join(flags["chroot"], distdir, i)):
+            if not os.path.isfile(os.path.join(flags["chroot"] + distdir, i)):
                 # If file does not exist then it failed
                 self._bad_checksum.add(i)
                 return True
@@ -334,17 +335,14 @@ class Port(object):
 
     def _post_install(self, _make, status):
         """Update the install status."""
+        if self.install_status != Port.ABSENT:
+            pkg.db.remove(self)
         if status:
-            from ..env import flags
-            from .mk import status
-
-            if flags["no_op"]:
-                self.install_status = Port.CURRENT
-            else:
-                self.install_status = status(self, True)
+            pkg.db.add(self)
         else:
             # TODO???
-            self.install_status = Port.ABSENT
+            pass
+        self.install_status = pkg.db.status(self)
         return status
 
     def _pre_package(self):
@@ -358,6 +356,7 @@ class Port(object):
 
     def pkginstall(self):
         """Prepare to install the port from it's package."""
+        # TODO: proper asserts (valid stage).
         from ..env import flags
         from ..make import make_target
 
@@ -383,43 +382,25 @@ class Port(object):
                 self.stage = Port.PKGINSTALL
                 self.working = False
                 self.stage_completed.emit(self)
+            else:
+                pkg.db.remove(self)
             self.dependent.status_changed()
             if not status:
                 return
 
-        if flags["chroot"]:
-            args = ("pkg_add", "-C", flags["chroot"], self.attr["pkgfile"])
-        else:
-            args = ("pkg_add", self.attr["pkgfile"])
-
-        if flags["no_op"]:
-            from ..make import PopenNone
-
-            pkg_add = PopenNone(args, self)
-        else:
-            from ..make import Popen
-
-            logfile = open(self.log_file, "a")
-            pkg_add = Popen(args, self, stdin=subprocess.PIPE, stdout=logfile,
-                            stderr=logfile)
-            pkg_add.stdin.close()
-        return pkg_add.connect(self._post_pkginstall)
+        return pkg.add(self).connect(self._post_pkginstall)
 
     def _post_pkginstall(self, pkg_add):
         """Report if the port successfully installed from it's package."""
         from ..env import flags
         from ..make import SUCCESS
-        from .mk import status
 
         self.working = False
-        if flags["no_op"]:
-            success = True
-            self.install_status = Port.CURRENT
-        else:
-            success = pkg_add.wait() == SUCCESS
-            if success:
-                self.install_status = status(self, True)
+        success = pkg_add.wait() == SUCCESS
+        if success:
+            pkg.db.add(self)
 
+        self.install_status = pkg.db.status(self)
         self.failed = not success
         self.stage = Port.PKGINSTALL
         self.stage_completed.emit(self)
@@ -460,7 +441,6 @@ class Port(object):
     def _check_config(self):
         """Check the options file to see if it is up-to-date."""
         from ..env import flags
-        from .mk import pkg_version
 
         if flags["config"] == "none":
             return True
@@ -481,7 +461,7 @@ class Port(object):
         if flags["config"] == "changed" and options != set(self.attr["options"]):
             return False
         if (flags["config"] == "newer" and
-            pkg_version(pkgname, config_pkgname) == Port.NEWER) :
+            pkg.version(pkgname, config_pkgname) == Port.NEWER) :
             return False
         return True
 
