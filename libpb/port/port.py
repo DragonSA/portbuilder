@@ -361,7 +361,7 @@ class Port(object):
         from ..env import flags
         from ..make import make_target
 
-        if (self.working or
+        if (self.working or self.attr["no_package"] or
             not os.path.isfile(flags["chroot"] + self.attr["pkgfile"])):
             return False
 

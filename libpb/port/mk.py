@@ -59,7 +59,7 @@ ports_attr = {
 "interactive": ["IS_INTERACTIVE", bool],  # The port is interactive
 "makefiles":   [".MAKEFILE_LIST", tuple], # The Makefiles included
 "optionsfile": ["OPTIONSFILE",    str],   # The options file
-"pkgdir":      ["PACKAGES",       str],   # The package directory
+"pkgdir":      ["PKGREPOSITORY",  str],   # The package directory
 "wrkdir":      ["WRKDIR",         str],   # The ports working directory
 } #: The attributes of the given port
 
