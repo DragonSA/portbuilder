@@ -77,22 +77,16 @@ def main():
     options, args = parser.parse_args()
     options.args = args
     options.parser = parser
+    set_early_options(options)
+    load_defaults()
     set_options(options)
 
-    if len(args) == 0:
+    if len(options.args) == 0:
         print parser.get_usage()
         return
 
     # Make sure log_dir is available
     mkdir(flags["log_dir"])
-
-    # Make sure environ is not polluted with make flags
-    for key in ("__MKLVL__", "MAKEFLAGS", "MAKELEVEL", "MFLAGS",
-                "MAKE_JOBS_FIFO"):
-        try:
-            del os.environ[key]
-        except KeyError:
-            pass
 
     # Cache the environment variables used by ports/Mk/bsd.*.mk
     setup_env()
@@ -107,7 +101,7 @@ def main():
     delegate = PortDelegate(options.package, options.upgrade, options.force)
 
     # Execute the primary build target
-    for port in args:
+    for port in options.args:
         get_port(port).connect(delegate)
 
     if not flags["no_op_print"]:
@@ -286,6 +280,10 @@ def gen_parser():
                       action="store_true", help="Create packages for all "
                       "installed ports")
 
+    parser.add_option("--pkgng", dest="pkgng", default=False,
+                      action="store_true", help="Use pkgng as the package
+                      manager.")
+
     parser.add_option("--profile", action="store", default=False,
                       type="string", help="Produce a profile of a run saved "
                       "to file PROFILE")
@@ -304,10 +302,46 @@ def gen_parser():
     return parser
 
 
-def set_options(options):
-    """Set all the global options."""
+def load_defaults():
+    """
+    Load the defaults as specified from /etc/make.conf.
+
+    Requires flags["chroot"] to be initialised.
+    """
+    menv = make_env(
+            # DEPENDS_TARGET modifiers
+            "DEPENDS_CLEAN", "DEPENDS_PRECLEAN", "DEPENDS_TARGET",
+            "BATCH", , "USE_PACKAGE_DEPENDS", "WITH_DEBUG", "WITH_PKGNG"
+        )
+
+    # DEPENDS_TARGET / flags["target"] modifiers
+    if menv["DEPENDS_TARGET"]:
+        flags["target"] = menv["DEPENDS_TARGET"].split()
+        for i in flags["target"]:
+            if i not in ("clean", "install", "reinstall", "package"):
+                raise ValueError("unsupported DEPENDS_TARGET: '%s'" % i)
+    else:
+        if menv["DEPENDS_CLEAN"]:
+            flags["target"] = flags["target"] + ["clean"]
+        if menv["DEPENDS_PRECLEAN"]:
+            flags["target"] = ["clean"] + flags["target"]
+
+    if menv["BATCH"]:
+        flags["config"] = "none"
+    if menv["USE_PACKAGE_DEPENDS"]:
+        flags["depend"] = ["package", "build"]
+    if menv["WITH_DEBUG"]:
+        flags["debug"] = True
+    if menv["WITH_PKGNG"]:
+        flags["pkg_mgmt"] = "pkgng"
+
+
+def set_early_options(options):
+    """
+    Set global options, required before calling initialising defaults from
+    port's defaults.
+    """
     from libpb.env import env, flags
-    from libpb.port.port import Port
 
     # Add all -D options
     for i in options.make_env:
@@ -325,8 +359,24 @@ def set_options(options):
             env[var] = val
             options.args.remove(i)
 
-    # Force 'none' config mode if BATCH present
-    if "BATCH" in env or "BATCH" in os.environ or options.batch:
+    # Set chroot environment
+    if options.chroot:
+        if options.chroot[-1] == '/':
+            options.chroot = options.chroot[:-1]
+        if not os.path.isdir(options.chroot):
+            options.parser.error("chroot needs to be a valid directory")
+        flags["chroot"] = os.path.join(os.getcwd(), options.chroot)
+        if os.getuid() != 0:
+            options.parser.error("chroot option only works with root account")
+
+
+def set_options(options):
+    """Set all the global options."""
+    from libpb.env import env, flags
+    from libpb.port.port import Port
+
+    # Force 'none' config mode if in batch mode
+    if options.batch:
         flags["config"] = "none"
 
     # Add all installed ports to port list
@@ -341,6 +391,9 @@ def set_options(options):
         options.args.extend(pkg_info.stdout.read().split())
 
     # Architecture flag
+    if not options.arch and "ARCH" in os.environ:
+        # Try prevent some foot shooting
+        options.arch = os.environ["ARCH"]
     if options.arch:
         os.environ["ARCH"] = options.arch
         os.environ["UNAME_m"] = options.arch
@@ -350,29 +403,17 @@ def set_options(options):
         if options.arch == "i386" and "HAVE_COMPAT_IA32_KERN" in os.environ:
             del os.environ["HAVE_COMPAT_IA32_KERN"]
 
-    # Set chroot environment
-    if options.chroot:
-        if options.chroot[-1] == '/':
-            options.chroot = options.chroot[:-1]
-        if not os.path.isdir(options.chroot):
-            options.parser.error("chroot needs to be a valid directory")
-        flags["chroot"] = os.path.join(os.getcwd(), options.chroot)
-        if os.getuid() != 0:
-            options.parser.error("chroot option only works with root account")
-
     # Debug mode
     if options.debug:
         flags["debug"] = True
 
     # Depend resolve methods
-    if "USE_PACKAGE_DEPENDS" in env or "USE_PACKAGE_DEPENDS" in os.environ:
-        options.depend = "package,build"
     if options.depend:
         depend = [i.strip() for i in options.depend.split(",")]
         for i in depend:
             if depend.count(i) > 1:
-                options.parser.error("multiple depend method specified")
-            elif i not in ("build", "package"):
+                options.parser.error("depend method specified multiple times")
+            elif i not in ("build", "package", "repo"):
                 options.parser.error("unknown depend method")
         flags["depend"] = depend
 
@@ -420,7 +461,7 @@ def set_options(options):
 
     # Package all installed ports
     if options.packageA:
-        flags["package"] = True
+        flags["target"] = ["package"]
         options.package = True
 
     # Upgrade ports

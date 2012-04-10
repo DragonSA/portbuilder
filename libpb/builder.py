@@ -99,15 +99,17 @@ class DependLoader(object):
         elif port.failed:
             return False
         if method == "build":
-            if flags["package"]:
+            if "package" in flags["target"]:
                 # Connect to install job and give package_builder ownership
                 job = package_builder(port)
                 if port in install_builder.ports:
                     # Use the install job if it exists otherwise use the package
                     # job.
                     job = install_builder.ports[port]
-            else:
+            elif "install" in flags["target"] or "reinstall" in flags["target"]:
                 job = install_builder(port)
+            else:
+                assert not "Unknown dependency target"
         elif method == "package":
             if not os.path.isfile(flags["chroot"] + port.attr["pkgfile"]):
                 pkginstall_builder.update.emit(pkginstall_builder,
