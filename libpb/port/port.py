@@ -6,7 +6,8 @@ from contextlib import contextmanager
 import os
 import subprocess
 import time
-from .. import pkg
+
+from libpb import pkg
 
 from ..signal import SignalProperty
 
@@ -446,7 +447,6 @@ class Port(object):
     def _check_config(self):
         """Check the options file to see if it is up-to-date."""
         from ..env import flags
-        from .mk import pkg_version
 
         if flags["config"] == "none":
             return True
@@ -467,7 +467,7 @@ class Port(object):
         if flags["config"] == "changed" and options != set(self.attr["options"]):
             return False
         if (flags["config"] == "newer" and
-            pkg_version(pkgname, config_pkgname) == Port.NEWER) :
+            pkg.version(pkgname, config_pkgname) == Port.NEWER) :
             return False
         return True
 

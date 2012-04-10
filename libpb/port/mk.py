@@ -2,10 +2,11 @@
 
 from __future__ import absolute_import
 
+from libpb import pkg
 from ..env import env
 from ..signal import Signal
 
-__all__ = ["Attr", "attr", "status", "pkg_version"]
+__all__ = ["Attr", "attr", "status"]
 
 ports_attr = {
 # Port naming
@@ -177,7 +178,7 @@ def status(port, changed=False, cache=dict()):
             # If the pkg has the same origin get the maximum of the install
             # status
             if porigin == port.origin:
-                pstatus = max(pstatus, pkg_version(i, port.attr['pkgname']))
+                pstatus = max(pstatus, pkg.version(i, port.attr['pkgname']))
     return pstatus
 
 
@@ -251,54 +252,3 @@ class Attr(Signal):
 
         self.emit(self.origin, attr_map)
 
-
-def pkg_version(old, new):
-    """Compare two package names and indicates the difference."""
-    from .port import Port
-
-    old = old.rsplit('-', 1)[1]  # Name and version components of the old pkg
-    new = new.rsplit('-', 1)[1]  # Name and version components of the new pkg
-
-    if old == new:
-        # The packages are the same
-        return Port.CURRENT
-
-    # Check the ports apoch
-    old, new, pstatus = cmp_attr(old, new, ',')
-    if pstatus:
-        return Port.CURRENT + pstatus
-
-    # Check the ports revision
-    old, new, pstatus = cmp_attr(old, new, '_')
-    if old == new and pstatus:
-        return Port.CURRENT + pstatus
-
-    # Check the ports version from left to right
-    old = old.split('.')
-    new = new.split('.')
-    for i in range(min(len(old), len(new))):
-        # Try numerical comparison, otherwise use str
-        try:
-            pstatus = cmp(int(old[i]), int(new[i]))
-        except ValueError:
-            pstatus = cmp(old[i], new[i])
-        # If there is a difference in this version level
-        if pstatus:
-            return Port.CURRENT + pstatus
-
-    # The difference between the number of version levels
-    return Port.CURRENT - cmp(len(old), len(new))
-
-
-def cmp_attr(old, new, sym):
-    """Compare the two attributes of the port."""
-    old = old.rsplit(sym, 1)  # The value of the old pkg
-    new = new.rsplit(sym, 1)  # The value of the new pkg
-    if len(old) > len(new):  # If old has version and new does not
-        return (old[0], new[0], 1)
-    elif len(old) < len(new): # If new has version and old does not
-        return (old[0], new[0], -1)
-    elif len(old) == len(new) == 1:  # If neither has version
-        return (old[0], new[0], 0)
-    else: #if len(old) == 2 and len(new) == 2 # Both have version
-        return (old[0], new[0], cmp(int(old[1]), int(new[1])))

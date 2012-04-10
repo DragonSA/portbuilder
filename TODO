@@ -189,6 +189,7 @@ Future release:
    - support DEPENDS_PRECLEAN
    - support DEPENDS_CLEAN
    - support NODEPENDSCLEAN
+ - allow pkg.version to use "pkg_version" as alternative
 
 0.1.3 - Milestone 3 (Target Builders):
  * Finish call documentation
