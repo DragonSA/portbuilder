@@ -12,7 +12,7 @@ import subprocess
 import sys
 import traceback
 
-from libpb import pkg
+from libpb import env, pkg
 
 CONFIG = ("none", "changed", "newer", "all")
 VAR_NAME = "^[a-zA-Z_][a-zA-Z0-9_]*$"
@@ -277,6 +277,10 @@ def gen_parser():
     parser.add_option("-N", dest="no_opt", action="store_true", default=False,
                       help="Do not execute any commands.")
 
+    parser.add_option("--no-clean", dest="no_clean", default=False,
+                      action="store_true", help="Do not clean a port after it "
+                      "it has been installed/packaged.")
+
     parser.add_option("-p", "--package", action="store_true", default=False,
                       help="Create packages for specified ports.")
 
@@ -285,8 +289,12 @@ def gen_parser():
                       "installed ports")
 
     parser.add_option("--pkgng", dest="pkgng", default=False,
-                      action="store_true", help="Use pkgng as the package
-                      manager.")
+                      action="store_true", help="Use pkgng as the package "
+                      "manager.")
+
+    parser.add_option("--preclean", dest="preclean", default=False,
+                      action="store_true", help="Pre-clean before building a "
+                      "port")
 
     parser.add_option("--profile", action="store", default=False,
                       type="string", help="Produce a profile of a run saved "
@@ -320,24 +328,24 @@ def load_defaults():
 
     # DEPENDS_TARGET / flags["target"] modifiers
     if menv["DEPENDS_TARGET"]:
-        flags["target"] = menv["DEPENDS_TARGET"].split()
+        env.flags["target"] = menv["DEPENDS_TARGET"].split()
         for i in flags["target"]:
             if i not in ("clean", "install", "reinstall", "package"):
                 raise ValueError("unsupported DEPENDS_TARGET: '%s'" % i)
     else:
-        if menv["DEPENDS_CLEAN"]:
-            flags["target"] = flags["target"] + ["clean"]
-        if menv["DEPENDS_PRECLEAN"]:
-            flags["target"] = ["clean"] + flags["target"]
+        if menv["DEPENDS_CLEAN"] and env.flags["target"][-1] != "clean":
+            env.flags["target"] = env.flags["target"] + ["clean"]
+        if menv["DEPENDS_PRECLEAN"] and env.flags["target"][0] != "clean":
+            env.flags["target"] = ["clean"] + env.flags["target"]
 
     if menv["BATCH"]:
-        flags["config"] = "none"
+        env.flags["config"] = "none"
     if menv["USE_PACKAGE_DEPENDS"]:
-        flags["depend"] = ["package", "build"]
+        env.flags["depend"] = ["package", "build"]
     if menv["WITH_DEBUG"]:
-        flags["debug"] = True
+        env.flags["debug"] = True
     if menv["WITH_PKGNG"]:
-        flags["pkg_mgmt"] = "pkgng"
+        env.flags["pkg_mgmt"] = "pkgng"
 
 
 def set_early_options(options):
@@ -345,13 +353,11 @@ def set_early_options(options):
     Set global options, required before calling initialising defaults from
     port's defaults.
     """
-    from libpb.env import env, flags
-
     # Add all -D options
     for i in options.make_env:
         if not re.match(VAR_NAME, i):
             options.parser.error("incorrectly formatted variable name: %s" % i)
-        env[i] = True
+        env.env[i] = True
 
     # Add other make env options (aka variable=value)
     for i in options.args[:]:
@@ -360,7 +366,7 @@ def set_early_options(options):
             if not re.match(VAR_NAME, var):
                 options.parser.error("incorrectly formatted variable name: "
                                      "%s" % var)
-            env[var] = val
+            env.env[var] = val
             options.args.remove(i)
 
     # Set chroot environment
@@ -369,9 +375,13 @@ def set_early_options(options):
             options.chroot = options.chroot[:-1]
         if not os.path.isdir(options.chroot):
             options.parser.error("chroot needs to be a valid directory")
-        flags["chroot"] = os.path.join(os.getcwd(), options.chroot)
+        env.flags["chroot"] = os.path.join(os.getcwd(), options.chroot)
         if os.getuid() != 0:
             options.parser.error("chroot option only works with root account")
+
+    # Use pkgng for ports-mgmt (--pkgng)
+    if options.pkgng:
+        env.env["WITH_PKGNG"] = "YES"
 
 
 def set_options(options):
@@ -456,21 +466,29 @@ def set_options(options):
     if options.no_opt:
         flags["no_op"] = True
 
-    # Package all installed ports
+    # Do not clean a port
+    if options.no_clean and env.flags["target"][-1] == "clean":
+        env.flags["target"].pop(-1)
+
+    # Package all installed ports (-P)
     if options.packageA:
         flags["target"] = ["package"]
         options.package = True
 
-    # Upgrade ports
+    # Upgrade ports (-u)
     if options.upgrade and len(options.args) > 1:
         flags["mode"] = "recursive"
 
-    # Upgrade all ports
+    # Upgrade all ports (-U)
     if options.upgradeA:
         flags["stage"] = max(flags["stage"], Port.OLDER)
         flags["mode"] = "recursive"
 
-    # Profile option
+    # Pre-clean before building ports
+    if options.preclean and env.flags["target"][0] != "clean":
+        env.flags["target"] = ["clean"] + env.flags["target"]
+
+    # Profile option (--profile)
     if options.profile:
         options.profile = os.path.join(os.getcwd(), options.profile)
 
