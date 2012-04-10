@@ -163,7 +163,6 @@ class Port(object):
 
     def _cleaned(self, job=None):
         """Mark the port as clean."""
-        self.working = False
         if job and not job.status:
             self.failed = True
         if not self.failed and os.path.isfile(self.log_file):
@@ -319,8 +318,7 @@ class Port(object):
 
     def _pre_build(self):
         """Build the port."""
-        return self._make_target(("all",), BATCH=True,
-                                 NOCLEANDEPENDS=True, NO_DEPENDS=True)
+        return self._make_target(("all",), BATCH=True, NO_DEPENDS=True)
 
     @staticmethod
     def _post_build(_make, status):
