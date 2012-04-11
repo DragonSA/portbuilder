@@ -108,7 +108,7 @@ class DependLoader(object):
                     # Use the install job if it exists otherwise use the package
                     # job.
                     job = install_builder.ports[port]
-            elif "install" in flags["target"] or "reinstall" in flags["target"]:
+            elif "install" in flags["target"]:
                 job = install_builder(port)
             else:
                 assert not "Unknown dependency target"

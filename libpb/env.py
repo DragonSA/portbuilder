@@ -8,7 +8,10 @@ import subprocess
 
 from .port.port import Port
 
-__all__ = ["CPUS", "env", "env_master", "flags", "setup_env"]
+__all__ = [
+        "CPUS", "CONFIG", "DEPEND", "MODE", "PKG_MGMT", "STAGE", "TARGET",
+        "env", "env_master", "flags", "setup_env"
+    ]
 
 CPUS = os.sysconf("SC_NPROCESSORS_ONLN")
 
@@ -78,11 +81,16 @@ env_master = {
 # target - The dependency targets when building a port required by a dependant.
 #       The currently supported targets are:
 #               install   - install the port
-#               reinstall - alias for install
 #               package   - package the port
 #               clean     - clean the port, may be specified before and/or
 #                       after the install/package target indicating that the
 #                       port should cleaned before or after, respectively.
+CONFIG   = ("none", "changed", "newer", "all")
+DEPEND   = ("build", "package", "repo")
+MODE     = ("install", "recursive", "clean")
+PKG_MGMT = ("pkg", "pkgng")
+STAGE    = (Port.ABSENT, Port.OLDER, Port.CURRENT, Port.NEWER)
+TARGET   = ("clean", "install", "package")
 flags = {
   "chroot"      : "",                   # Chroot directory of system
   "config"      : "changed",            # Configure ports based on criteria
