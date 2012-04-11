@@ -138,6 +138,8 @@ class PortJob(Job):
         try:
             if self.stage == Port.PKGINSTALL:
                 status = self.port.pkginstall()
+            elif self.stage == Port.REPOINSTALL:
+                status = self.port.repoinstall()
             else:
                 status = self.port.build_stage(self.stage)
             assert status is not False
