@@ -5,7 +5,7 @@ from __future__ import absolute_import
 import bisect
 import os
 
-from libpb import event, queue
+from libpb import builder, event, queue
 
 __all__ = ["event", "state", "stop"]
 
@@ -74,21 +74,18 @@ class StateTracker(object):
 
     def __init__(self):
         """Initialise the StateTracker."""
-        from .builder import builders, depend_builder
-
         self.stages = []
-        for builder in builders:
-            self.stages.append(StateTracker.Stage(builder, self))
+        for b in builder.builders:
+            self.stages.append(StateTracker.Stage(b, self))
 
         self._resort = False
-        depend_builder.update.connect(self._sort)
+        builder.depend.update.connect(self._sort)
 
     def __del__(self):
         """Disconnect from signals."""
-        from .builder import depend_builder
         for i in self.stages:
             i.cleanup()
-        depend_builder.update.disconnect(self._sort)
+        builder.depend.update.disconnect(self._sort)
 
     def __getitem__(self, stage):
         """Get the Stage object for stage."""
@@ -144,7 +141,6 @@ class StateTracker(object):
 
 def stop(kill=False, kill_clean=False):
     """Stop building ports and cleanup."""
-    from .builder import builders
     from .env import CPUS, flags
     import signal
 
@@ -189,8 +185,8 @@ def stop(kill=False, kill_clean=False):
             port.stage_completed.connect(lambda x: x.clean())
 
     # Clean all other outstanding ports
-    for builder in builders:
-        for port in builder.ports:
+    for b in builder.builders:
+        for port in b.ports:
             if port not in active:
                 port.clean()
 

@@ -12,7 +12,7 @@ import subprocess
 import sys
 import traceback
 
-from libpb import env, pkg, queue
+from libpb import builder, env, pkg, queue
 
 CONFIG = ("none", "changed", "newer", "all")
 VAR_NAME = "^[a-zA-Z_][a-zA-Z0-9_]*$"
@@ -30,23 +30,22 @@ class PortDelegate(object):
     def __call__(self, port):
         """Add a port to the required builder."""
         from libpb.env import flags
-        from libpb.builder import depend, install_builder, package_builder
         from libpb.port.dependhandler import Dependent
 
         if isinstance(port, str):
             return
         if ((not (flags["mode"] == "recursive" or self.force) and
-             port.install_status > flags["stage"]) or port in depend.ports):
+             port.install_status > flags["stage"]) or port in builder.depend_resolve.ports):
             return
         if self.upgrade or self.force:
             port.dependent.status = Dependent.UNRESOLV
             port.force = self.force
         if self.package:
-            job = package_builder(port)
-            if port in install_builder.ports:
-                job = install_builder.ports[port]
+            job = builder.package(port)
+            if port in builder.install.ports:
+                job = builder.install.ports[port]
         else:
-            job = install_builder(port)
+            job = builder.install(port)
         depend.register(job)
 
 
