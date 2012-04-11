@@ -192,9 +192,9 @@ Future release:
    * support DEPENDS_CLEAN
    * support NODEPENDSCLEAN
    * support PKGREPOSITORY
- - implement clean flags["target"]
+ * implement clean flags["target"]
  - refactor env/mk code
- - remove reinstall from flags["target"]
+ * remove reinstall from flags["target"]
  - implement sysctl using ctypes
  - cleanup namespace
  - add support to verify if stage is possible (can_do_stage)
@@ -202,7 +202,7 @@ Future release:
  - periodically check that the state tracked pkgdb agrees with pkg_info
  - document libpb initialisation procedure (cache/clean env, load defaults, db init)
  * make pre/post cleaning the default
- - refactor all env.flags (like CONFIG) for better handling
+ * refactor all env.flags (like CONFIG) for better handling
 
 0.1.3 - Milestone 3 (Target Builders):
  * Finish call documentation
