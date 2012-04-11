@@ -155,6 +155,12 @@ Future release:
    - Fix the use of prefexing...
  - refactor jobs (and move jobs to better locations)
  - implement background loading of pkgdb (non-blocking IO)
+ - separate fetch/install steps of repo install
+ - add priorities for install_queue:
+   - pkginstall = higher priority
+   - install = normal priority
+   - repoinstall = low priority
+ - make jobs responsible for stopping themselves
 
 0.2 - Milestone 4 (Command line controller):
  - Create target to build INDEX
@@ -170,12 +176,14 @@ Future release:
  - make compatible with pkgng
  - display skipped ports (with toggle)
  - add -j options to control queue loads
- - create a clean_builder
- - clean ports before trying other depend methods
+ x create a clean_builder
+ * clean ports before trying other depend methods
  - indicate progress of each stage (i.e. fetched, built)
  - allow ports to be reinserted into build queue (and connect up)
- - rename builders (module name provides a hint to their purpose)
- - start moving library imports to module level (vs method/function)
+ * rename builders (module name provides a hint to their purpose)
+ * rename queues
+ - rename signals
+ + start moving library imports to module level (vs method/function)
  - make portbuilder indicate what is happening before Top monitor starts
  - handle queue with stalled job and no active job (not possible with current code)
  - make builds more persistent (i.e. no abort on dependency failure)
@@ -185,7 +193,7 @@ Future release:
    - subprocess (and others)
    ? split into own project
  - support `reinstall' target
- - add support for installing from different package sources (repo, local)
+ * add support for installing from different package sources (repo, local)
  * refactor/improve make.conf dynamic configuration:
    * refactor existing dynamic configuration
    * support DEPENDS_PRECLEAN
@@ -196,7 +204,7 @@ Future release:
  - refactor env/mk code
  - remove reinstall from flags["target"]
  - implement sysctl using ctypes
- - cleanup namespace
+ + cleanup namespace
  - add support to verify if stage is possible (can_do_stage)
  - allow pkg.version to use "pkg_version" as alternative
  - periodically check that the state tracked pkgdb agrees with pkg_info
