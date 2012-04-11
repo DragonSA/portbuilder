@@ -119,4 +119,4 @@ build_queue = QueueManager(CPUS * 2)
 install_queue = QueueManager(1)
 package_queue = QueueManager(1)
 queues = (config_queue, checksum_queue, fetch_queue, build_queue,
-          install_queue, package_queue, install_queue)
+          install_queue, package_queue, install_queue, install_queue)
