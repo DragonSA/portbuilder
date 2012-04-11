@@ -7,6 +7,8 @@ import curses, curses.ascii
 import sys
 import time
 
+from libpb import queue
+
 from .port.port import Port
 from .builder import Builder
 
@@ -64,15 +66,16 @@ class Monitor(object):
 
 
 STAGE_NAME = ("config", "config", "depend", "chcksm", "fetch", "build",
-              "install", "package", "pkginst")
+              "install", "package", "pkginst", "repoins")
 STAGE = (
-    (Port.DEPEND,     "Depend"),
-    (Port.CHECKSUM,   "Checksum"),
-    (Port.FETCH,      "Fetch"),
-    (Port.BUILD,      "Build"),
-    (Port.INSTALL,    "Install"),
-    (Port.PKGINSTALL, "Pkginst"),
-    (Port.PACKAGE,    "Package"),
+    (Port.DEPEND,      "Depend"),
+    (Port.CHECKSUM,    "Checksum"),
+    (Port.FETCH,       "Fetch"),
+    (Port.BUILD,       "Build"),
+    (Port.INSTALL,     "Install"),
+    (Port.PKGINSTALL,  "Pkginst"),
+    (Port.REPOINSTALL, "repoins"),
+    (Port.PACKAGE,     "Package"),
   )
 
 STATUS_NAME = ("pending", "queued", "active", "failed", None, "done")
@@ -230,16 +233,15 @@ class Top(Monitor):
     def _update_ports(self, scr):
         """Update the ports details."""
         from .port import ports
-        from .queue import attr_queue
 
         msg = "port count: %i" % ports()
-        if len(attr_queue):
-            if len(attr_queue.queue):
-                msg += "; retrieving %i (of %i)" % (len(attr_queue.active),
-                                                    len(attr_queue.active) +
-                                                    len(attr_queue))
+        if len(queue.attr):
+            if len(queue.attr.queue):
+                msg += "; retrieving %i (of %i)" % (len(queue.attr.active),
+                                                    len(queue.attr.active) +
+                                                    len(queue.attr))
             else:
-                msg += "; retrieving %i" % len(attr_queue)
+                msg += "; retrieving %i" % len(queue.attr)
         scr.addstr(self._offset, 0, msg)
 
         self._offset += 1
@@ -283,8 +285,6 @@ class Top(Monitor):
 
     def _update_rows(self, scr, stages):
         """Update the rows of port information."""
-        from .queue import clean_queue
-
         scr.addstr(self._offset + 1, 2, ' STAGE   STATE   TIME PACKAGE')
 
         def ports(stages, status):
@@ -338,10 +338,10 @@ class Top(Monitor):
 
             # Display ports cleaning and queued to be cleaned
             if self._idle:
-                clean = (clean_queue.active + clean_queue.stalled +
-                         clean_queue.queue)
+                clean = (queue.clean.active + queue.clean.stalled +
+                         queue.clean.queue)
             else:
-                clean = clean_queue.active
+                clean = queue.clean.active
             if self._skip >= len(clean):
                 self._skip -= len(clean)
             else:

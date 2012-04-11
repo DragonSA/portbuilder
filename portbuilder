@@ -12,7 +12,7 @@ import subprocess
 import sys
 import traceback
 
-from libpb import env, pkg
+from libpb import builder, env, pkg, queue
 
 VAR_NAME = "^[a-zA-Z_][a-zA-Z0-9_]*$"
 
@@ -29,23 +29,22 @@ class PortDelegate(object):
     def __call__(self, port):
         """Add a port to the required builder."""
         from libpb.env import flags
-        from libpb.builder import depend, install_builder, package_builder
         from libpb.port.dependhandler import Dependent
 
         if isinstance(port, str):
             return
         if ((not (flags["mode"] == "recursive" or self.force) and
-             port.install_status > flags["stage"]) or port in depend.ports):
+             port.install_status > flags["stage"]) or port in builder.depend_resolve.ports):
             return
         if self.upgrade or self.force:
             port.dependent.status = Dependent.UNRESOLV
             port.force = self.force
         if self.package:
-            job = package_builder(port)
-            if port in install_builder.ports:
-                job = install_builder.ports[port]
+            job = builder.package(port)
+            if port in builder.install.ports:
+                job = builder.install.ports[port]
         else:
-            job = install_builder(port)
+            job = builder.install(port)
         depend.register(job)
 
 
@@ -139,9 +138,8 @@ def run_loop(options):
 
         if options.no_opt_print:
             # All ports not configured, run all queues
-            from libpb.queue import queues
-            for queue in queues:
-                queue.load = 1
+            for q in queue.queues:
+                q.load = 1
             run()
         report()
     except SystemExit:
@@ -427,11 +425,8 @@ def set_options(options):
 
     # Fetch only options:
     if options.fetch:
-        from libpb.env import CPUS
-        from libpb.queue import checksum_queue
-
         flags["fetch_only"] = True
-        checksum_queue.load = CPUS
+        queue.checksum.load = env.CPUS
 
     # Fetch ports list from file
     if options.ports_file:
@@ -455,13 +450,11 @@ def set_options(options):
 
     # No operations and print (-n)
     if options.no_opt_print:
-        from libpb.queue import queues
-
         flags["no_op"] = True
         flags["no_op_print"] = True
         # Configure all ports before printing commands
-        for queue in queues[1:]:
-            queue.load = 0
+        for q in queue.queues[1:]:
+            q.load = 0
 
     # No operations (-N)
     if options.no_opt:

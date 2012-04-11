@@ -7,7 +7,7 @@ import os
 import subprocess
 import time
 
-from libpb import env, pkg
+from libpb import env, pkg, queue
 
 from ..signal import SignalProperty
 
@@ -98,15 +98,16 @@ class Port(object):
     NEWER   = 3
 
     # Build stage status flags
-    ZERO       = 0
-    CONFIG     = 1
-    DEPEND     = 2
-    CHECKSUM   = 3
-    FETCH      = 4
-    BUILD      = 5
-    INSTALL    = 6
-    PACKAGE    = 7
-    PKGINSTALL = 8
+    ZERO        = 0
+    CONFIG      = 1
+    DEPEND      = 2
+    CHECKSUM    = 3
+    FETCH       = 4
+    BUILD       = 5
+    INSTALL     = 6
+    PACKAGE     = 7
+    PKGINSTALL  = 8
+    REPOINSTALL = 9
 
     _config_lock = Lock()
     _checksum_lock = FileLock()
@@ -153,10 +154,9 @@ class Port(object):
         assert not self.working or flags["mode"] == "clean"
         if Port.BUILD <= self.stage < Port.PKGINSTALL or force:
             from ..job import CleanJob
-            from ..queue import clean_queue
 
             job = CleanJob(self).connect(self._cleaned)
-            clean_queue.add(job)
+            queue.clean.add(job)
             return job
         else:
             self._cleaned()
@@ -354,6 +354,18 @@ class Port(object):
         """Indicate package status."""
         return status
 
+    def repoinstall(self):
+        """Prepare to install the port from a repository."""
+        if (self.working or self.attr["no_package"]):
+            return False
+
+        self.stage = Port.REPOINSTALL - 1
+        self.working = time.time()
+        if self.install_status > Port.ABSENT:
+            return make_target(self, "deinstall").connect(self._repoinstall)
+        else:
+            return self._repoinstall()
+
     def pkginstall(self):
         """Prepare to install the port from it's package."""
         # TODO: proper asserts (valid stage).
@@ -371,7 +383,11 @@ class Port(object):
         else:
             return self._pkginstall()
 
-    def _pkginstall(self, make=None):
+    def _repoinstall(self, make=None):
+        """Install the port from a repository package."""
+        return self._pkginstall(make, True)
+
+    def _pkginstall(self, make=None, repo=False):
         """Install the port from it's package."""
         from ..env import flags
         from ..make import SUCCESS
@@ -379,7 +395,7 @@ class Port(object):
         if make is not None:
             status = make.wait() == SUCCESS
             if not status:
-                self.stage = Port.PKGINSTALL
+                self.stage = Port.REPOINSTALL if repo else Port.PKGINSTALL
                 self.working = False
                 self.stage_completed.emit(self)
             else:
@@ -388,7 +404,7 @@ class Port(object):
             if not status:
                 return
 
-        return pkg.add(self).connect(self._post_pkginstall)
+        return pkg.add(self, repo).connect(self._post_pkginstall)
 
     def _post_pkginstall(self, pkg_add):
         """Report if the port successfully installed from it's package."""

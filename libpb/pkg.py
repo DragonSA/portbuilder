@@ -10,12 +10,16 @@ from libpb import env, make, port
 
 __all__ = ["add", "version"]
 
-def add(port):
+def add(port, repo=False):
     """Add a package from port."""
     if env.flags["chroot"]:
-        args = ("pkg_add", "-C", env.flags["chroot"], port.attr["pkgfile"])
+        args = ("pkg_add", "-C", env.flags["chroot"])
     else:
-        args = ("pkg_add", port.attr["pkgfile"])
+        args = ("pkg_add",)
+    if repo:
+        args += ("-r", port.attr["pkgname"])
+    else:
+        args += (port.attr["pkgfile"],)
 
     if env.flags["no_op"]:
         pkg_add = make.PopenNone(args, self)

@@ -5,7 +5,7 @@ from __future__ import absolute_import
 import bisect
 import os
 
-from . import event
+from libpb import builder, event, queue
 
 __all__ = ["event", "state", "stop"]
 
@@ -74,21 +74,18 @@ class StateTracker(object):
 
     def __init__(self):
         """Initialise the StateTracker."""
-        from .builder import builders, depend_builder
-
         self.stages = []
-        for builder in builders:
-            self.stages.append(StateTracker.Stage(builder, self))
+        for b in builder.builders:
+            self.stages.append(StateTracker.Stage(b, self))
 
         self._resort = False
-        depend_builder.update.connect(self._sort)
+        builder.depend.update.connect(self._sort)
 
     def __del__(self):
         """Disconnect from signals."""
-        from .builder import depend_builder
         for i in self.stages:
             i.cleanup()
-        depend_builder.update.disconnect(self._sort)
+        builder.depend.update.disconnect(self._sort)
 
     def __getitem__(self, stage):
         """Get the Stage object for stage."""
@@ -144,9 +141,7 @@ class StateTracker(object):
 
 def stop(kill=False, kill_clean=False):
     """Stop building ports and cleanup."""
-    from .builder import builders
     from .env import CPUS, flags
-    from .queue import attr_queue, clean_queue, queues
     import signal
 
     if flags["no_op"]:
@@ -154,13 +149,13 @@ def stop(kill=False, kill_clean=False):
 
     flags["mode"] = "clean"
 
-    kill_queues = (attr_queue,) + queues
+    kill_queues = (queue.attr,) + queue.queues
     if kill_clean:
-        kill_queues += (clean_queue,)
+        kill_queues += (queue.clean,)
 
     # Kill all active jobs
-    for queue in kill_queues:
-        for pid in (job.pid for job in queue.active if job.pid):
+    for q in kill_queues:
+        for pid in (job.pid for job in q.active if job.pid):
             try:
                 if kill:
                     os.killpg(pid, signal.SIGKILL)
@@ -170,28 +165,28 @@ def stop(kill=False, kill_clean=False):
                 pass
 
     # Stop all queues
-    attr_queue.load = 0
-    for queue in queues:
-        queue.load = 0
+    queue.attr.load = 0
+    for q in queues:
+        q.load = 0
 
     # Make cleaning go a bit faster
     if kill_clean:
-        clean_queue.load = 0
+        queue.clean.load = 0
         return
     else:
-        clean_queue.load = CPUS
+        queue.clean.load = CPUS
 
     # Wait for all active ports to finish so that they may be cleaned
     active = set()
-    for queue in queues:
-        for job in queue.active:
+    for q in queues:
+        for job in q.active:
             port = job.port
             active.add(port)
             port.stage_completed.connect(lambda x: x.clean())
 
     # Clean all other outstanding ports
-    for builder in builders:
-        for port in builder.ports:
+    for b in builder.builders:
+        for port in b.ports:
             if port not in active:
                 port.clean()
 

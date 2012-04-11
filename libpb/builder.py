@@ -5,14 +5,15 @@ from __future__ import absolute_import
 from abc import ABCMeta, abstractmethod
 import os
 
-from libpb import env
+from libpb import env, queue
 
 from .port.port import Port
 from .signal import SignalProperty
 
-__all__ = ["Builder", "builders", "config_builder", "checksum_builder",
-           "fetch_builder", "build_builder", "install_builder",
-           "package_builder", "pkginstall_builder"]
+__all__ = [
+        "Builder", "builders", "config", "checksum", "fetch", "build",
+        "install", "package", "pkginstall"
+    ]
 
 
 class DependLoader(object):
@@ -43,15 +44,17 @@ class DependLoader(object):
             job = Signal()
             self.method[port] = flags["depend"][0]
 
-            for builder in (install_builder, pkginstall_builder):
+            for builder, method in zip((install, pkginstall, repoinstall),
+                                       ("build", "package", "repo")):
                 if port in builder.ports:
                     builder.add(port).connect(self._clean)
                     self.ports[port] = job
-                    self.method[port] = None
+                    self.method[port] = self._next(method)
                     break
             else:
                 if not self._find_method(port):
                     from .event import post_event
+                    self.finished.add(port)
                     post_event(job.emit, port)
                 else:
                     self.ports[port] = job
@@ -102,24 +105,24 @@ class DependLoader(object):
             return False
         if method == "build":
             if "package" in flags["target"]:
-                # Connect to install job and give package_builder ownership
-                job = package_builder(port)
-                if port in install_builder.ports:
+                # Connect to install job and give package ownership
+                job = package(port)
+                if port in install.ports:
                     # Use the install job if it exists otherwise use the package
                     # job.
-                    job = install_builder.ports[port]
+                    job = install.ports[port]
             elif "install" in flags["target"]:
-                job = install_builder(port)
+                job = install(port)
             else:
                 assert not "Unknown dependency target"
         elif method == "package":
             if not os.path.isfile(flags["chroot"] + port.attr["pkgfile"]):
-                pkginstall_builder.update.emit(pkginstall_builder,
-                                               Builder.ADDED, port)
-                pkginstall_builder.update.emit(pkginstall_builder,
-                                               Builder.FAILED, port)
+                pkginstall.update.emit(pkginstall, Builder.ADDED, port)
+                pkginstall.update.emit(pkginstall, Builder.FAILED, port)
                 return False
-            job = pkginstall_builder(port)
+            job = pkginstall(port)
+        elif method == "repo":
+            job = repoinstall(port)
         else:
             assert not "Unknown port resolve method"
         job.connect(self._clean)
@@ -177,8 +180,7 @@ class ConfigBuilder(Builder):
 
     def __init__(self):
         """Initialise config builder."""
-        from .queue import config_queue
-        Builder.__init__(self, Port.CONFIG, config_queue)
+        Builder.__init__(self, Port.CONFIG, queue.config)
 
     def __call__(self, port):
         """Configure the given port."""
@@ -241,7 +243,7 @@ class DependBuilder(Builder):
             self.ports[port] = sig
             self.update.emit(self, Builder.ADDED, port)
             if port.stage < Port.CONFIG:
-                config_builder.add(port).connect(self._add)
+                config.add(port).connect(self._add)
             else:
                 self._add(port=port)
             return sig
@@ -257,12 +259,10 @@ class DependBuilder(Builder):
 
     def _loaded(self, port):
         """Port has finished loading dependency."""
-        from .queue import queues
-
         port.stage_completed.disconnect(self._loaded)
         if port.dependency is not None:
-            for queue in queues:
-                queue.reorder()
+            for q in queue.queues:
+                q.reorder()
         if port.failed:
             self.failed.append(port)
             self.update.emit(self, Builder.FAILED, port)
@@ -274,11 +274,9 @@ class DependBuilder(Builder):
 class StageBuilder(Builder):
     """General port stage builder."""
 
-    def __init__(self, stage, prev_builder=None):
+    def __init__(self, stage, queue, prev_builder=None):
         """Initialise port stage builder."""
-        from .queue import queues
-
-        Builder.__init__(self, stage, queues[stage - 2])
+        Builder.__init__(self, stage, queue)
 
         self._pending = {}
         self._depends = {}
@@ -313,9 +311,9 @@ class StageBuilder(Builder):
 
             # Configure port then process it
             if port.stage < Port.DEPEND:
-                depend_builder.add(port).connect(self._add)
+                depend.add(port).connect(self._add)
             else:
-                assert port not in depend_builder.ports
+                assert port not in depend.ports
                 self._add(port)
             return job
 
@@ -336,7 +334,7 @@ class StageBuilder(Builder):
         for p in depends:
             if p not in self._depends:
                 self._depends[p] = set()
-                depend(p).connect(self._depend_resolv)
+                depend_resolve(p).connect(self._depend_resolv)
             self._depends[p].add(port)
 
         # Build the previous stage if needed
@@ -484,15 +482,18 @@ class PackageBuilder(StageBuilder):
             assert port.stage == self.stage - 1
             return True
 
+depend_resolve = DependLoader()
 
-depend = DependLoader()
-config_builder     = ConfigBuilder()
-depend_builder     = DependBuilder()
-checksum_builder   = StageBuilder(Port.CHECKSUM)
-fetch_builder      = StageBuilder(Port.FETCH,   checksum_builder)
-build_builder      = BuilderBuilder(Port.BUILD,   fetch_builder)
-install_builder    = StageBuilder(Port.INSTALL, build_builder)
-package_builder    = PackageBuilder(Port.PACKAGE, install_builder)
-pkginstall_builder = StageBuilder(Port.PKGINSTALL)
-builders = (config_builder, depend_builder, checksum_builder, fetch_builder,
-            build_builder, install_builder, package_builder, pkginstall_builder)
+config      = ConfigBuilder()
+depend      = DependBuilder()
+checksum    = StageBuilder(Port.CHECKSUM, queue.checksum)
+fetch       = StageBuilder(Port.FETCH, queue.fetch, checksum)
+build       = BuilderBuilder(Port.BUILD, queue.build, fetch)
+install     = StageBuilder(Port.INSTALL, queue.install, build)
+package     = PackageBuilder(Port.PACKAGE, queue.package, install)
+pkginstall  = StageBuilder(Port.PKGINSTALL, queue.install)
+repoinstall = StageBuilder(Port.REPOINSTALL, queue.install)
+builders = (
+        config, depend, checksum, fetch, build, install, package, pkginstall,
+        repoinstall,
+    )
