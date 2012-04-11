@@ -12,7 +12,7 @@ import subprocess
 import sys
 import traceback
 
-from libpb import env, pkg
+from libpb import env, pkg, queue
 
 CONFIG = ("none", "changed", "newer", "all")
 VAR_NAME = "^[a-zA-Z_][a-zA-Z0-9_]*$"
@@ -140,9 +140,8 @@ def run_loop(options):
 
         if options.no_opt_print:
             # All ports not configured, run all queues
-            from libpb.queue import queues
-            for queue in queues:
-                queue.load = 1
+            for q in queue.queues:
+                q.load = 1
             run()
         report()
     except SystemExit:
@@ -426,11 +425,8 @@ def set_options(options):
 
     # Fetch only options:
     if options.fetch:
-        from libpb.env import CPUS
-        from libpb.queue import checksum_queue
-
         flags["fetch_only"] = True
-        checksum_queue.load = CPUS
+        queue.checksum.load = env.CPUS
 
     # Fetch ports list from file
     if options.ports_file:
@@ -454,13 +450,11 @@ def set_options(options):
 
     # No operations and print (-n)
     if options.no_opt_print:
-        from libpb.queue import queues
-
         flags["no_op"] = True
         flags["no_op_print"] = True
         # Configure all ports before printing commands
-        for queue in queues[1:]:
-            queue.load = 0
+        for q in queue.queues[1:]:
+            q.load = 0
 
     # No operations (-N)
     if options.no_opt:

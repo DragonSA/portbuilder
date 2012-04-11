@@ -7,6 +7,8 @@ import errno
 import collections
 import select
 
+from libpb import queue
+
 from .signal import InlineSignal, SignalProperty
 
 __all__ = ["alarm", "event", "pending_events", "post_event", "resume", "run",
@@ -106,11 +108,9 @@ class EventManager(object):
 
     def run(self):
         """Run the currently queued events."""
-        from .queue import attr_queue, clean_queue, queues
-
         self._no_tb = False
         self.traceback = None
-        queues = (attr_queue, clean_queue) + queues
+        queues = (queue.attr, queue.clean) + queue.queues
         try:
             self.start.emit()
             while True:
@@ -127,8 +127,8 @@ class EventManager(object):
                     func(*args, **kwargs)
                     self._clear_tb()
 
-                for queue in queues:
-                    if len(queue.active):
+                for q in queues:
+                    if len(q.active):
                         break
                 else:
                     # Die if no events or outstanding processes

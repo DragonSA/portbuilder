@@ -7,7 +7,7 @@ import os
 import subprocess
 import time
 
-from libpb import env, pkg
+from libpb import env, pkg, queue
 
 from ..signal import SignalProperty
 
@@ -154,10 +154,9 @@ class Port(object):
         assert not self.working or flags["mode"] == "clean"
         if Port.BUILD <= self.stage < Port.PKGINSTALL or force:
             from ..job import CleanJob
-            from ..queue import clean_queue
 
             job = CleanJob(self).connect(self._cleaned)
-            clean_queue.add(job)
+            queue.clean.add(job)
             return job
         else:
             self._cleaned()

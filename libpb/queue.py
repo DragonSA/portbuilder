@@ -6,8 +6,10 @@ import bisect
 
 from .env import CPUS
 
-__all__ = ["QueueManager", "queues", "attr_queue", "config_queue",
-           "checksum_queue", "fetch_queue", "build_queue", "install_queue"]
+__all__ = [
+        "QueueManager", "queues", "attr", "config", "checksum", "fetch",
+        "build", "install"
+    ]
 
 
 class QueueManager(object):
@@ -109,14 +111,13 @@ class QueueManager(object):
         return queue.pop(best_idx)
 
 
-attr_queue = QueueManager(CPUS * 2)
-clean_queue = QueueManager(1)
+attr  = QueueManager(CPUS * 2)
+clean = QueueManager(1)
 
-config_queue = QueueManager(1)
-checksum_queue = QueueManager(max(1, CPUS // 2))
-fetch_queue = QueueManager(1)
-build_queue = QueueManager(CPUS * 2)
-install_queue = QueueManager(1)
-package_queue = QueueManager(1)
-queues = (config_queue, checksum_queue, fetch_queue, build_queue,
-          install_queue, package_queue, install_queue, install_queue)
+config   = QueueManager(1)
+checksum = QueueManager(max(1, CPUS // 2))
+fetch    = QueueManager(1)
+build    = QueueManager(CPUS * 2)
+install  = QueueManager(1)
+package  = QueueManager(1)
+queues   = (config, checksum, fetch, build, install, package, install, install)

@@ -5,7 +5,7 @@ from __future__ import absolute_import
 import bisect
 import os
 
-from . import event
+from libpb import event, queue
 
 __all__ = ["event", "state", "stop"]
 
@@ -146,7 +146,6 @@ def stop(kill=False, kill_clean=False):
     """Stop building ports and cleanup."""
     from .builder import builders
     from .env import CPUS, flags
-    from .queue import attr_queue, clean_queue, queues
     import signal
 
     if flags["no_op"]:
@@ -154,13 +153,13 @@ def stop(kill=False, kill_clean=False):
 
     flags["mode"] = "clean"
 
-    kill_queues = (attr_queue,) + queues
+    kill_queues = (queue.attr,) + queue.queues
     if kill_clean:
-        kill_queues += (clean_queue,)
+        kill_queues += (queue.clean,)
 
     # Kill all active jobs
-    for queue in kill_queues:
-        for pid in (job.pid for job in queue.active if job.pid):
+    for q in kill_queues:
+        for pid in (job.pid for job in q.active if job.pid):
             try:
                 if kill:
                     os.killpg(pid, signal.SIGKILL)
@@ -170,21 +169,21 @@ def stop(kill=False, kill_clean=False):
                 pass
 
     # Stop all queues
-    attr_queue.load = 0
-    for queue in queues:
-        queue.load = 0
+    queue.attr.load = 0
+    for q in queues:
+        q.load = 0
 
     # Make cleaning go a bit faster
     if kill_clean:
-        clean_queue.load = 0
+        queue.clean.load = 0
         return
     else:
-        clean_queue.load = CPUS
+        queue.clean.load = CPUS
 
     # Wait for all active ports to finish so that they may be cleaned
     active = set()
-    for queue in queues:
-        for job in queue.active:
+    for q in queues:
+        for job in q.active:
             port = job.port
             active.add(port)
             port.stage_completed.connect(lambda x: x.clean())

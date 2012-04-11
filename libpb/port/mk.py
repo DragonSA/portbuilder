@@ -2,7 +2,7 @@
 
 from __future__ import absolute_import
 
-from libpb import pkg
+from libpb import pkg, queue
 from ..env import env
 from ..signal import Signal
 
@@ -138,10 +138,9 @@ ports_attr["makefiles"].append(lambda x: [i for i in x if i != '..'])
 def attr(origin):
     """Retrieve a ports attributes by using the attribute queue."""
     from ..job import AttrJob
-    from ..queue import attr_queue
 
     attr = Attr(origin)
-    attr_queue.add(AttrJob(attr))
+    queue.attr.add(AttrJob(attr))
     return attr
 
 
