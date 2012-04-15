@@ -8,7 +8,7 @@ import subprocess
 
 from libpb import env, job, make, pkg, queue, signal
 
-__all__ = ["Attr", "attr", "load_defaults"]
+__all__ = ["Attr", "attr", "cache", "clean", "load_defaults"]
 
 
 def load_defaults():
@@ -70,12 +70,8 @@ def load_defaults():
         env.flags["pkg_mgmt"] = "pkgng"
 
 
-def setup_env():
-    """Update the env dictionary based on this programs environment flags."""
-    for i in env:
-        if i in os.environ:
-            env[i] = os.environ[i]
-
+def clean():
+    """Clean the env and os.environ.."""
     # Cleanup some env variables
     if env["PORTSDIR"][-1] == '/':
         env["PORTSDIR"] = env["PORTSDIR"][:-1]
@@ -88,6 +84,9 @@ def setup_env():
         except KeyError:
             pass
 
+
+def cache():
+    """Cache commonly used variables. which are expensive to compute."""
     # Variables conditionally set in ports/Mk/bsd.port.mk
     uname = os.uname()
     if "ARCH" not in os.environ:

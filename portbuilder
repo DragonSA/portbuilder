@@ -78,9 +78,17 @@ def main():
     options.args = args
     options.parser = parser
     set_early_options(options)
+    print "Loading /etc/make.conf (defaults)...",
     mk.load_defaults()
+    print "done"
+    print "Loading package datebase...",
     pkg.db.load()
+    print "done"
     set_options(options)
+    print "Caching variables...",
+    mk.clean()
+    mk.cache()
+    print "done"
 
     if len(options.args) == 0:
         print parser.get_usage()
@@ -88,9 +96,6 @@ def main():
 
     # Make sure log_dir is available
     mkdir(flags["log_dir"])
-
-    # Cache the environment variables used by ports/Mk/bsd.*.mk
-    mk.setup_env()
 
     # Install signal handlers
     signal.signal(signal.SIGINT, signal.SIG_IGN)
