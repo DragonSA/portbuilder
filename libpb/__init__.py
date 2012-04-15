@@ -1,4 +1,23 @@
-"""FreeBSD port building infrastructure."""
+"""
+FreeBSD port building infrastructure.
+
+To initialise libpb, the following functions needs to be called (in this order).
+ 1) libpb.mk_defaults()
+ 2.1) libpb.mk.clean()
+ 2.2) libob.mk.cache()
+ 2.3) libob.pkg.db.load()
+
+(1) loads the defaults from the port infrastructure.  The calling program must
+ensure that libpb.env.flags["chroot"] has been set, if valid, and that all
+libpb.env.env values have been initialised.
+
+The sub-items of (2) can be called in any order.  (2.1) cleans the environment
+variables (libpb.env.env and os.environ).  (2.2) caches expensive operations
+used by the ports infrastructure and is optional.  (2.3) loads the package
+database.
+
+(2.1) and (2.2) need to be called before initiating a Port object.
+"""
 
 from __future__ import absolute_import
 
