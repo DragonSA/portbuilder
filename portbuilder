@@ -67,12 +67,10 @@ def sigint():
 
 def main():
     """The main event loop."""
-    from libpb.env import flags, setup_env
+    from libpb.env import flags
     from libpb.event import event
     from libpb.monitor import Top
     from libpb.port import get_port
-
-    pkg.db.load()
 
     # Process arguments
     parser = gen_parser()
@@ -81,6 +79,7 @@ def main():
     options.parser = parser
     set_early_options(options)
     mk.load_defaults()
+    pkg.db.load()
     set_options(options)
 
     if len(options.args) == 0:
@@ -91,7 +90,7 @@ def main():
     mkdir(flags["log_dir"])
 
     # Cache the environment variables used by ports/Mk/bsd.*.mk
-    setup_env()
+    mk.setup_env()
 
     # Install signal handlers
     signal.signal(signal.SIGINT, signal.SIG_IGN)

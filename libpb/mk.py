@@ -2,6 +2,10 @@
 
 from __future__ import absolute_import
 
+import os
+import re
+import subprocess
+
 from libpb import env, job, make, pkg, queue, signal
 
 __all__ = ["Attr", "attr", "load_defaults"]
@@ -13,34 +17,102 @@ def load_defaults():
 
     Requires flags["chroot"] and env.env to be initialised.
     """
-    menv = make_env(
+    menv = [
             # DEPENDS_TARGET modifiers
             "DEPENDS_CLEAN", "DEPENDS_PRECLEAN", "DEPENDS_TARGET",
-            "BATCH", , "USE_PACKAGE_DEPENDS", "WITH_DEBUG", "WITH_PKGNG"
-        )
+            # Sundry items
+            "BATCH", "USE_PACKAGE_DEPENDS", "WITH_DEBUG", "WITH_PKGNG"
+        ]
+
+    master_keys = env.master_env.keys()
+    keys = set(menv + master_keys)
+
+    make = ["make", "-f/dev/null"] + ["-V%s" % i for i in keys]
+    args += ["-D%s" % k if v is True else "%s=%s" % (k, v) for k, v in env.env.items()]
+    if env.flags["chroot"]:
+        make = ["chroot", flags["chroot"]] + make
+    make = subprocess.Popen(make, stdout=subprocess.PIPE,
+                            stderr=subprocess.PIPE, close_fds=True)
+    if make.wait() == 0:
+        make_env = dict((i, j.strip()) for i, j in zip(keys, make.readlines()))
+    else:
+        make_env = dict((i, "") for i in keys)
+
+    # Update env_master with predefined values from make.conf
+    for k in master_keys:
+        if k in env.env:
+            env.env_master[k] = None
+        elif v:
+            env.env[k] = env.env_master[k] = make_env[k]
 
     # DEPENDS_TARGET / flags["target"] modifiers
-    if menv["DEPENDS_TARGET"]:
-        env.flags["target"] = menv["DEPENDS_TARGET"].split()
+    if make_env["DEPENDS_TARGET"]:
+        env.flags["target"] = make_env["DEPENDS_TARGET"].split()
         for i in env.flags["target"]:
             if i == "reinstall":
                 i = env.flags["target"][env.flags["target"].find(i)] = "install"
             if i not in env.TARGET:
                 raise ValueError("unsupported DEPENDS_TARGET: '%s'" % i)
     else:
-        if menv["DEPENDS_CLEAN"] and env.flags["target"][-1] != "clean":
+        if make_env["DEPENDS_CLEAN"] and env.flags["target"][-1] != "clean":
             env.flags["target"] = env.flags["target"] + ["clean"]
-        if menv["DEPENDS_PRECLEAN"] and env.flags["target"][0] != "clean":
+        if make_env["DEPENDS_PRECLEAN"] and env.flags["target"][0] != "clean":
             env.flags["target"] = ["clean"] + env.flags["target"]
 
-    if menv["BATCH"]:
+    # Sundry items
+    if make_env["BATCH"]:
         env.flags["config"] = "none"
-    if menv["USE_PACKAGE_DEPENDS"]:
+    if make_env["USE_PACKAGE_DEPENDS"]:
         env.flags["depend"] = ["package", "build"]
-    if menv["WITH_DEBUG"]:
+    if make_env["WITH_DEBUG"]:
         env.flags["debug"] = True
-    if menv["WITH_PKGNG"]:
+    if make_env["WITH_PKGNG"]:
         env.flags["pkg_mgmt"] = "pkgng"
+
+
+def setup_env():
+    """Update the env dictionary based on this programs environment flags."""
+    for i in env:
+        if i in os.environ:
+            env[i] = os.environ[i]
+
+    # Cleanup some env variables
+    if env["PORTSDIR"][-1] == '/':
+        env["PORTSDIR"] = env["PORTSDIR"][:-1]
+
+    # Make sure environ is not polluted with make flags
+    for key in ("__MKLVL__", "MAKEFLAGS", "MAKELEVEL", "MFLAGS",
+                "MAKE_JOBS_FIFO"):
+        try:
+            del os.environ[key]
+        except KeyError:
+            pass
+
+    # Variables conditionally set in ports/Mk/bsd.port.mk
+    uname = os.uname()
+    if "ARCH" not in os.environ:
+        os.environ["ARCH"] = uname[4]
+    if "OPSYS" not in os.environ:
+        os.environ["OPSYS"] = uname[0]
+    if "OSREL" not in os.environ:
+        os.environ["OSREL"] = uname[2].split('-', 1)[0].split('(', 1)[0]
+    if "OSVERSION" not in os.environ:
+        os.environ["OSVERSION"] = _get_os_version()
+    if (uname[4] in ("amd64", "ia64") and
+        "HAVE_COMPAT_IA32_KERN" not in os.environ):
+        # TODO: create ctypes wrapper around sysctl(3)
+        has_compact = "YES" if _sysctl("compat.ia32.maxvmem") else ""
+        os.environ["HAVE_COMPAT_IA32_KERN"] = has_compact
+    if "LINUX_OSRELEASE" not in os.environ:
+        os.environ["LINUX_OSRELEASE"] = _sysctl("compat.linux.osrelease")
+    if "UID" not in os.environ:
+        os.environ["UID"] = str(os.getuid())
+    if "CONFIGURE_MAX_CMD_LEN" not in os.environ:
+        os.environ["CONFIGURE_MAX_CMD_LEN"] = _sysctl("kern.argmax")
+
+    # Variables conditionally set in ports/Mk/bsd.port.subdir.mk
+    if "_OSVERSION" not in os.environ:
+        os.environ["_OSVERSION"] = uname[2]
 
 
 def attr(origin):
@@ -109,6 +181,33 @@ class Attr(signal.Signal):
         self.emit(self.origin, attr_map)
 
 
+def _sysctl(name):
+    """Retrieve the string value of a sysctlbyname(3)."""
+    # TODO: create ctypes wrapper around sysctl(3)
+    sysctl = subprocess.Popen(("sysctl", "-n", name), stdout=subprocess.PIPE,
+                              stderr=subprocess.PIPE, close_fds=True)
+    if sysctl.wait() == 0:
+        return sysctl.stdout.read()[:-1]
+    else:
+        return ""
+
+
+def _get_os_version():
+    """Get the OS Version.  Based on how ports/Mk/bsd.port.mk sets OSVERSION"""
+    # XXX: platform specific code
+    for path in (flags["chroot"] + "/usr/include/sys/param.h",
+                 flags["chroot"] + "/usr/src/sys/sys/param.h"):
+        if os.path.isfile(path):
+            # We have a param.h
+            osversion = re.search('^#define\s+__FreeBSD_version\s+([0-9]*).*$',
+                                open(path, "r").read(), re.MULTILINE)
+            if osversion:
+                return osversion.groups()[0]
+    return _sysctl("kern.osreldate")
+
+#=============================================================================#
+#                          PORTS ATTRIBUTE SECTION                            #
+#=============================================================================#
 ports_attr = {
 # Port naming
 "name":       ["PORTNAME",     str], # The port's name

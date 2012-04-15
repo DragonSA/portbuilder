@@ -2,15 +2,11 @@
 
 from __future__ import absolute_import
 
-import os
-import re
-import subprocess
-
 from .port.port import Port
 
 __all__ = [
         "CPUS", "CONFIG", "DEPEND", "MODE", "PKG_MGMT", "STAGE", "TARGET",
-        "env", "env_master", "flags", "setup_env"
+        "env", "env_master", "flags",
     ]
 
 CPUS = os.sysconf("SC_NPROCESSORS_ONLN")
@@ -106,115 +102,3 @@ flags = {
   "stage"       : Port.ABSENT           # The minimum level for build
   "target"      : ["install", "clean"]  # Dependency target (aka DEPENDS_TARGET)
 }
-
-
-def _make_env(keys):
-    """
-    Retrieve the environment variables as defined in make.conf.
-
-    If the variable is not defined in make,conf then the os.environ value is
-    used if present.
-    """
-    make = ["make", "-f/dev/null"] + ["-V%s" % i for i in keys]
-    args += ["-D%s" % k if v is True else "%s=%s" % (k, v) for k, v in env.items()]
-
-    if flags["chroot"]:
-        make = ["chroot", flags["chroot"]] + make
-    make = subprocess.Popen(make, stdout=subprocess.PIPE,
-                            stderr=subprocess.PIPE, close_fds=True)
-    if make.wait() == 0:
-        return dict((i, j.strip()) for i, j in zip(env, make.readlines()))
-    else:
-        return dict((i, "") for i in env)
-
-
-def _sysctl(name):
-    """Retrieve the string value of a sysctlbyname(3)."""
-    # TODO: create ctypes wrapper around sysctl(3)
-    sysctl = subprocess.Popen(("sysctl", "-n", name), stdout=subprocess.PIPE,
-                              stderr=subprocess.PIPE, close_fds=True)
-    if sysctl.wait() == 0:
-        return sysctl.stdout.read()[:-1]
-    else:
-        return ""
-
-
-def _get_os_version():
-    """Get the OS Version.  Based on how ports/Mk/bsd.port.mk sets OSVERSION"""
-    # XXX: platform specific code
-    for path in (flags["chroot"] + "/usr/include/sys/param.h",
-                 flags["chroot"] + "/usr/src/sys/sys/param.h"):
-        if os.path.isfile(path):
-            # We have a param.h
-            osversion = re.search('^#define\s+__FreeBSD_version\s+([0-9]*).*$',
-                                open(path, "r").read(), re.MULTILINE)
-            if osversion:
-                return osversion.groups()[0]
-    return _sysctl("kern.osreldate")
-
-
-def make_env(env, *args):
-    """
-    Retrieve the default make flags, available either from make.conf or from
-    the environment.
-
-    This function needs to be called after flags["chroot"] has been set but
-    ideally before other flags are modified.  This function should be called
-    at least once.
-    """
-    master_keys = master_env.keys()
-    make_env = _make_env(env, args + master_keys)
-
-    # Update env_master with predefined values from make.conf
-    for k, v in zip(master_keys, make_env[-len(master_keys):]):
-        if k in env:
-            env_master[k] = None
-        elif v:
-            env[k] = env_master[k] = v
-
-    return dict((k, v) for k, v in zip(args, make_env))
-
-
-def setup_env():
-    """Update the env dictionary based on this programs environment flags."""
-    for i in env:
-        if i in os.environ:
-            env[i] = os.environ[i]
-
-    # Cleanup some env variables
-    if env["PORTSDIR"][-1] == '/':
-        env["PORTSDIR"] = env["PORTSDIR"][:-1]
-
-    # Make sure environ is not polluted with make flags
-    for key in ("__MKLVL__", "MAKEFLAGS", "MAKELEVEL", "MFLAGS",
-                "MAKE_JOBS_FIFO"):
-        try:
-            del os.environ[key]
-        except KeyError:
-            pass
-
-    # Variables conditionally set in ports/Mk/bsd.port.mk
-    uname = os.uname()
-    if "ARCH" not in os.environ:
-        os.environ["ARCH"] = uname[4]
-    if "OPSYS" not in os.environ:
-        os.environ["OPSYS"] = uname[0]
-    if "OSREL" not in os.environ:
-        os.environ["OSREL"] = uname[2].split('-', 1)[0].split('(', 1)[0]
-    if "OSVERSION" not in os.environ:
-        os.environ["OSVERSION"] = _get_os_version()
-    if (uname[4] in ("amd64", "ia64") and
-        "HAVE_COMPAT_IA32_KERN" not in os.environ):
-        # TODO: create ctypes wrapper around sysctl(3)
-        has_compact = "YES" if _sysctl("compat.ia32.maxvmem") else ""
-        os.environ["HAVE_COMPAT_IA32_KERN"] = has_compact
-    if "LINUX_OSRELEASE" not in os.environ:
-        os.environ["LINUX_OSRELEASE"] = _sysctl("compat.linux.osrelease")
-    if "UID" not in os.environ:
-        os.environ["UID"] = str(os.getuid())
-    if "CONFIGURE_MAX_CMD_LEN" not in os.environ:
-        os.environ["CONFIGURE_MAX_CMD_LEN"] = _sysctl("kern.argmax")
-
-    # Variables conditionally set in ports/Mk/bsd.port.subdir.mk
-    if "_OSVERSION" not in os.environ:
-        os.environ["_OSVERSION"] = uname[2]
