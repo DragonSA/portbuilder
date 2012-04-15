@@ -2,11 +2,112 @@
 
 from __future__ import absolute_import
 
-from libpb import pkg, queue
-from ..env import env
-from ..signal import Signal
+from libpb import env, job, make, pkg, queue, signal
 
-__all__ = ["Attr", "attr"]
+__all__ = ["Attr", "attr", "load_defaults"]
+
+
+def load_defaults():
+    """
+    Load the defaults as specified from /etc/make.conf.
+
+    Requires flags["chroot"] and env.env to be initialised.
+    """
+    menv = make_env(
+            # DEPENDS_TARGET modifiers
+            "DEPENDS_CLEAN", "DEPENDS_PRECLEAN", "DEPENDS_TARGET",
+            "BATCH", , "USE_PACKAGE_DEPENDS", "WITH_DEBUG", "WITH_PKGNG"
+        )
+
+    # DEPENDS_TARGET / flags["target"] modifiers
+    if menv["DEPENDS_TARGET"]:
+        env.flags["target"] = menv["DEPENDS_TARGET"].split()
+        for i in env.flags["target"]:
+            if i == "reinstall":
+                i = env.flags["target"][env.flags["target"].find(i)] = "install"
+            if i not in env.TARGET:
+                raise ValueError("unsupported DEPENDS_TARGET: '%s'" % i)
+    else:
+        if menv["DEPENDS_CLEAN"] and env.flags["target"][-1] != "clean":
+            env.flags["target"] = env.flags["target"] + ["clean"]
+        if menv["DEPENDS_PRECLEAN"] and env.flags["target"][0] != "clean":
+            env.flags["target"] = ["clean"] + env.flags["target"]
+
+    if menv["BATCH"]:
+        env.flags["config"] = "none"
+    if menv["USE_PACKAGE_DEPENDS"]:
+        env.flags["depend"] = ["package", "build"]
+    if menv["WITH_DEBUG"]:
+        env.flags["debug"] = True
+    if menv["WITH_PKGNG"]:
+        env.flags["pkg_mgmt"] = "pkgng"
+
+
+def attr(origin):
+    """Retrieve a ports attributes by using the attribute queue."""
+    attr = Attr(origin)
+    queue.attr.add(job.AttrJob(attr))
+    return attr
+
+
+class Attr(signal.Signal):
+    """Get the attributes for a given port"""
+
+    def __init__(self, origin):
+        super(Attr, self).__init__()
+        self.origin = origin
+
+    def get(self):
+        """Get the attributes from the port by invoking make"""
+        from ..make import make_target
+
+        args = []  #: Arguments to be passed to the make target
+        # Pass all the arguments from ports_attr table
+        for i in ports_attr.itervalues():
+            args.append('-V')
+            args.append(i[0])
+
+        return make.make_target(self.origin, args, True).connect(self.parse_attr)
+
+    def parse_attr(self, make):
+        """Parse the attributes from a port and call the requested function."""
+        if make.wait() != make.SUCCESS:
+            from ..debug import error
+            error("libpb/port/mk/attr_stage2",
+                  ["Failed to get port %s attributes (err=%s)" %
+                   (self.origin, make.returncode),] + make.stderr.readlines())
+            self.emit(self.origin, None)
+            return
+
+        errs = make.stderr.readlines()
+        if len(errs):
+            from ..debug import error
+            error("libpb/port/mk/attr_stage2",
+                  ["Non-fatal errors in port %s attributes" % self.origin,] +
+                    errs)
+
+        attr_map = {}
+        for name, value in ports_attr.iteritems():
+            if value[1] is str:
+                # Get the string (stripped)
+                attr_map[name] = make.stdout.readline().strip()
+            else:
+                # Pass the string through a special processing (like list/tuple)
+                attr_map[name] = value[1](make.stdout.readline().split())
+            # Apply all filters for the attribute
+            for i in value[2:]:
+                try:
+                    attr_map[name] = i(attr_map[name])
+                except BaseException, e:
+                    from ..debug import error
+                    error("libpb/port/mk/attr_stage2",
+                          ("Failed to process port %s attributes" %
+                           self.origin,) + e.args)
+                    self.emit(self.origin, None)
+                    return
+
+        self.emit(self.origin, attr_map)
+
 
 ports_attr = {
 # Port naming
@@ -65,7 +166,7 @@ ports_attr = {
 } #: The attributes of the given port
 
 # The following are 'fixes' for various attributes
-ports_attr["depends"].append(lambda x: [i[len(env["PORTSDIR"]) + 1:] for i in x])
+ports_attr["depends"].append(lambda x: [i[len(env.env["PORTSDIR"]) + 1:] for i in x])
 ports_attr["depends"].append(lambda x: ([x.remove(i) for i in x
                                          if x.count(i) > 1], x)[1])
 ports_attr["distfiles"].append(lambda x: [i.split(':', 1)[0] for i in x])
@@ -110,8 +211,7 @@ def parse_jobs_number(jobs_number):
     try:
         return int(jobs_number[2:])
     except ValueError:
-        from ..env import CPUS
-        return CPUS
+        return env.CPUS
 ports_attr["jobs_number"].append(parse_jobs_number)
 
 
@@ -121,8 +221,8 @@ def strip_depends(depends):
         if depend.find(':') == -1:
             raise RuntimeError("bad dependency line: '%s'" % depend)
         obj, port = depend.split(':', 1)
-        if port.startswith(env["PORTSDIR"]):
-            port = port[len(env["PORTSDIR"]) + 1:]
+        if port.startswith(env.env["PORTSDIR"]):
+            port = port[len(env.env["PORTSDIR"]) + 1:]
         else:
             raise RuntimeError("bad dependency line: '%s'" % depend)
         yield obj, port
@@ -133,74 +233,3 @@ ports_attr["depend_lib"].extend((strip_depends, tuple))
 ports_attr["depend_run"].extend((strip_depends, tuple))
 ports_attr["depend_patch"].extend((strip_depends, tuple))
 ports_attr["makefiles"].append(lambda x: [i for i in x if i != '..'])
-
-
-def attr(origin):
-    """Retrieve a ports attributes by using the attribute queue."""
-    from ..job import AttrJob
-
-    attr = Attr(origin)
-    queue.attr.add(AttrJob(attr))
-    return attr
-
-
-class Attr(Signal):
-    """Get the attributes for a given port"""
-
-    def __init__(self, origin):
-        Signal.__init__(self)
-        self.origin = origin
-
-    def get(self):
-        """Get the attributes from the port by invoking make"""
-        from ..make import make_target
-
-        args = []  #: Arguments to be passed to the make target
-        # Pass all the arguments from ports_attr table
-        for i in ports_attr.itervalues():
-            args.append('-V')
-            args.append(i[0])
-
-        return make_target(self.origin, args, True).connect(self.parse_attr)
-
-    def parse_attr(self, make):
-        """Parse the attributes from a port and call the requested function."""
-        from ..make import SUCCESS
-
-        if make.wait() != SUCCESS:
-            from ..debug import error
-            error("libpb/port/mk/attr_stage2",
-                  ["Failed to get port %s attributes (err=%s)" %
-                   (self.origin, make.returncode),] + make.stderr.readlines())
-            self.emit(self.origin, None)
-            return
-
-        errs = make.stderr.readlines()
-        if len(errs):
-            from ..debug import error
-            error("libpb/port/mk/attr_stage2",
-                  ["Non-fatal errors in port %s attributes" % self.origin,] +
-                    errs)
-
-        attr_map = {}
-        for name, value in ports_attr.iteritems():
-            if value[1] is str:
-                # Get the string (stripped)
-                attr_map[name] = make.stdout.readline().strip()
-            else:
-                # Pass the string through a special processing (like list/tuple)
-                attr_map[name] = value[1](make.stdout.readline().split())
-            # Apply all filters for the attribute
-            for i in value[2:]:
-                try:
-                    attr_map[name] = i(attr_map[name])
-                except BaseException, e:
-                    from ..debug import error
-                    error("libpb/port/mk/attr_stage2",
-                          ("Failed to process port %s attributes" %
-                           self.origin,) + e.args)
-                    self.emit(self.origin, None)
-                    return
-
-        self.emit(self.origin, attr_map)
-

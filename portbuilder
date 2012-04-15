@@ -12,7 +12,7 @@ import subprocess
 import sys
 import traceback
 
-from libpb import builder, env, pkg, queue
+from libpb import builder, env, mk, pkg, queue
 
 VAR_NAME = "^[a-zA-Z_][a-zA-Z0-9_]*$"
 
@@ -80,7 +80,7 @@ def main():
     options.args = args
     options.parser = parser
     set_early_options(options)
-    load_defaults()
+    mk.load_defaults()
     set_options(options)
 
     if len(options.args) == 0:
@@ -309,42 +309,6 @@ def gen_parser():
     #                  "infrastructure.")
 
     return parser
-
-
-def load_defaults():
-    """
-    Load the defaults as specified from /etc/make.conf.
-
-    Requires flags["chroot"] to be initialised.
-    """
-    menv = make_env(
-            # DEPENDS_TARGET modifiers
-            "DEPENDS_CLEAN", "DEPENDS_PRECLEAN", "DEPENDS_TARGET",
-            "BATCH", , "USE_PACKAGE_DEPENDS", "WITH_DEBUG", "WITH_PKGNG"
-        )
-
-    # DEPENDS_TARGET / flags["target"] modifiers
-    if menv["DEPENDS_TARGET"]:
-        env.flags["target"] = menv["DEPENDS_TARGET"].split()
-        for i in env.flags["target"]:
-            if i == "reinstall":
-                i = env.flags["target"][env.flags["target"].find(i)] = "install"
-            if i not in env.TARGET:
-                raise ValueError("unsupported DEPENDS_TARGET: '%s'" % i)
-    else:
-        if menv["DEPENDS_CLEAN"] and env.flags["target"][-1] != "clean":
-            env.flags["target"] = env.flags["target"] + ["clean"]
-        if menv["DEPENDS_PRECLEAN"] and env.flags["target"][0] != "clean":
-            env.flags["target"] = ["clean"] + env.flags["target"]
-
-    if menv["BATCH"]:
-        env.flags["config"] = "none"
-    if menv["USE_PACKAGE_DEPENDS"]:
-        env.flags["depend"] = ["package", "build"]
-    if menv["WITH_DEBUG"]:
-        env.flags["debug"] = True
-    if menv["WITH_PKGNG"]:
-        env.flags["pkg_mgmt"] = "pkgng"
 
 
 def set_early_options(options):
