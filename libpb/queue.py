@@ -28,12 +28,12 @@ class QueueManager(object):
         return len(self.queue) + len(self.active) + len(self.stalled)
 
     @property
-    def load(self):
+    def load(self):  # pylint: disable-msg=E0202
         """Returns the current allowed load."""
         return self._load
 
-    @load.setter
-    def load(self, load):
+    @load.setter  # pylint: disable-msg=E1101
+    def load(self, load):  # pylint: disable-msg=E0202,E0102
         """Set the load and start jobs as required."""
         run = load > self._load
         self._load = load

@@ -123,7 +123,7 @@ class PortJob(Job):
         return "<PortJob(port=%s, stage=%i)>" % (self.port.origin, self.stage)
 
     @property
-    def priority(self):
+    def priority(self):  # pylint: disable-msg=E0202
         """Priority of port.  Port's priority may change without notice."""
         return self.port.dependent.priority
 
