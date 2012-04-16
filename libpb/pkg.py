@@ -28,11 +28,11 @@ def add(port, repo=False):
         args += (port.attr["pkgfile"],)
 
     if env.flags["no_op"]:
-        pkg_add = make.PopenNone(args, self)
+        pkg_add = make.PopenNone(args, port)
     else:
-        logfile = open(self.log_file, "a")
-        pkg_add = make.Popen(args, self, stdin=subprocess.PIPE, stdout=logfile,
-                             stderr=logfile, close_fds=True)
+        logfile = open(port.log_file, "a")
+        pkg_add = make.Popen(args, port, stdin=subprocess.PIPE, stdout=logfile,
+                             stderr=logfile)
         pkg_add.stdin.close()
     return pkg_add
 
@@ -136,7 +136,7 @@ class PKGDB(object):
             for pkg in self.db[port.origin]:
                 if pkg.rsplit('-', 1)[0] == pkgname:
                     pkgs.add(pkg)
-            self.db[port.origin] -= remove
+            self.db[port.origin] -= pkgs
 
     def status(self, port):
         """Query the install status of a port."""
