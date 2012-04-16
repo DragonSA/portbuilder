@@ -2,6 +2,8 @@
 
 from __future__ import absolute_import
 
+from libpb import event, mk, signal
+
 __all__ = ["get_port", "get_ports", "ports"]
 
 
@@ -19,23 +21,17 @@ class PortCache(object):
     def get_port(self, origin):
         """Get a port and callback with it."""
         if origin in self._ports:
-            from ..event import post_event
-            from ..signal import Signal
-
-            signal = Signal()
-            post_event(signal.emit, self._ports[origin])
-            return signal
+            sig = signal.Signal()
+            event.post_event(sig.emit, self._ports[origin])
+            return sig
         else:
             if origin in self._waiters:
                 return self._waiters[origin]
             else:
-                from .mk import attr
-                from ..signal import Signal
-
-                signal = Signal()
-                self._waiters[origin] = signal
-                attr(origin).connect(self._attr)
-                return signal
+                sig = signal.Signal()
+                self._waiters[origin] = sig
+                mk.attr(origin).connect(self._attr)
+                return sig
 
     def __iter__(self):
         return self._ports.values()
@@ -44,13 +40,13 @@ class PortCache(object):
         """Use attr to create a port."""
         from .port import Port
 
-        signal = self._waiters.pop(origin)
+        sig = self._waiters.pop(origin)
         if attr is None:
             port = origin
         else:
             port = Port(origin, attr)
         self._ports[origin] = port
-        signal.emit(port)
+        sig.emit(port)
 
 
 _cache = PortCache()
