@@ -4,7 +4,7 @@ from __future__ import absolute_import
 
 import bisect
 
-from .env import CPUS
+from libpb import env
 
 __all__ = [
         "QueueManager", "queues", "attr", "config", "checksum", "fetch",
@@ -111,13 +111,13 @@ class QueueManager(object):
         return queue.pop(best_idx)
 
 
-attr  = QueueManager(CPUS * 2)
+attr  = QueueManager(env.CPUS * 2)
 clean = QueueManager(1)
 
 config   = QueueManager(1)
-checksum = QueueManager(max(1, CPUS // 2))
+checksum = QueueManager(max(1, env.CPUS // 2))
 fetch    = QueueManager(1)
-build    = QueueManager(CPUS * 2)
+build    = QueueManager(env.CPUS * 2)
 install  = QueueManager(1)
 package  = QueueManager(1)
 queues   = (config, checksum, fetch, build, install, package, install, install)
