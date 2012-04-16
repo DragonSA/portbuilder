@@ -24,17 +24,19 @@ def load_defaults():
             "BATCH", "USE_PACKAGE_DEPENDS", "WITH_DEBUG", "WITH_PKGNG"
         ]
 
-    master_keys = env.master_env.keys()
+    master_keys = env.env_master.keys()
     keys = set(menv + master_keys)
 
-    make = ["make", "-f/dev/null"] + ["-V%s" % i for i in keys]
+    args = ["make", "-f/dev/null"] + ["-V%s" % i for i in keys]
     args += ["-D%s" % k if v is True else "%s=%s" % (k, v) for k, v in env.env.items()]
     if env.flags["chroot"]:
-        make = ["chroot", flags["chroot"]] + make
-    make = subprocess.Popen(make, stdout=subprocess.PIPE,
+        args = ["chroot", env.flags["chroot"]] + make
+    make = subprocess.Popen(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                             stderr=subprocess.PIPE, close_fds=True)
+    make.stdin.close()
+    make.stderr.close()
     if make.wait() == 0:
-        make_env = dict((i, j.strip()) for i, j in zip(keys, make.readlines()))
+        make_env = dict((i, j.strip()) for i, j in zip(keys, make.stdout.readlines()))
     else:
         make_env = dict((i, "") for i in keys)
 
@@ -42,8 +44,10 @@ def load_defaults():
     for k in master_keys:
         if k in env.env:
             env.env_master[k] = None
-        elif v:
+        elif make_env[k]:
             env.env[k] = env.env_master[k] = make_env[k]
+        else:
+            env.env[k] = env.env_master[k]
 
     # DEPENDS_TARGET / flags["target"] modifiers
     if make_env["DEPENDS_TARGET"]:
@@ -73,8 +77,8 @@ def load_defaults():
 def clean():
     """Clean the env and os.environ.."""
     # Cleanup some env variables
-    if env["PORTSDIR"][-1] == '/':
-        env["PORTSDIR"] = env["PORTSDIR"][:-1]
+    if env.env["PORTSDIR"][-1] == '/':
+        env.env["PORTSDIR"] = env.env["PORTSDIR"][:-1]
 
     # Make sure environ is not polluted with make flags
     for key in ("__MKLVL__", "MAKEFLAGS", "MAKELEVEL", "MFLAGS",
@@ -130,8 +134,6 @@ class Attr(signal.Signal):
 
     def get(self):
         """Get the attributes from the port by invoking make"""
-        from ..make import make_target
-
         args = []  #: Arguments to be passed to the make target
         # Pass all the arguments from ports_attr table
         for i in ports_attr.itervalues():
@@ -142,8 +144,9 @@ class Attr(signal.Signal):
 
     def parse_attr(self, make):
         """Parse the attributes from a port and call the requested function."""
-        if make.wait() != make.SUCCESS:
-            from ..debug import error
+        # TODO: if make.wait() != make.SUCCESS
+        if make.wait() != 0:
+            from .debug import error
             error("libpb/port/mk/attr_stage2",
                   ["Failed to get port %s attributes (err=%s)" %
                    (self.origin, make.returncode),] + make.stderr.readlines())
@@ -152,7 +155,7 @@ class Attr(signal.Signal):
 
         errs = make.stderr.readlines()
         if len(errs):
-            from ..debug import error
+            from .debug import error
             error("libpb/port/mk/attr_stage2",
                   ["Non-fatal errors in port %s attributes" % self.origin,] +
                     errs)
@@ -170,7 +173,7 @@ class Attr(signal.Signal):
                 try:
                     attr_map[name] = i(attr_map[name])
                 except BaseException, e:
-                    from ..debug import error
+                    from .debug import error
                     error("libpb/port/mk/attr_stage2",
                           ("Failed to process port %s attributes" %
                            self.origin,) + e.args)
@@ -194,8 +197,8 @@ def _sysctl(name):
 def _get_os_version():
     """Get the OS Version.  Based on how ports/Mk/bsd.port.mk sets OSVERSION"""
     # XXX: platform specific code
-    for path in (flags["chroot"] + "/usr/include/sys/param.h",
-                 flags["chroot"] + "/usr/src/sys/sys/param.h"):
+    for path in (env.flags["chroot"] + "/usr/include/sys/param.h",
+                 env.flags["chroot"] + "/usr/src/sys/sys/param.h"):
         if os.path.isfile(path):
             # We have a param.h
             osversion = re.search('^#define\s+__FreeBSD_version\s+([0-9]*).*$',

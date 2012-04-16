@@ -185,7 +185,7 @@ def stop(kill=False, kill_clean=False):
 
     # Stop all queues
     queue.attr.load = 0
-    for q in queues:
+    for q in queue.queues:
         q.load = 0
 
     # Make cleaning go a bit faster
@@ -197,7 +197,7 @@ def stop(kill=False, kill_clean=False):
 
     # Wait for all active ports to finish so that they may be cleaned
     active = set()
-    for q in queues:
+    for q in queue.queues:
         for job in q.active:
             port = job.port
             active.add(port)

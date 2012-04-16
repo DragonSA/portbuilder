@@ -28,13 +28,12 @@ class PortDelegate(object):
 
     def __call__(self, port):
         """Add a port to the required builder."""
-        from libpb.env import flags
         from libpb.port.dependhandler import Dependent
 
         if isinstance(port, str):
             return
-        if ((not (flags["mode"] == "recursive" or self.force) and
-             port.install_status > flags["stage"]) or port in builder.depend_resolve.ports):
+        if ((not (env.flags["mode"] == "recursive" or self.force) and
+             port.install_status > env.flags["stage"]) or port in builder.depend_resolve.ports):
             return
         if self.upgrade or self.force:
             port.dependent.status = Dependent.UNRESOLV
@@ -45,7 +44,7 @@ class PortDelegate(object):
                 job = builder.install.ports[port]
         else:
             job = builder.install(port)
-        depend.register(job)
+        builder.depend_resolve.register(job)
 
 
 def sigterm():
@@ -78,6 +77,9 @@ def main():
     options.args = args
     options.parser = parser
     set_early_options(options)
+    if len(options.args) == 0:
+        print parser.get_usage()
+        return
     print "Loading /etc/make.conf (defaults)...",
     mk.load_defaults()
     print "done"
@@ -89,10 +91,6 @@ def main():
     mk.clean()
     mk.cache()
     print "done"
-
-    if len(options.args) == 0:
-        print parser.get_usage()
-        return
 
     # Make sure log_dir is available
     mkdir(flags["log_dir"])
@@ -353,12 +351,11 @@ def set_early_options(options):
 
 def set_options(options):
     """Set all the global options."""
-    from libpb.env import env, flags
     from libpb.port.port import Port
 
     # Force 'none' config mode if in batch mode
     if options.batch:
-        flags["config"] = "none"
+        env.flags["config"] = "none"
 
     # Add all installed ports to port list
     if options.all:
@@ -379,7 +376,7 @@ def set_options(options):
 
     # Debug mode
     if options.debug:
-        flags["debug"] = True
+        env.flags["debug"] = True
 
     # Depend resolve methods
     if options.depend:
@@ -387,13 +384,13 @@ def set_options(options):
         for i in depend:
             if depend.count(i) > 1:
                 options.parser.error("depend method specified multiple times")
-            elif i not in ("build", "package", "repo"):
+            elif i not in env.DEPEND:
                 options.parser.error("unknown depend method")
-        flags["depend"] = depend
+        env.flags["depend"] = depend
 
     # Fetch only options:
     if options.fetch:
-        flags["fetch_only"] = True
+        env.flags["fetch_only"] = True
         queue.checksum.load = env.CPUS
 
     # Fetch ports list from file
@@ -405,12 +402,12 @@ def set_options(options):
 
     # Force build and install of ports
     if options.force and len(options.args) > 1:
-        flags["mode"] = "recursive"
+        env.flags["mode"] = "recursive"
 
     # Force build and install of all ports
     if options.forceA:
-        flags["stage"] = max(flags["stage"], Port.NEWER)
-        flags["mode"] = "recursive"
+        env.flags["stage"] = max(env.flags["stage"], Port.NEWER)
+        env.flags["mode"] = "recursive"
 
     # ! (-n & -N)
     if options.no_opt and options.no_opt_print:
@@ -418,15 +415,15 @@ def set_options(options):
 
     # No operations and print (-n)
     if options.no_opt_print:
-        flags["no_op"] = True
-        flags["no_op_print"] = True
+        env.flags["no_op"] = True
+        env.flags["no_op_print"] = True
         # Configure all ports before printing commands
         for q in queue.queues[1:]:
             q.load = 0
 
     # No operations (-N)
     if options.no_opt:
-        flags["no_op"] = True
+        env.flags["no_op"] = True
 
     # Do not clean a port
     if options.no_clean and env.flags["target"][-1] == "clean":
@@ -434,17 +431,17 @@ def set_options(options):
 
     # Package all installed ports (-P)
     if options.packageA:
-        flags["target"] = ["package"]
+        env.flags["target"] = ["package"]
         options.package = True
 
     # Upgrade ports (-u)
     if options.upgrade and len(options.args) > 1:
-        flags["mode"] = "recursive"
+        env.flags["mode"] = "recursive"
 
     # Upgrade all ports (-U)
     if options.upgradeA:
-        flags["stage"] = max(flags["stage"], Port.OLDER)
-        flags["mode"] = "recursive"
+        env.flags["stage"] = max(env.flags["stage"], Port.OLDER)
+        env.flags["mode"] = "recursive"
 
     # Pre-clean before building ports
     if options.preclean and env.flags["target"][0] != "clean":
