@@ -6,7 +6,13 @@ from __future__ import absolute_import
 
 import subprocess
 
-from libpb import env, make, port
+from libpb import env, make
+
+# Installed status flags
+ABSENT  = 0
+OLDER   = 1
+CURRENT = 2
+NEWER   = 3
 
 __all__ = ["add", "version"]
 
@@ -37,7 +43,7 @@ def info():
     if env.flags["chroot"]:
         args = ("chroot", env.flags["chroot"]) + args
     pkg_info = subprocess.Popen(
-        args, stdin=subprocess.PIPE, stdout.subprocess.PIPE,
+        args, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT, close_fds=True)
     pkg_info.stdin.close()
 
@@ -55,24 +61,22 @@ def info():
 
 def version(old, new):
     """Compare two package names and indicates the difference."""
-    Port = port.port.Port
-
     old = old.rsplit('-', 1)[1]  # Name and version components of the old pkg
     new = new.rsplit('-', 1)[1]  # Name and version components of the new pkg
 
     if old == new:
         # The packages are the same
-        return Port.CURRENT
+        return CURRENT
 
     # Check the ports apoch
     old, new, pstatus = cmp_attr(old, new, ',')
     if pstatus:
-        return Port.CURRENT + pstatus
+        return CURRENT + pstatus
 
     # Check the ports revision
     old, new, pstatus = cmp_attr(old, new, '_')
     if old == new and pstatus:
-        return Port.CURRENT + pstatus
+        return CURRENT + pstatus
 
     # Check the ports version from left to right
     old = old.split('.')
@@ -85,10 +89,10 @@ def version(old, new):
             pstatus = cmp(old[i], new[i])
         # If there is a difference in this version level
         if pstatus:
-            return Port.CURRENT + pstatus
+            return CURRENT + pstatus
 
     # The difference between the number of version levels
-    return Port.CURRENT - cmp(len(old), len(new))
+    return CURRENT - cmp(len(old), len(new))
 
 
 def cmp_attr(old, new, sym):
@@ -106,10 +110,11 @@ def cmp_attr(old, new, sym):
     return (old[0], new[1], pstatus)
 
 
-def PKGDB(object):
+class PKGDB(object):
     """A package database that tracks the installed status of packages."""
 
     def __init__(self):
+        super(PKGDB, self).__init__()
         self.db = {}
 
     def add(self, port):
@@ -117,7 +122,7 @@ def PKGDB(object):
         if port.origin in self.db:
             self.db[port.origin].add(port.attr['pkgname'])
         else:
-            self.db[port.origin] = set([port.attr['pkgname'])
+            self.db[port.origin] = set([port.attr['pkgname']])
 
     def load(self):
         """(Re)Load the package database."""
@@ -135,9 +140,7 @@ def PKGDB(object):
 
     def status(self, port):
         """Query the install status of a port."""
-        Port = port.port.Port
-
-        pstatus = Port.ABSENT
+        pstatus = ABSENT
         if port.origin in self.db:
             pkgname = port.attr['pkgname'].rsplit('-', 1)[0]
             for pkg in self.db[port.origin]:

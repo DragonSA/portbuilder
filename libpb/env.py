@@ -2,7 +2,7 @@
 
 from __future__ import absolute_import
 
-from .port.port import Port
+import os
 
 __all__ = [
         "CPUS", "CONFIG", "DEPEND", "MODE", "PKG_MGMT", "STAGE", "TARGET",
@@ -85,7 +85,7 @@ CONFIG   = ("none", "changed", "newer", "all")
 DEPEND   = ("build", "package", "repo")
 MODE     = ("install", "recursive", "clean")
 PKG_MGMT = ("pkg", "pkgng")
-STAGE    = (Port.ABSENT, Port.OLDER, Port.CURRENT, Port.NEWER)
+STAGE    = (0, 1, 2, 3)
 TARGET   = ("clean", "install", "package")
 flags = {
   "chroot"      : "",                   # Chroot directory of system
@@ -98,7 +98,7 @@ flags = {
   "mode"        : "install",            # Mode of operation
   "no_op"       : False,                # Do nothing
   "no_op_print" : False,                # Print commands instead of execution
-  "pkg_mgmt"    : "pkg"                 # The package system used ('pkg(ng)?')
-  "stage"       : Port.ABSENT           # The minimum level for build
+  "pkg_mgmt"    : "pkg",                # The package system used ('pkg(ng)?')
+  "stage"       : 0,                    # The minimum level for build
   "target"      : ["install", "clean"]  # Dependency target (aka DEPENDS_TARGET)
 }
