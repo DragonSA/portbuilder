@@ -30,7 +30,7 @@ def load_defaults():
     args = ["make", "-f/dev/null"] + ["-V%s" % i for i in keys]
     args += ["-D%s" % k if v is True else "%s=%s" % (k, v) for k, v in env.env.items()]
     if env.flags["chroot"]:
-        args = ["chroot", flags["chroot"]] + make
+        args = ["chroot", env.flags["chroot"]] + make
     make = subprocess.Popen(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                             stderr=subprocess.PIPE, close_fds=True)
     make.stdin.close()

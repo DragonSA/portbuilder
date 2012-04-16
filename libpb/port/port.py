@@ -7,7 +7,7 @@ import os
 import subprocess
 import time
 
-from libpb import env, pkg, queue
+from libpb import env, make, mk, pkg, queue
 
 from ..signal import SignalProperty
 
@@ -222,9 +222,7 @@ class Port(object):
         """Refetch attr data if ports were configured successfully."""
         self._config_lock.release()
         if status:
-            from .mk import Attr
-
-            Attr(self.origin).connect(self._load_attr).get()
+            mk.Attr(self.origin).connect(self._load_attr).get()
             return None
         return status
 
@@ -362,7 +360,7 @@ class Port(object):
         self.stage = Port.REPOINSTALL - 1
         self.working = time.time()
         if self.install_status > Port.ABSENT:
-            return make_target(self, "deinstall").connect(self._repoinstall)
+            return make.make_target(self, "deinstall").connect(self._repoinstall)
         else:
             return self._repoinstall()
 
