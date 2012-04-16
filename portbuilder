@@ -78,6 +78,9 @@ def main():
     options.args = args
     options.parser = parser
     set_early_options(options)
+    if len(options.args) == 0:
+        print parser.get_usage()
+        return
     print "Loading /etc/make.conf (defaults)...",
     mk.load_defaults()
     print "done"
@@ -89,10 +92,6 @@ def main():
     mk.clean()
     mk.cache()
     print "done"
-
-    if len(options.args) == 0:
-        print parser.get_usage()
-        return
 
     # Make sure log_dir is available
     mkdir(flags["log_dir"])
