@@ -57,6 +57,9 @@ def load_defaults():
                 i = env.flags["target"][env.flags["target"].find(i)] = "install"
             if i not in env.TARGET:
                 raise ValueError("unsupported DEPENDS_TARGET: '%s'" % i)
+        if "install" not in env.flags["target"] and \
+                "package" not in env.flags["target"]:
+            raise ValueError("DEPENDS_TARGET must have either install or package")
     else:
         if make_env["DEPENDS_CLEAN"] and env.flags["target"][-1] != "clean":
             env.flags["target"] = env.flags["target"] + ["clean"]
