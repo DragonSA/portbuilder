@@ -364,7 +364,7 @@ class Port(object):
 
     def _pre_package(self):
         """Package the port,"""
-        return self._make_target("package", BATCH=True)
+        return self._make_target("package", BATCH=True, NO_DEPENDS=True)
 
     @staticmethod
     def _post_package(_make, status):
@@ -373,6 +373,8 @@ class Port(object):
 
     def repoinstall(self):
         """Prepare to install the port from a repository."""
+        log.debug("Port.repoinstall()", ("Port '%s': building stage %i" % (self.origin, Port.REPOINSTALL),))
+
         if (self.working or self.attr["no_package"]):
             return False
 
@@ -388,6 +390,8 @@ class Port(object):
         # TODO: proper asserts (valid stage).
         from ..env import flags
         from ..make import make_target
+
+        log.debug("Port.pkginstall()", ("Port '%s': building stage %i" % (self.origin, Port.PKGINSTALL),))
 
         if (self.working or self.attr["no_package"] or
             not os.path.isfile(flags["chroot"] + self.attr["pkgfile"])):
@@ -415,6 +419,9 @@ class Port(object):
                 self.stage = Port.REPOINSTALL if repo else Port.PKGINSTALL
                 self.working = False
                 self.stage_completed.emit(self)
+                self.failed = True
+                log.error("Port._pkginstall()", ("Port '%s': failed stage %d" %
+                          (self.origin, self.stage),))
             else:
                 pkg.db.remove(self)
             self.dependent.status_changed()
@@ -423,22 +430,34 @@ class Port(object):
 
         pkg_add = pkg.add(self, repo)
         if pkg_add:
-            pkg_add.connect(self._post_pkginstall)
+            if repo:
+                pkg_add.connect(self._post_repoinstall)
+            else:
+                pkg_add.connect(self._post_pkginstall)
         return pkg_add
 
-    def _post_pkginstall(self, pkg_add):
+    def _post_repoinstall(self, pkg_add):
+        """Report if the port successfully installed from it's package."""
+        self._post_pkginstall(pkg_add, True)
+
+    def _post_pkginstall(self, pkg_add, repo=False):
         """Report if the port successfully installed from it's package."""
         from ..env import flags
         from ..make import SUCCESS
 
         self.working = False
-        success = pkg_add.wait() == SUCCESS
-        if success:
+        self.stage = Port.REPOINSTALL if repo else Port.PKGINSTALL
+
+        if pkg_add.wait() == SUCCESS:
             pkg.db.add(self)
+            log.error("Port._post_pkginstall()", ("Port '%s': finished stage %d" %
+                      (self.origin, self.stage),))
+        else:
+            log.error("Port._port_pkginstall()", ("Port '%s': failed stage %d" %
+                      (self.origin, self.stage),), trace=True)
+            self.failed = True
 
         self.install_status = pkg.db.status(self)
-        self.failed = not success
-        self.stage = Port.PKGINSTALL
         self.stage_completed.emit(self)
 
         self.dependent.status_changed()
