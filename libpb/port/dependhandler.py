@@ -6,6 +6,8 @@ import collections
 
 from .port import Port
 
+from libpb import debug as log
+
 __all__ = ['Dependent', 'Dependency']
 
 
@@ -201,6 +203,8 @@ class Dependency(DependHandler):
                 if status != Dependent.RESOLV:
                     self._count += 1
         else:
+            log.error("Dependency._add()", ("Port '%s': failed to load "
+                      "dependency '%s'" % (self.port.origin, port),))
             self._bad += 1
 
 
