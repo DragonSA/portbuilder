@@ -83,20 +83,25 @@ class AttrJob(Job):
 class CleanJob(Job):
     """Clean a port job."""
 
-    def __init__(self, port):
+    def __init__(self, port, force=False):
         Job.__init__(self)
         self.port = port
         self.pid = None
         self.status = None
+        self.force = force
 
     def __repr__(self):
         return "<CleanJob(%s)>" % self.port
 
     def work(self):
         """Clean a port."""
-        make = self.port.clean()
-        make.connect(self._cleaned)
-        self.pid = make.pid
+        make = self.port.clean(self.force)
+        if isinstance(make, bool) or make is not None:
+            self.done()
+            self.status = bool(make)
+        else:
+            make.connect(self._cleaned)
+            self.pid = make.pid
 
     def _cleaned(self, make):
         """Mark job as finished."""

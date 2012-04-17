@@ -148,19 +148,24 @@ class Port(object):
     def __repr__(self):
         return "<Port(%s)>" % (self.origin)
 
-    def clean(self):
+    def clean(self, force=False):
         assert not self.working or self.stage < Port.BUILD or \
                env.flags["mode"] == "clean"
 
         if self.stage >= Port.BUILD:
             self.working = time.time()
-        mak = make.make_target(self, "clean", NOCLEANDEPENDS=True)
-        return mak.connect(self._post_clean)
 
-    def _post_clean(self, make):
+        if Port.BUILD <= self.stage <= Port.PACKAGE or force:
+            mak = make.make_target(self, "clean", NOCLEANDEPENDS=True)
+            return mak.connect(self._post_clean)
+        else:
+            self._post_clean()
+            return True
+
+    def _post_clean(self, make=None):
         if self.stage >= Port.BUILD:
             self.working = False
-        if make.wait():
+        if make and make.wait():
             self.failed = True
         if not self.failed and os.path.isfile(self.log_file) and \
             (env.flags["mode"] == "clean" or self.stage >= Port.BUILD):
