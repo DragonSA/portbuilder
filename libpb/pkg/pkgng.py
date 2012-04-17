@@ -26,8 +26,7 @@ def add(port, repo=False):
         # Special case when adding the `pkg' as it provides the functionality
         # and thus cannot add itself (or so one would thing).
         if repo:
-            # TODO: indicate this cannot work
-            args = ("false",)
+            args = False
         else:
             args = ("sh", "-c", shell_pkg_add % port.attr)
     else:
@@ -36,7 +35,7 @@ def add(port, repo=False):
             args = ("pkg", "install", port.attr["pkgname"])
         else:
             args = ("pkg", "add", port.attr["pkgfile"])
-    if env.flags["chroot"]:
+    if args and env.flags["chroot"]:
         args = ("chroot", env.flags["chroot"]) + args
     return args
 

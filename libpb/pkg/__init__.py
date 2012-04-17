@@ -26,6 +26,8 @@ def add(port, repo=False):
     else:
         assert not "Unknown pkg_mgmt"
 
+    if not args:
+        return args
     if env.flags["no_op"]:
         pkg_add = make.PopenNone(args, port)
     else:

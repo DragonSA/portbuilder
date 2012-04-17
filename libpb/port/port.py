@@ -402,7 +402,10 @@ class Port(object):
             if not status:
                 return
 
-        return pkg.add(self, repo).connect(self._post_pkginstall)
+        pkg_add = pkg.add(self, repo)
+        if pkg_add:
+            pkg_add.connect(self._post_pkginstall)
+        return pkg_add
 
     def _post_pkginstall(self, pkg_add):
         """Report if the port successfully installed from it's package."""
