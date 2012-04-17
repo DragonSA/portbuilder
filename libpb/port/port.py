@@ -333,7 +333,7 @@ class Port(object):
         else:
             log.debug("Port._post_fetch()", ("Port '%s': failed to fetch "
                       "distfiles: %s" % (self.origin,
-                      ", ",join("'%s'" % i for i in distfiles)),))
+                      ", ".join("'%s'" % i for i in distfiles)),))
             self._bad_checksum.update(distfiles)
             self._fetch_failed.update(distfiles)
         return status
