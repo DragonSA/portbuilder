@@ -50,16 +50,15 @@ def info():
         stdout=subprocess.PIPE, stderr=subprocess.STDOUT, close_fds=True)
     pkg_info.stdin.close()
 
-    if pkg_info.wait() != 0:
-        return {}
     pkgdb = {}
-    for pkg_port in pkg_info.stdout.readlines():
-        pkgname, origin = pkg_port.split(':')
-        origin = origin.strip()
-        if origin in pkgdb:
-            pkgdb[origin].add(pkgname)
-        else:
-            pkgdb[origin] = set((pkgname,))
+    if pkg_info.wait() == 0:
+        for pkg_port in pkg_info.stdout.readlines():
+            pkgname, origin = pkg_port.split(':')
+            origin = origin.strip()
+            if origin in pkgdb:
+                pkgdb[origin].add(pkgname)
+            else:
+                pkgdb[origin] = set((pkgname,))
     return pkgdb
 
 
