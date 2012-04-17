@@ -90,12 +90,17 @@ class DependLoader(object):
                 del self.method[port]
                 port.failed = True
                 port.dependent.status_changed()
+                log.debug("DependLoader._find_method()", ("Port '%s': no viable resolve method found" % (port,),))
                 return False
             else:
                 self.method[port] = self._next(self.method[port])
                 port.dependent.propogate = not self.method[port]
                 if self._resolve(port, method):
+                    log.debug("DependLoader._find_method()", ("Port '%s': resolving using method '%s'" % (port, method),))
                     return True
+                else:
+                    log.debug("DependLoader._find_method()", ("Port '%s': skipping resolve method '%s'" % (port, method),))
+
 
     def _resolve(self, port, method):
         """Try resolve the port using various methods."""
