@@ -111,7 +111,7 @@ class QueueManager(object):
         return queue.pop(best_idx)
 
 
-attr  = QueueManager(env.CPUS * 2)
+attr  = QueueManager(env.CPUS)
 clean = QueueManager(1)
 
 config   = QueueManager(1)
