@@ -148,25 +148,22 @@ class Port(object):
     def __repr__(self):
         return "<Port(%s)>" % (self.origin)
 
-    def clean(self, force=False):
-        """Clean the ports working directory and log file."""
-        from ..env import flags
+    def clean(self):
+        assert not self.working or self.stage < Port.BUILD or \
+               env.flags["mode"] == "clean"
 
-        assert not self.working or flags["mode"] == "clean"
-        if Port.BUILD <= self.stage < Port.PKGINSTALL or force:
-            from ..job import CleanJob
+        if self.stage >= Port.BUILD:
+            self.working = time.time()
+        mak = make.make_target(self, "clean", NOCLEANDEPENDS=True)
+        return mak.connect(self._post_clean)
 
-            job = CleanJob(self).connect(self._cleaned)
-            queue.clean.add(job)
-            return job
-        else:
-            self._cleaned()
-
-    def _cleaned(self, job=None):
-        """Mark the port as clean."""
-        if job and not job.status:
+    def _post_clean(self, make):
+        if self.stage >= Port.BUILD:
+            self.working = False
+        if make.wait():
             self.failed = True
-        if not self.failed and os.path.isfile(self.log_file):
+        if not self.failed and os.path.isfile(self.log_file) and \
+            (env.flags["mode"] == "clean" or self.stage >= Port.BUILD):
             os.unlink(self.log_file)
 
     def reset(self):
@@ -195,13 +192,22 @@ class Port(object):
                    self._pre_fetch, self._pre_build, self._pre_install,
                    self._pre_package, None)
 
-        if self.working or self.stage != stage - 1 or self.failed:
+        if self.working or self.stage != stage - 1 or self.failed or (
+            self.stage >= Port.DEPEND and self.dependency.check(stage)):
             # Don't do stage if not able to
-            return False
-        if self.stage >= Port.DEPEND and self.dependency.check(stage):
-            # Don't do stage if not configured
+            if self.working:
+                msg = "already busy"
+            elif self.stage != stage - 1:
+                msg = "haven't completed previous stage"
+            elif self.failed:
+                msg = "port failed previous stage"
+            elif self.stage >= Port.DEPEND and self.dependency.check(stage):
+                msg = "dependencies not resolved"
+            log.error("Port.build_stage()", ("Port '%s': cannot build stage "
+                      "%i: %s" % (self.origin, stage, msg),))
             return False
 
+        log.debug("Port.build_stage()", ("Port '%s': building stage %i" % (self.origin, stage),))
         self.working = time.time()
         try:
             status = pre_map[stage - 1]()
@@ -259,6 +265,9 @@ class Port(object):
             return True
 
         distfiles = self.attr["distfiles"]
+        if not distfiles:
+            # No distfiles to fetch
+            return True
         if self._fetched.issuperset(distfiles):
             # If files are already fetched
             self.stage = Port.FETCH
@@ -293,6 +302,9 @@ class Port(object):
     def _pre_fetch(self):
         """Fetch the ports files."""
         distfiles = self.attr["distfiles"]
+        if not distfiles:
+            # If no distfiles to fetch
+            return True
         if self._fetched.issuperset(distfiles):
             # If files are already fetched
             return True
@@ -314,6 +326,9 @@ class Port(object):
             self._bad_checksum.difference_update(distfiles)
             self._fetched.update(distfiles)
         else:
+            log.debug("Port._post_fetch()", ("Port '%s': failed to fetch "
+                      "distfiles: %s" % (self.origin,
+                      ", ",join("'%s'" % i for i in distfiles)),))
             self._bad_checksum.update(distfiles)
             self._fetch_failed.update(distfiles)
         return status
@@ -451,9 +466,12 @@ class Port(object):
         from ..env import flags
 
         if not status:
-            log.error("Port._finalise()", ("Port '%s': failed at stage %d" %
+            log.error("Port._finalise()", ("Port '%s': failed stage %d" %
                       (self.origin, stage + 1),), trace=True)
             self.failed = True
+        else:
+            log.debug("Port._finalise()", ("Port '%s': finished stage %d" %
+                      (self.origin, stage + 1),))
         self.working = False
         self.stage = max(stage + 1, self.stage)
         self.stage_completed.emit(self)

@@ -94,16 +94,14 @@ class CleanJob(Job):
 
     def work(self):
         """Clean a port."""
-        from .make import make_target
-        self.port.working = time.time()
-        make = make_target(self.port, "clean", NOCLEANDEPENDS=True)
+        make = self.port.clean()
         make.connect(self._cleaned)
         self.pid = make.pid
 
-    def _cleaned(self, popen):
+    def _cleaned(self, make):
         """Mark job as finished."""
         from .make import SUCCESS
-        self.status = popen.wait() == SUCCESS
+        self.status = make.wait() == SUCCESS
         self.done()
 
 
@@ -133,6 +131,8 @@ class PortJob(Job):
     def work(self):
         """Run the required port stage."""
         from .port.port import Port
+
+        assert not self.port.working
 
         self.port.stage_completed.connect(self.stage_done)
         try:
