@@ -25,14 +25,15 @@ class DependHandler(object):
 
     #: The dependencies for a given stage
     STAGE2DEPENDS = {
-      Port.CONFIG:     (),
-      Port.DEPEND:     (),
-      Port.CHECKSUM:   (),
-      Port.FETCH:      (FETCH,),
-      Port.BUILD:      (EXTRACT, PATCH, LIB, BUILD, PKG),
-      Port.INSTALL:    (LIB, RUN, PKG),
-      Port.PACKAGE:    (LIB, RUN, PKG),
-      Port.PKGINSTALL: (LIB, RUN, PKG),
+      Port.CONFIG:      (),
+      Port.DEPEND:      (),
+      Port.CHECKSUM:    (),
+      Port.FETCH:       (FETCH,),
+      Port.BUILD:       (EXTRACT, PATCH, LIB, BUILD, PKG),
+      Port.INSTALL:     (LIB, RUN, PKG),
+      Port.PACKAGE:     (LIB, RUN, PKG),
+      Port.PKGINSTALL:  (LIB, RUN, PKG),
+      Port.REPOINSTALL: (LIB, RUN, PKG),
     }
 
 
