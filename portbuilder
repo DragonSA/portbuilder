@@ -77,7 +77,7 @@ def main():
     options.args = args
     options.parser = parser
     set_early_options(options)
-    if len(options.args) == 0 and not options.all:
+    if len(options.args) == 0 and not options.all and not options.ports_file:
         print parser.get_usage()
         return
     print "Loading /etc/make.conf (defaults)...",
