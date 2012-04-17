@@ -110,7 +110,7 @@ def cmp_attr(old, new, sym):
         pstatus = 0
     else: #if len(old) == 2 and len(new) == 2 # Both have version
         pstatus = cmp(int(old[1]), int(new[1]))
-    return (old[0], new[1], pstatus)
+    return (old[0], new[0], pstatus)
 
 
 class PKGDB(object):
