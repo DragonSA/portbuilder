@@ -164,6 +164,7 @@ Future release:
  - mark installed ports/packages as dependency/explicit (or (in)?direct)
  - only load port attributes that are needed
  - cleanup/refactor mk.py
+ - update pkgng repo ('pkg update') when it is specified in env.flags["depend"]
 
 0.2 - Milestone 4 (Command line controller):
  - Create target to build INDEX
@@ -176,7 +177,7 @@ Future release:
  - Use Port when referring to defined flags (i.e. INSTALL, BUILD)
  - Use MOVED for port.mk.status (fallback)
  * pkg_mgmt interface (vs direct file inspection)
- - make compatible with pkgng
+ * make compatible with pkgng
  - display skipped ports (with toggle)
  - add -j options to control queue loads
  x create a clean_builder
@@ -211,11 +212,12 @@ Future release:
  - add support to verify if stage is possible (can_do_stage)
  - allow pkg.version to use "pkg_version" as alternative
  - periodically check that the state tracked pkgdb agrees with pkg_info
- - document libpb initialisation procedure (cache/clean env, load defaults, db init)
+ * document libpb initialisation procedure (cache/clean env, load defaults, db init)
  * make pre/post cleaning the default
  * refactor all env.flags (like CONFIG) for better handling
  - rename/refactor make target (move into mk?)
  - fix module level definitions used by port (install status, build stage)
+ - install `pkg' if env.flags["pkg_mgmt"] == "pkgng" (fix options.all)
 
 0.1.3 - Milestone 3 (Target Builders):
  * Finish call documentation
