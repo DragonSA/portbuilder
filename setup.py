@@ -24,7 +24,7 @@ setup(name='portbuilder',
       author_email="naylor.b.david@gmail.com",
       url="http://github.com/DragonSA/portbuilder/",
       download_url="http://cloud.github.com/downloads/DragonSA/portbuilder/portbuilder-0.1.3.1.tar.xz",
-      packages=["libpb", "libpb/port",],
+      packages=["libpb", "libpb/pkg", "libpb/port",],
       scripts=["portbuilder",],
       classifiers=[
             "Development Status :: 3 - Alpha",
