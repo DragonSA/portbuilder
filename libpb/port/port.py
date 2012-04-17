@@ -157,9 +157,11 @@ class Port(object):
 
         if Port.BUILD <= self.stage <= Port.PACKAGE or force:
             mak = make.make_target(self, "clean", NOCLEANDEPENDS=True)
+            log.debug("Port.clean()", ("Port '%s': full clean" % self.origin,))
             return mak.connect(self._post_clean)
         else:
             self._post_clean()
+            log.debug("Port.clean()", ("Port '%s': quick clean" % self.origin,))
             return True
 
     def _post_clean(self, make=None):
@@ -168,7 +170,8 @@ class Port(object):
         if make and make.wait():
             self.failed = True
         if not self.failed and os.path.isfile(self.log_file) and \
-            (env.flags["mode"] == "clean" or self.stage >= Port.BUILD):
+            (env.flags["mode"] == "clean" or self.stage >= Port.BUILD or
+             self.dependency.failed):
             os.unlink(self.log_file)
 
     def reset(self):
@@ -290,7 +293,7 @@ class Port(object):
             from ..job import StalledJob
             raise StalledJob()
         else:
-            return self._make_target("checksum", BATCH=True,
+            return self._make_target("checksum", BATCH=True, NO_DEPENDS=True,
                                      DISABLE_CONFLICTS=True, FETCH_REGET=0)
 
     def _post_checksum(self, _make, status):
@@ -491,7 +494,7 @@ class Port(object):
 
         if not status:
             log.error("Port._finalise()", ("Port '%s': failed stage %d" %
-                      (self.origin, stage + 1),), trace=True)
+                      (self.origin, stage + 1),))
             self.failed = True
         else:
             log.debug("Port._finalise()", ("Port '%s': finished stage %d" %
