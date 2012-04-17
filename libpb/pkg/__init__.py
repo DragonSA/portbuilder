@@ -7,6 +7,7 @@ from __future__ import absolute_import
 import subprocess
 
 from libpb import env, make
+from . import pkg
 
 # Installed status flags
 ABSENT  = 0
@@ -14,49 +15,30 @@ OLDER   = 1
 CURRENT = 2
 NEWER   = 3
 
-__all__ = ["add", "version"]
+__all__ = ["add", "db", "version"]
 
 def add(port, repo=False):
-    """Add a package from port."""
-    if env.flags["chroot"]:
-        args = ("pkg_add", "-C", env.flags["chroot"])
+    """Add a package for port."""
+    if env.flags["pkg_mgmt"] == "pkg":
+        args = pkg.add(port, repo)
     else:
-        args = ("pkg_add",)
-    if repo:
-        args += ("-r", port.attr["pkgname"])
-    else:
-        args += (port.attr["pkgfile"],)
+        assert not "Unknown pkg_mgmt"
 
     if env.flags["no_op"]:
         pkg_add = make.PopenNone(args, port)
     else:
         logfile = open(port.log_file, "a")
-        pkg_add = make.Popen(args, port, stdin=subprocess.PIPE, stdout=logfile,
-                             stderr=logfile)
+        pkg_add = make.Popen(args, port, subprocess.PIPE, logfile, logfile)
         pkg_add.stdin.close()
     return pkg_add
 
 
 def info():
     """List all installed packages with their respective port origin."""
-    args = ("pkg_info", "-aoQ")
-    if env.flags["chroot"]:
-        args = ("chroot", env.flags["chroot"]) + args
-    pkg_info = subprocess.Popen(
-        args, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT, close_fds=True)
-    pkg_info.stdin.close()
-
-    if pkg_info.wait() != 0:
-        return {}
-    pkgdb = {}
-    for pkg_port in pkg_info.stdout.readlines():
-        pkg, origin = pkg_port.split(':')
-        if origin in pkgdb:
-            pkgdb[origin].add(pkg)
-        else:
-            pkgdb[origin] = set([pkg])
-    return pkgdb
+    if env.flags["pkg_mgmt"] == "pkg":
+        return pkg.info()
+    else:
+        assert not "Unknown pkg_mgmt"
 
 
 def version(old, new):
@@ -131,21 +113,22 @@ class PKGDB(object):
     def remove(self, port):
         """Indicate that a port has been uninstalled."""
         if port.origin in self.db:
-            pkgname = port.attr['pkgname'].rsplit('-', 1)[0]
+            portname = port.attr['pkgname'].rsplit('-', 1)[0]
             pkgs = set()
-            for pkg in self.db[port.origin]:
-                if pkg.rsplit('-', 1)[0] == pkgname:
-                    pkgs.add(pkg)
+            for pkgname in self.db[port.origin]:
+                if pkgname.rsplit('-', 1)[0] == portname:
+                    pkgs.add(pkgname)
             self.db[port.origin] -= pkgs
 
     def status(self, port):
         """Query the install status of a port."""
         pstatus = ABSENT
         if port.origin in self.db:
-            pkgname = port.attr['pkgname'].rsplit('-', 1)[0]
-            for pkg in self.db[port.origin]:
-                if pkg.rsplit('-', 1)[0] == pkgname:
-                    pstatus = max(pstatus, version(pkg, port.attr['pkgname']))
+            portname = port.attr['pkgname'].rsplit('-', 1)[0]
+            for pkgname in self.db[port.origin]:
+                if pkgname.rsplit('-', 1)[0] == portname:
+                    pstatus = max(pstatus,
+                                  version(pkgname, port.attr['pkgname']))
         return pstatus
 
 db = PKGDB()
