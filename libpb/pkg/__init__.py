@@ -53,6 +53,7 @@ def info():
     pkgdb = {}
     for pkg_port in pkg_info.stdout.readlines():
         pkgname, origin = pkg_port.split(':')
+        origin = origin.strip()
         if origin in pkgdb:
             pkgdb[origin].add(pkgname)
         else:
