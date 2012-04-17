@@ -7,7 +7,7 @@ from __future__ import absolute_import
 import subprocess
 
 from libpb import env, make
-from . import pkg
+from . import pkg, pkgng
 
 # Installed status flags
 ABSENT  = 0
@@ -21,6 +21,8 @@ def add(port, repo=False):
     """Add a package for port."""
     if env.flags["pkg_mgmt"] == "pkg":
         args = pkg.add(port, repo)
+    elif env.flags["pkg_mgmt"] == "pkgng":
+        args = pkgng.add(port, repo)
     else:
         assert not "Unknown pkg_mgmt"
 
@@ -37,6 +39,8 @@ def info():
     """List all installed packages with their respective port origin."""
     if env.flags["pkg_mgmt"] == "pkg":
         return pkg.info()
+    elif env.flags["pkg_mgmt"] == "pkgng":
+        return pkgng.info()
     else:
         assert not "Unknown pkg_mgmt"
 
