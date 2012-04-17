@@ -38,11 +38,26 @@ def add(port, repo=False):
 def info():
     """List all installed packages with their respective port origin."""
     if env.flags["pkg_mgmt"] == "pkg":
-        return pkg.info()
+        args = pkg.info()
     elif env.flags["pkg_mgmt"] == "pkgng":
-        return pkgng.info()
+        args = pkgng.info()
     else:
         assert not "Unknown pkg_mgmt"
+
+    pkg_info = subprocess.Popen(args, stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE, stderr=subprocess.STDOUT, close_fds=True)
+    pkg_info.stdin.close()
+
+    if pkg_info.wait() != 0:
+        return {}
+    pkgdb = {}
+    for pkg_port in pkg_info.stdout.readlines():
+        pkgname, origin = pkg_port.split(':')
+        if origin in pkgdb:
+            pkgdb[origin].add(pkgname)
+        else:
+            pkgdb[origin] = set((pkgname,))
+    return pkgdb
 
 
 def version(old, new):
