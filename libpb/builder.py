@@ -119,12 +119,16 @@ class DependLoader(object):
                 assert not "Unknown dependency target"
         elif method == "package":
             if not os.path.isfile(flags["chroot"] + port.attr["pkgfile"]) or \
-                porrt.attr["no_package"]:
+                port.attr["no_package"]:
                 pkginstall.update.emit(pkginstall, Builder.ADDED, port)
                 pkginstall.update.emit(pkginstall, Builder.FAILED, port)
                 return False
             job = pkginstall(port)
         elif method == "repo":
+            if port.attr["no_package"]:
+                repoinstall.update.emit(repoinstall, Builder.ADDED, port)
+                repoinstall.update.emit(repoinstall, Builder.FAILED, port)
+                return False
             job = repoinstall(port)
         else:
             assert not "Unknown port resolve method"
