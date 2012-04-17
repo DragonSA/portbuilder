@@ -8,6 +8,7 @@ import subprocess
 import time
 
 from libpb import env, make, mk, pkg, queue
+from libpb import debug as log
 
 from ..signal import SignalProperty
 
@@ -182,6 +183,9 @@ class Port(object):
         elif not len(self.attr["options"]) or self._check_config():
             # If no need to configure port
             self.stage = Port.CONFIG
+        else:
+            # Start from the beginning
+            self.stage = Port.ZERO
 
     def build_stage(self, stage):
         """Build the requested stage."""
@@ -447,6 +451,8 @@ class Port(object):
         from ..env import flags
 
         if not status:
+            log.error("Port._finalise()", ("Port '%s': failed at stage %d" %
+                      (self.origin, stage + 1),), trace=True)
             self.failed = True
         self.working = False
         self.stage = max(stage + 1, self.stage)
