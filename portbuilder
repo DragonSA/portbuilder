@@ -249,7 +249,8 @@ def gen_parser():
 
     parser.add_option("--depend", action="store", type="string", default="",
                       help="Comma separated list of methods to resolve "
-                      "dependencies (build, package) [default=build]")
+                      "dependencies (%s) [default: build]" %
+                      (", ".join(env.DEPEND),))
 
     parser.add_option("-D", dest="make_env", action="append", default=[],
                       metavar="variable", help="Define the given variable for "
@@ -431,7 +432,9 @@ def set_options(options):
 
     # Package all installed ports (-P)
     if options.packageA:
-        env.flags["target"] = ["package"]
+        if env.flags["target"].count("install"):
+            idx = env.flags["target"].index("install")
+            env.flags["target"][idx] = "package"
         options.package = True
 
     # Upgrade ports (-u)
