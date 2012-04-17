@@ -9,7 +9,7 @@ __all__ = ["add", "info"]
 
 shell_pkg_add = """
 if [ ! -d %(wrkdir)s ]; then
-    mkdir %(wrkdir)s;
+    mkdir -p %(wrkdir)s;
     clean_wrkdir="YES";
 fi;
 tar -xf %(pkgfile)s -C %(wrkdir)s -s ",/.*/,,g" "*/pkg-static";
