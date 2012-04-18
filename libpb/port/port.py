@@ -141,6 +141,9 @@ class Port(object):
 
         if not len(self.attr["options"]) or self._check_config():
             self.stage = Port.CONFIG
+            if self._fetched.issuperset(self.attr["distfiles"]):
+                # NOTE: if no distfiles above is always true
+                self.stage = Port.FETCH
 
     def __lt__(self, other):
         return self.dependent.priority > other.dependent.priority
@@ -230,6 +233,9 @@ class Port(object):
     def _pre_config(self):
         """Configure the ports options."""
         if self._check_config():
+            if self._fetched.issuperset(self.attr["distfiles"]):
+                # NOTE: if no distfiles above is always true
+                self.stage = Port.FETCH
             return True
         if not self._config_lock.acquire():
             from ..job import StalledJob
@@ -253,6 +259,9 @@ class Port(object):
         self.log_file = os.path.join(flags["log_dir"], self.attr["pkgname"])
         if log_file != self.log_file and os.path.isfile(log_file):
             os.rename(log_file, self.log_file)
+        if self._fetched.issuperset(self.attr["distfiles"]):
+            # NOTE: if no distfiles above is always true
+            self.stage = Port.FETCH
         self._finalise(self.stage, attr is not None)
 
     def _pre_depend(self):
@@ -273,10 +282,8 @@ class Port(object):
             return True
 
         distfiles = self.attr["distfiles"]
-        if not distfiles:
-            # No distfiles to fetch
-            return True
         if self._fetched.issuperset(distfiles):
+            # NOTE: if no distfiles above is always true
             # If files are already fetched
             self.stage = Port.FETCH
             return True
@@ -310,10 +317,8 @@ class Port(object):
     def _pre_fetch(self):
         """Fetch the ports files."""
         distfiles = self.attr["distfiles"]
-        if not distfiles:
-            # If no distfiles to fetch
-            return True
         if self._fetched.issuperset(distfiles):
+            # NOTE: if no distfiles above is always true
             # If files are already fetched
             return True
         if self._fetch_failed.issuperset(distfiles):
