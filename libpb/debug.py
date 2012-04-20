@@ -1,64 +1,62 @@
-"""Support functions for debuging."""
+"""The logging module.  This module provides support for logging messages."""
 
-from __future__ import absolute_import
+from __future__ import absolute_import, with_statement
 
 import datetime
 import os
 import traceback
 
-from libpb import env
+from libpb import env, event
 
-__all__ = ["error", "exception", "get_tb"]
+__all__ = ["debug", "error", "exception", "get_tb"]
 
 
 def get_tb(offset=0):
     """Get the current traceback, excluding the top `offset` frames."""
-    from .env import flags
-
-    if flags["debug"]:
-        from traceback import extract_stack
-        return extract_stack()[:-(offset + 2)]
+    if env.flags["debug"]:
+        return traceback.extract_stack()[:-(offset + 2)]
     else:
         return None
 
 
+def format_tb(tb, name):
+    msg = "Traceback from %s (most recent call last):\n" % name
+    msg += "%s\n" % "".join(traceback.format_list(tb))
+    return msg
+
+
+def logfile():
+    return os.path.join(env.flags["log_dir"], env.flags["log_file"])
+
+
+def debug(func, msg):
+    msg = "\n".join(msg)
+    if env.flags["debug"]:
+        msg = msg.replace("\n", "n  ")
+        msg = "%s %s> %s\n" % (datetime.datetime.now(), func, msg)
+        with open(logfile(), "a") as log:
+            log.write(msg)
+
+
 def error(func, msg, trace=False):
     """Report an error to the general logfile"""
-    from .env import flags
-
     fullmsg = "%s %s> %s\n" % (datetime.datetime.now(), func, "\n  ".join(msg))
-
-    open(os.path.join(flags["log_dir"], flags["log_file"]), "a").write(fullmsg)
-
     if trace and env.flags["debug"]:
-        from .event import traceback as event_traceback
-        from .env import flags
-
-        log = open(os.path.join(flags["log_dir"], flags["log_file"]), "a")
         msg = "  "
-        for tb, name in event_traceback() + [(get_tb(), "message")]:
-            msg += "Traceback from %s (most recent call last):\n" % name
-            msg += "%s\n" % "".join(traceback.format_list(tb))
-        log.write(msg.replace("\n", "\n  ")[:-2])
-        log.close()
+        msg += "".join(format_tb(tb, name) for tb, name in event.traceback() if tb)
+        msg += format_tb(get_tb(), "message")
+        fullmsg += msg.replace("\n", "\n  ")[:-2]
 
-
-info = error
-debug = error
+    with open(logfile(), "a") as log:
+        log.write(fullmsg)
 
 
 def exception():
     """Report an exception to the general logfile"""
-    from .event import traceback as event_traceback
-    from .env import flags
-
-    log = open(os.path.join(flags["log_dir"], flags["log_file"]), "a")
-    log.write("%s> EXCEPTION\n" % datetime.datetime.now())
     msg = "  "
-    for tb, name in event_traceback():
-        msg += "Traceback from %s (most recent call last):\n" % name
-        msg += "%s\n" % "".join(traceback.format_list(tb))
+    msg += "".join(format_tb(tb, name) for tb, name in event.traceback() if tb)
     msg += traceback.format_exc()
     msg += "\n"
-    log.write(msg.replace("\n", "\n  ")[:-2])
-    log.close()
+    with open(logfile(), "a") as log:
+        log.write("%s> EXCEPTION\n" % datetime.datetime.now())
+        log.write(msg.replace("\n", "\n  ")[:-2])
