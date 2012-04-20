@@ -6,7 +6,7 @@ import os
 import re
 import subprocess
 
-from libpb import env, job, make, pkg, queue, signal
+from libpb import env, job, log, make, pkg, queue, signal
 
 __all__ = ["Attr", "attr", "cache", "clean", "load_defaults"]
 
@@ -149,19 +149,18 @@ class Attr(signal.Signal):
         """Parse the attributes from a port and call the requested function."""
         # TODO: if make.wait() != make.SUCCESS
         if make.wait() != 0:
-            from .debug import error
-            error("libpb/port/mk/attr_stage2",
-                  ["Failed to get port %s attributes (err=%s)" %
-                   (self.origin, make.returncode),] + make.stderr.readlines())
+            log.error("Attr.parse_attr()",
+                      "Failed to get port %s attributes (err=%s)\n%s" %
+                          (self.origin, make.returncode,
+                           "".join(make.stderr.readlines())))
             self.emit(self.origin, None)
             return
 
         errs = make.stderr.readlines()
         if len(errs):
-            from .debug import error
-            error("libpb/port/mk/attr_stage2",
-                  ["Non-fatal errors in port %s attributes" % self.origin,] +
-                    errs)
+            log.error("Attr.parse_attr()",
+                      "Non-fatal errors in port %s attributes\n%s" %
+                          (self.origin, "".join(errs)))
 
         attr_map = {}
         for name, value in ports_attr.iteritems():
@@ -176,10 +175,9 @@ class Attr(signal.Signal):
                 try:
                     attr_map[name] = i(attr_map[name])
                 except BaseException, e:
-                    from .debug import error
-                    error("libpb/port/mk/attr_stage2",
-                          ("Failed to process port %s attributes" %
-                           self.origin,) + e.args)
+                    log.error("Attr.parse_attr()",
+                              "Failed to process port %s attributes: %s" %
+                                  (self.origin, str(e)))
                     self.emit(self.origin, None)
                     return
 

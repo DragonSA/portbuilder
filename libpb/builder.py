@@ -5,8 +5,7 @@ from __future__ import absolute_import
 from abc import ABCMeta, abstractmethod
 import os
 
-from libpb import env, job, queue
-from libpb import debug as log
+from libpb import env, job, log, queue
 from libpb.job import CleanJob
 
 from .port.port import Port
@@ -90,16 +89,21 @@ class DependLoader(object):
                 del self.method[port]
                 port.failed = True
                 port.dependent.status_changed()
-                log.debug("DependLoader._find_method()", ("Port '%s': no viable resolve method found" % (port,),))
+                log.debug("DependLoader._find_method()",
+                          "Port '%s': no viable resolve method found" % (port,))
                 return False
             else:
                 self.method[port] = self._next(self.method[port])
                 port.dependent.propogate = not self.method[port]
                 if self._resolve(port, method):
-                    log.debug("DependLoader._find_method()", ("Port '%s': resolving using method '%s'" % (port, method),))
+                    log.debug("DependLoader._find_method()",
+                              "Port '%s': resolving using method '%s'" %
+                                  (port, method))
                     return True
                 else:
-                    log.debug("DependLoader._find_method()", ("Port '%s': skipping resolve method '%s'" % (port, method),))
+                    log.debug("DependLoader._find_method()",
+                              "Port '%s': skipping resolve method '%s'" %
+                                  (port, method))
 
 
     def _resolve(self, port, method):
@@ -355,7 +359,9 @@ class StageBuilder(Builder):
             self._pending[port] += 1
             self.prev_builder.add(port).connect(self._stage_resolv)
 
-        log.debug("StageBuilder._add()", ("Port '%s': added job for stage %d, waiting on %d" % (port.origin, self.stage, self._pending[port]),))
+        log.debug("StageBuilder._add()",
+                  "Port '%s': added job for stage %d, waiting on %d" %
+                      (port.origin, self.stage, self._pending[port]))
 
         # Build stage if port is ready
         if not self._pending[port]:
@@ -370,7 +376,9 @@ class StageBuilder(Builder):
         """Cleanup after the port has completed its stage."""
         from .env import flags
 
-        log.debug("StageBuilder._cleanup()", ("Port '%s': completed job for stage %d" % (job.port.origin, self.stage),))
+        log.debug("StageBuilder._cleanup()",
+                  "Port '%s': completed job for stage %d" %
+                      (job.port.origin, self.stage))
 
         del self.ports[job.port]
         failed = self._port_failed(job.port)
@@ -390,7 +398,10 @@ class StageBuilder(Builder):
     def _depend_resolv(self, depend):
         """Update dependency structures for resolved dependency."""
         if not self._port_failed(depend):
-            log.debug("StageBuilder._depend_resolv()", ("Port '%s': resolved stage %d for ports %s" % (depend.origin, self.stage, ", ".join("'%s'" % i.origin for i in self._depends[depend])),))
+            all_depends = ["'%s'" % i.origin for i in self._depends[depend]]
+            log.debug("StageBuilder._depend_resolv()",
+                      "Port '%s': resolved stage %d for ports %s" %
+                          (depend.origin, self.stage, ", ".join(all_depends)))
             for port in self._depends.pop(depend):
                 if not self._port_failed(port):
                     self._pending[port] -= 1
@@ -445,15 +456,17 @@ class StageBuilder(Builder):
         assert not port.dependency.check(self.stage)
         del self._pending[port]
         if self._port_check(port):
-            log.debug("StageBuilder._port_ready()", ("Port '%s': queuing job for "
-                     "stage %d" % (port.origin, self.stage),))
+            log.debug("StageBuilder._port_ready()",
+                      "Port '%s': queuing job for stage %d" %
+                          (port.origin, self.stage))
             assert port.stage == self.stage - 1 or self.stage > Port.PACKAGE
             self.update.emit(self, Builder.QUEUED, port)
             self.ports[port].started.connect(self._started)
             self.queue.add(self.ports[port])
         else:
-            log.debug("StageBuilder._port_ready()", ("Port '%s': skipping "
-                      "stage %d" % (port.origin, self.stage),))
+            log.debug("StageBuilder._port_ready()",
+                      "Port '%s': skipping stage %d" %
+                          (port.origin, self.stage))
 
     def _port_check(self, port):
         """Check if the port should build this stage."""

@@ -4,6 +4,8 @@ from __future__ import absolute_import
 
 import weakref
 
+from libpb import log
+
 __all__ = ["Signal", "SignalProperty"]
 
 
@@ -21,11 +23,9 @@ class Signal(object):
 
     def connect(self, slot):
         """Connect a callback function to the signal."""
-        from .debug import get_tb
-
         if slot is not None:
             self._slots.append(slot)
-            self._tb[slot] =  get_tb()
+            self._tb[slot] =  log.get_tb()
         return self
 
     def disconnect(self, slot):
@@ -39,14 +39,12 @@ class Signal(object):
 
     def replace(self, oldslot, newslot):
         """Replace a slot with a different one (to maintain calling order)."""
-        from .debug import get_tb
-
         if oldslot not in self._slots:
             raise RuntimeError("%s: Slot not connected to this signal, cannot "
                                "be replaced: %s" % (repr(self), str(oldslot)))
         self._slots[self._slots.index(oldslot)] = newslot
         self._tb.pop(oldslot)
-        self._tb[newslot] = get_tb()
+        self._tb[newslot] = log.get_tb()
         return self
 
     reconnect = replace

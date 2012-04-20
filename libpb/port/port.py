@@ -7,8 +7,7 @@ import os
 import subprocess
 import time
 
-from libpb import env, make, mk, pkg, queue
-from libpb import debug as log
+from libpb import env, log, make, mk, pkg, queue
 
 from ..signal import SignalProperty
 
@@ -160,11 +159,11 @@ class Port(object):
 
         if Port.BUILD <= self.stage <= Port.PACKAGE or force:
             mak = make.make_target(self, "clean", NOCLEANDEPENDS=True)
-            log.debug("Port.clean()", ("Port '%s': full clean" % self.origin,))
+            log.debug("Port.clean()", "Port '%s': full clean" % self.origin)
             return mak.connect(self._post_clean)
         else:
             self._post_clean()
-            log.debug("Port.clean()", ("Port '%s': quick clean" % self.origin,))
+            log.debug("Port.clean()", "Port '%s': quick clean" % self.origin)
             return True
 
     def _post_clean(self, make=None):
@@ -218,7 +217,8 @@ class Port(object):
                       "%i: %s" % (self.origin, stage, msg),))
             return False
 
-        log.debug("Port.build_stage()", ("Port '%s': building stage %i" % (self.origin, stage),))
+        log.debug("Port.build_stage()",
+                  "Port '%s': building stage %i" % (self.origin, stage))
         self.working = time.time()
         try:
             status = pre_map[stage - 1]()
@@ -339,9 +339,10 @@ class Port(object):
             self._bad_checksum.difference_update(distfiles)
             self._fetched.update(distfiles)
         else:
-            log.debug("Port._post_fetch()", ("Port '%s': failed to fetch "
-                      "distfiles: %s" % (self.origin,
-                      ", ".join("'%s'" % i for i in distfiles)),))
+            files = ", ".join("'%s'" % i for i in distfiles)
+            log.debug("Port._post_fetch()",
+                      "Port '%s': failed to fetch distfiles: %s" %
+                          (self.origin, files))
             self._bad_checksum.update(distfiles)
             self._fetch_failed.update(distfiles)
         return status
@@ -386,7 +387,8 @@ class Port(object):
 
     def repoinstall(self):
         """Prepare to install the port from a repository."""
-        log.debug("Port.repoinstall()", ("Port '%s': building stage %i" % (self.origin, Port.REPOINSTALL),))
+        log.debug("Port.repoinstall()", "Port '%s': building stage %i" %
+                      (self.origin, Port.REPOINSTALL))
 
         if (self.working or self.attr["no_package"]):
             return False
@@ -404,7 +406,8 @@ class Port(object):
         from ..env import flags
         from ..make import make_target
 
-        log.debug("Port.pkginstall()", ("Port '%s': building stage %i" % (self.origin, Port.PKGINSTALL),))
+        log.debug("Port.pkginstall()", "Port '%s': building stage %i" %
+                      (self.origin, Port.PKGINSTALL))
 
         if (self.working or self.attr["no_package"] or
             not os.path.isfile(flags["chroot"] + self.attr["pkgfile"])):
@@ -433,8 +436,8 @@ class Port(object):
                 self.working = False
                 self.stage_completed.emit(self)
                 self.failed = True
-                log.error("Port._pkginstall()", ("Port '%s': failed stage %d" %
-                          (self.origin, self.stage),))
+                log.error("Port._pkginstall()", "Port '%s': failed stage %d" %
+                              (self.origin, self.stage))
             else:
                 pkg.db.remove(self)
             self.dependent.status_changed()
@@ -463,11 +466,11 @@ class Port(object):
 
         if pkg_add.wait() == SUCCESS:
             pkg.db.add(self)
-            log.error("Port._post_pkginstall()", ("Port '%s': finished stage %d" %
-                      (self.origin, self.stage),))
+            log.error("Port._post_pkginstall()",
+                     "Port '%s': finished stage %d" % (self.origin, self.stage))
         else:
-            log.error("Port._port_pkginstall()", ("Port '%s': failed stage %d" %
-                      (self.origin, self.stage),), trace=True)
+            log.error("Port._port_pkginstall()", "Port '%s': failed stage %d" %
+                      (self.origin, self.stage))
             self.failed = True
 
         self.install_status = pkg.db.status(self)
@@ -498,12 +501,12 @@ class Port(object):
         from ..env import flags
 
         if not status:
-            log.error("Port._finalise()", ("Port '%s': failed stage %d" %
-                      (self.origin, stage + 1),))
+            log.error("Port._finalise()", "Port '%s': failed stage %d" %
+                          (self.origin, stage + 1))
             self.failed = True
         else:
-            log.debug("Port._finalise()", ("Port '%s': finished stage %d" %
-                      (self.origin, stage + 1),))
+            log.debug("Port._finalise()", "Port '%s': finished stage %d" %
+                          (self.origin, stage + 1))
         self.working = False
         self.stage = max(stage + 1, self.stage)
         self.stage_completed.emit(self)

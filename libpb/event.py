@@ -7,7 +7,7 @@ import errno
 import collections
 import select
 
-from libpb import queue
+from libpb import log, queue
 
 from .signal import InlineSignal, SignalProperty
 
@@ -98,13 +98,11 @@ class EventManager(object):
 
     def post_event(self, func, *args, **kwargs):
         """Add an event to be called asynchronously."""
-        from .debug import get_tb
-
         if not callable(func):
             assert(len(func) == 4)
-            self._events.append(func + (get_tb(1),))
+            self._events.append(func + (log.get_tb(1),))
         else:
-            self._events.append((func, args, kwargs, None, get_tb()))
+            self._events.append((func, args, kwargs, None, log.get_tb()))
 
     def run(self):
         """Run the currently queued events."""
