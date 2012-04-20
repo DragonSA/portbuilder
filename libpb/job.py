@@ -83,27 +83,30 @@ class AttrJob(Job):
 class CleanJob(Job):
     """Clean a port job."""
 
-    def __init__(self, port):
+    def __init__(self, port, force=False):
         Job.__init__(self)
         self.port = port
         self.pid = None
         self.status = None
+        self.force = force
 
     def __repr__(self):
         return "<CleanJob(%s)>" % self.port
 
     def work(self):
         """Clean a port."""
-        from .make import make_target
-        self.port.working = time.time()
-        make = make_target(self.port, "clean", NOCLEANDEPENDS=True)
-        make.connect(self._cleaned)
-        self.pid = make.pid
+        make = self.port.clean(self.force)
+        if isinstance(make, bool) or make is not None:
+            self.done()
+            self.status = bool(make)
+        else:
+            make.connect(self._cleaned)
+            self.pid = make.pid
 
-    def _cleaned(self, popen):
+    def _cleaned(self, make):
         """Mark job as finished."""
         from .make import SUCCESS
-        self.status = popen.wait() == SUCCESS
+        self.status = make.wait() == SUCCESS
         self.done()
 
 
@@ -133,6 +136,8 @@ class PortJob(Job):
     def work(self):
         """Run the required port stage."""
         from .port.port import Port
+
+        assert not self.port.working
 
         self.port.stage_completed.connect(self.stage_done)
         try:

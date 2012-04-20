@@ -3,13 +3,15 @@ The next generation package management tools (i.e. pkgng)..
 """
 from __future__ import absolute_import
 
+import os
+
 from libpb import env
 
 __all__ = ["add", "info"]
 
 shell_pkg_add = """
 if [ ! -d %(wrkdir)s ]; then
-    mkdir %(wrkdir)s;
+    mkdir -p %(wrkdir)s;
     clean_wrkdir="YES";
 fi;
 tar -xf %(pkgfile)s -C %(wrkdir)s -s ",/.*/,,g" "*/pkg-static";
@@ -19,6 +21,8 @@ if [ "$clean_wrkdir" = "YES" ]; then
     rmdir %(wrkdir)s;
 fi
 """
+
+os.environ["ALWAYS_ASSUME_YES"] = "YES"
 
 def add(port, repo=False):
     """Add a package for port."""
@@ -32,17 +36,21 @@ def add(port, repo=False):
     else:
         # Normal package add
         if repo:
-            args = ("pkg", "install", port.attr["pkgname"])
+            args = ("install", port.attr["pkgname"])
         else:
-            args = ("pkg", "add", port.attr["pkgfile"])
-    if args and env.flags["chroot"]:
-        args = ("chroot", env.flags["chroot"]) + args
+            args = ("add", port.attr["pkgfile"])
+    if args:
+        if env.flags["chroot"]:
+            args = ("pkg", "-c", env.flags["chroot"]) + args
+        else:
+            args = ("pkg",) + args
     return args
 
 
 def info():
     """List all installed packages with their respective port origin."""
-    args = ("pkg", "info", "-aoQ")
     if env.flags["chroot"]:
-        args = ("chroot", env.flags["chroot"]) + args
+        args = ("pkg", "-c", env.flags["chroot"], "info", "-ao")
+    else:
+        args = ("pkg", "info", "-ao")
     return args

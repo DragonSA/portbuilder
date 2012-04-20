@@ -7,7 +7,7 @@ import os
 import subprocess
 import time
 
-from libpb import env, make, mk, pkg, queue
+from libpb import env, log, make, mk, pkg, queue
 
 from ..signal import SignalProperty
 
@@ -148,24 +148,29 @@ class Port(object):
         return "<Port(%s)>" % (self.origin)
 
     def clean(self, force=False):
-        """Clean the ports working directory and log file."""
-        from ..env import flags
+        assert not self.working or self.stage < Port.BUILD or \
+               env.flags["mode"] == "clean"
 
-        assert not self.working or flags["mode"] == "clean"
-        if Port.BUILD <= self.stage < Port.PKGINSTALL or force:
-            from ..job import CleanJob
+        if self.stage >= Port.BUILD:
+            self.working = time.time()
 
-            job = CleanJob(self).connect(self._cleaned)
-            queue.clean.add(job)
-            return job
+        if Port.BUILD <= self.stage <= Port.PACKAGE or force:
+            mak = make.make_target(self, "clean", NOCLEANDEPENDS=True)
+            log.debug("Port.clean()", "Port '%s': full clean" % self.origin)
+            return mak.connect(self._post_clean)
         else:
-            self._cleaned()
+            self._post_clean()
+            log.debug("Port.clean()", "Port '%s': quick clean" % self.origin)
+            return True
 
-    def _cleaned(self, job=None):
-        """Mark the port as clean."""
-        if job and not job.status:
+    def _post_clean(self, make=None):
+        if self.stage >= Port.BUILD:
+            self.working = False
+        if make and make.wait():
             self.failed = True
-        if not self.failed and os.path.isfile(self.log_file):
+        if not self.failed and os.path.isfile(self.log_file) and \
+                (env.flags["mode"] == "clean" or self.stage >= Port.BUILD or
+                 (self.dependency and self.dependency.failed)):
             os.unlink(self.log_file)
 
     def reset(self):
@@ -182,6 +187,9 @@ class Port(object):
         elif not len(self.attr["options"]) or self._check_config():
             # If no need to configure port
             self.stage = Port.CONFIG
+        else:
+            # Start from the beginning
+            self.stage = Port.ZERO
 
     def build_stage(self, stage):
         """Build the requested stage."""
@@ -191,13 +199,23 @@ class Port(object):
                    self._pre_fetch, self._pre_build, self._pre_install,
                    self._pre_package, None)
 
-        if self.working or self.stage != stage - 1 or self.failed:
+        if self.working or self.stage != stage - 1 or self.failed or (
+            self.stage >= Port.DEPEND and self.dependency.check(stage)):
             # Don't do stage if not able to
-            return False
-        if self.stage >= Port.DEPEND and self.dependency.check(stage):
-            # Don't do stage if not configured
+            if self.working:
+                msg = "already busy"
+            elif self.stage != stage - 1:
+                msg = "haven't completed previous stage"
+            elif self.failed:
+                msg = "port failed previous stage"
+            elif self.stage >= Port.DEPEND and self.dependency.check(stage):
+                msg = "dependencies not resolved"
+            log.error("Port.build_stage()", ("Port '%s': cannot build stage "
+                      "%i: %s" % (self.origin, stage, msg),))
             return False
 
+        log.debug("Port.build_stage()",
+                  "Port '%s': building stage %i" % (self.origin, stage))
         self.working = time.time()
         try:
             status = pre_map[stage - 1]()
@@ -212,6 +230,9 @@ class Port(object):
     def _pre_config(self):
         """Configure the ports options."""
         if self._check_config():
+            if self._fetched.issuperset(self.attr["distfiles"]):
+                # NOTE: if no distfiles above is always true
+                self.stage = Port.FETCH
             return True
         if not self._config_lock.acquire():
             from ..job import StalledJob
@@ -247,6 +268,13 @@ class Port(object):
                    "depend_lib", "depend_run", "depend_patch", "depend_package")
         self.dependency = Dependency(self, [self.attr[i] for i in depends])
 
+    def _post_depend(self, status):
+        """Advance to the build stage if nothing to fetch."""
+        if status and self._fetched.issuperset(self.attr["distfiles"]):
+            # NOTE: if no distfiles above is always true
+            self.stage = Port.FETCH
+        self._finalise(Port.CONFIG, status)
+
     def _pre_checksum(self):
         """Check if distfiles are available."""
         from ..env import flags
@@ -256,6 +284,7 @@ class Port(object):
 
         distfiles = self.attr["distfiles"]
         if self._fetched.issuperset(distfiles):
+            # NOTE: if no distfiles above is always true
             # If files are already fetched
             self.stage = Port.FETCH
             return True
@@ -272,7 +301,7 @@ class Port(object):
             from ..job import StalledJob
             raise StalledJob()
         else:
-            return self._make_target("checksum", BATCH=True,
+            return self._make_target("checksum", BATCH=True, NO_DEPENDS=True,
                                      DISABLE_CONFLICTS=True, FETCH_REGET=0)
 
     def _post_checksum(self, _make, status):
@@ -290,6 +319,7 @@ class Port(object):
         """Fetch the ports files."""
         distfiles = self.attr["distfiles"]
         if self._fetched.issuperset(distfiles):
+            # NOTE: if no distfiles above is always true
             # If files are already fetched
             return True
         if self._fetch_failed.issuperset(distfiles):
@@ -310,6 +340,10 @@ class Port(object):
             self._bad_checksum.difference_update(distfiles)
             self._fetched.update(distfiles)
         else:
+            files = ", ".join("'%s'" % i for i in distfiles)
+            log.debug("Port._post_fetch()",
+                      "Port '%s': failed to fetch distfiles: %s" %
+                          (self.origin, files))
             self._bad_checksum.update(distfiles)
             self._fetch_failed.update(distfiles)
         return status
@@ -345,7 +379,7 @@ class Port(object):
 
     def _pre_package(self):
         """Package the port,"""
-        return self._make_target("package", BATCH=True)
+        return self._make_target("package", BATCH=True, NO_DEPENDS=True)
 
     @staticmethod
     def _post_package(_make, status):
@@ -354,6 +388,9 @@ class Port(object):
 
     def repoinstall(self):
         """Prepare to install the port from a repository."""
+        log.debug("Port.repoinstall()", "Port '%s': building stage %i" %
+                      (self.origin, Port.REPOINSTALL))
+
         if (self.working or self.attr["no_package"]):
             return False
 
@@ -369,6 +406,9 @@ class Port(object):
         # TODO: proper asserts (valid stage).
         from ..env import flags
         from ..make import make_target
+
+        log.debug("Port.pkginstall()", "Port '%s': building stage %i" %
+                      (self.origin, Port.PKGINSTALL))
 
         if (self.working or self.attr["no_package"] or
             not os.path.isfile(flags["chroot"] + self.attr["pkgfile"])):
@@ -396,6 +436,9 @@ class Port(object):
                 self.stage = Port.REPOINSTALL if repo else Port.PKGINSTALL
                 self.working = False
                 self.stage_completed.emit(self)
+                self.failed = True
+                log.error("Port._pkginstall()", "Port '%s': failed stage %d" %
+                              (self.origin, self.stage))
             else:
                 pkg.db.remove(self)
             self.dependent.status_changed()
@@ -404,22 +447,34 @@ class Port(object):
 
         pkg_add = pkg.add(self, repo)
         if pkg_add:
-            pkg_add.connect(self._post_pkginstall)
+            if repo:
+                pkg_add.connect(self._post_repoinstall)
+            else:
+                pkg_add.connect(self._post_pkginstall)
         return pkg_add
 
-    def _post_pkginstall(self, pkg_add):
+    def _post_repoinstall(self, pkg_add):
+        """Report if the port successfully installed from it's package."""
+        self._post_pkginstall(pkg_add, True)
+
+    def _post_pkginstall(self, pkg_add, repo=False):
         """Report if the port successfully installed from it's package."""
         from ..env import flags
         from ..make import SUCCESS
 
         self.working = False
-        success = pkg_add.wait() == SUCCESS
-        if success:
+        self.stage = Port.REPOINSTALL if repo else Port.PKGINSTALL
+
+        if pkg_add.wait() == SUCCESS:
             pkg.db.add(self)
+            log.error("Port._post_pkginstall()",
+                     "Port '%s': finished stage %d" % (self.origin, self.stage))
+        else:
+            log.error("Port._port_pkginstall()", "Port '%s': failed stage %d" %
+                      (self.origin, self.stage))
+            self.failed = True
 
         self.install_status = pkg.db.status(self)
-        self.failed = not success
-        self.stage = Port.PKGINSTALL
         self.stage_completed.emit(self)
 
         self.dependent.status_changed()
@@ -447,7 +502,12 @@ class Port(object):
         from ..env import flags
 
         if not status:
+            log.error("Port._finalise()", "Port '%s': failed stage %d" %
+                          (self.origin, stage + 1))
             self.failed = True
+        else:
+            log.debug("Port._finalise()", "Port '%s': finished stage %d" %
+                          (self.origin, stage + 1))
         self.working = False
         self.stage = max(stage + 1, self.stage)
         self.stage_completed.emit(self)

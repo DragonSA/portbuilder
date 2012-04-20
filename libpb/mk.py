@@ -6,7 +6,7 @@ import os
 import re
 import subprocess
 
-from libpb import env, job, make, pkg, queue, signal
+from libpb import env, job, log, make, pkg, queue, signal
 
 __all__ = ["Attr", "attr", "cache", "clean", "load_defaults"]
 
@@ -30,7 +30,7 @@ def load_defaults():
     args = ["make", "-f/dev/null"] + ["-V%s" % i for i in keys]
     args += ["-D%s" % k if v is True else "%s=%s" % (k, v) for k, v in env.env.items()]
     if env.flags["chroot"]:
-        args = ["chroot", env.flags["chroot"]] + make
+        args = ["chroot", env.flags["chroot"]] + args
     make = subprocess.Popen(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                             stderr=subprocess.PIPE, close_fds=True)
     make.stdin.close()
@@ -57,6 +57,9 @@ def load_defaults():
                 i = env.flags["target"][env.flags["target"].find(i)] = "install"
             if i not in env.TARGET:
                 raise ValueError("unsupported DEPENDS_TARGET: '%s'" % i)
+        if "install" not in env.flags["target"] and \
+                "package" not in env.flags["target"]:
+            raise ValueError("DEPENDS_TARGET must have either install or package")
     else:
         if make_env["DEPENDS_CLEAN"] and env.flags["target"][-1] != "clean":
             env.flags["target"] = env.flags["target"] + ["clean"]
@@ -82,7 +85,7 @@ def clean():
 
     # Make sure environ is not polluted with make flags
     for key in ("__MKLVL__", "MAKEFLAGS", "MAKELEVEL", "MFLAGS",
-                "MAKE_JOBS_FIFO"):
+                "MAKE_JOBS_FIFO", "SHLVL"):
         try:
             del os.environ[key]
         except KeyError:
@@ -146,19 +149,18 @@ class Attr(signal.Signal):
         """Parse the attributes from a port and call the requested function."""
         # TODO: if make.wait() != make.SUCCESS
         if make.wait() != 0:
-            from .debug import error
-            error("libpb/port/mk/attr_stage2",
-                  ["Failed to get port %s attributes (err=%s)" %
-                   (self.origin, make.returncode),] + make.stderr.readlines())
+            log.error("Attr.parse_attr()",
+                      "Failed to get port %s attributes (err=%s)\n%s" %
+                          (self.origin, make.returncode,
+                           "".join(make.stderr.readlines())))
             self.emit(self.origin, None)
             return
 
         errs = make.stderr.readlines()
         if len(errs):
-            from .debug import error
-            error("libpb/port/mk/attr_stage2",
-                  ["Non-fatal errors in port %s attributes" % self.origin,] +
-                    errs)
+            log.error("Attr.parse_attr()",
+                      "Non-fatal errors in port %s attributes\n%s" %
+                          (self.origin, "".join(errs)))
 
         attr_map = {}
         for name, value in ports_attr.iteritems():
@@ -173,10 +175,9 @@ class Attr(signal.Signal):
                 try:
                     attr_map[name] = i(attr_map[name])
                 except BaseException, e:
-                    from .debug import error
-                    error("libpb/port/mk/attr_stage2",
-                          ("Failed to process port %s attributes" %
-                           self.origin,) + e.args)
+                    log.error("Attr.parse_attr()",
+                              "Failed to process port %s attributes: %s" %
+                                  (self.origin, str(e)))
                     self.emit(self.origin, None)
                     return
 
@@ -333,4 +334,5 @@ ports_attr["depend_fetch"].extend((strip_depends, tuple))
 ports_attr["depend_lib"].extend((strip_depends, tuple))
 ports_attr["depend_run"].extend((strip_depends, tuple))
 ports_attr["depend_patch"].extend((strip_depends, tuple))
+ports_attr["depend_package"].extend((strip_depends, tuple))
 ports_attr["makefiles"].append(lambda x: [i for i in x if i != '..'])

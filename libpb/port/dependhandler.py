@@ -6,6 +6,8 @@ import collections
 
 from .port import Port
 
+from libpb import log
+
 __all__ = ['Dependent', 'Dependency']
 
 
@@ -23,14 +25,15 @@ class DependHandler(object):
 
     #: The dependencies for a given stage
     STAGE2DEPENDS = {
-      Port.CONFIG:     (),
-      Port.DEPEND:     (),
-      Port.CHECKSUM:   (),
-      Port.FETCH:      (FETCH,),
-      Port.BUILD:      (EXTRACT, PATCH, LIB, BUILD, PKG),
-      Port.INSTALL:    (LIB, RUN, PKG),
-      Port.PACKAGE:    (LIB, RUN, PKG),
-      Port.PKGINSTALL: (LIB, RUN, PKG),
+      Port.CONFIG:      (),
+      Port.DEPEND:      (),
+      Port.CHECKSUM:    (),
+      Port.FETCH:       (FETCH,),
+      Port.BUILD:       (EXTRACT, PATCH, LIB, BUILD, PKG),
+      Port.INSTALL:     (LIB, RUN, PKG),
+      Port.PACKAGE:     (LIB, RUN, PKG),
+      Port.PKGINSTALL:  (LIB, RUN, PKG),
+      Port.REPOINSTALL: (LIB, RUN, PKG),
     }
 
 
@@ -183,7 +186,7 @@ class Dependency(DependHandler):
         if not self._loading:
             from ..event import post_event
             self._update_priority()
-            post_event(self.port._finalise, Port.CONFIG, True)
+            post_event(self.port._post_depend, True)
 
     def __repr__(self):
         return "<Dependency(port=%s)>" % self.port.origin
@@ -201,6 +204,9 @@ class Dependency(DependHandler):
                 if status != Dependent.RESOLV:
                     self._count += 1
         else:
+            log.error("Dependency._add()",
+                      "Port '%s': failed to load dependency '%s'" %
+                          (self.port.origin, port))
             self._bad += 1
 
 
@@ -213,7 +219,7 @@ class Dependency(DependHandler):
 
         if self._loading == 0:
             self._update_priority()
-            self.port._finalise(Port.CONFIG, not self._bad)
+            self.port._post_depend(not self._bad)
 
     def get(self, typ=None):
         """Retrieve a list of dependencies."""

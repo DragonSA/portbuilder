@@ -79,6 +79,7 @@ def make_target(port, targets, pipe=None, **kwargs):
         stdin = subprocess.PIPE
         stdout = open(port.log_file, 'a')
         stderr = stdout
+        stdout.write("# %s\n" % " ".join(args))
 
     if pipe is None and flags["no_op"]:
         make = PopenNone(args, port)

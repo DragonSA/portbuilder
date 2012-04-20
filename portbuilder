@@ -12,7 +12,7 @@ import subprocess
 import sys
 import traceback
 
-from libpb import builder, env, mk, pkg, queue
+from libpb import builder, env, log, mk, pkg, queue
 
 VAR_NAME = "^[a-zA-Z_][a-zA-Z0-9_]*$"
 
@@ -77,7 +77,7 @@ def main():
     options.args = args
     options.parser = parser
     set_early_options(options)
-    if len(options.args) == 0 and not options.all:
+    if len(options.args) == 0 and not options.all and not options.ports_file:
         print parser.get_usage()
         return
     print "Loading /etc/make.conf (defaults)...",
@@ -147,16 +147,12 @@ def run_loop(options):
     except SystemExit:
         raise
     except BaseException:
-        from libpb.debug import exception
         from libpb.event import post_event, traceback as event_traceback
         from libpb import stop
 
-        msg = ""
-        for tb, name in event_traceback():
-            msg += "Traceback from %s (most recent call last):\n" % name
-            msg += "%s\n" % "".join(traceback.format_list(tb))
+        msg = "".join(log.format_tb(tb, name) for tb, name in event_traceback())
         msg += traceback.format_exc()
-        exception()
+        log.exception()
 
         post_event(stop)
         try:
@@ -249,7 +245,8 @@ def gen_parser():
 
     parser.add_option("--depend", action="store", type="string", default="",
                       help="Comma separated list of methods to resolve "
-                      "dependencies (build, package) [default=build]")
+                      "dependencies (%s) [default: build]" %
+                      (", ".join(env.DEPEND),))
 
     parser.add_option("-D", dest="make_env", action="append", default=[],
                       metavar="variable", help="Define the given variable for "
@@ -431,7 +428,9 @@ def set_options(options):
 
     # Package all installed ports (-P)
     if options.packageA:
-        env.flags["target"] = ["package"]
+        if env.flags["target"].count("install"):
+            idx = env.flags["target"].index("install")
+            env.flags["target"][idx] = "package"
         options.package = True
 
     # Upgrade ports (-u)
