@@ -41,7 +41,7 @@ def offset_time():
 def debug(func, msg):
     if env.flags["debug"]:
         msg = msg.replace("\n", "n  ")
-        msg = "[%6.3f] (D) %s> %s\n" % (offset_time(), func, msg)
+        msg = "[%10.3f] (D) %s> %s\n" % (offset_time(), func, msg)
         with open(logfile(), "a") as log:
             log.write(msg)
 
@@ -49,7 +49,7 @@ def debug(func, msg):
 def error(func, msg, trace=False):
     """Report an error to the general logfile"""
     msg = msg.replace("\n", "n  ")
-    fullmsg = "[%6.3f] (E) %s> %s\n" % (offset_time(), func, msg)
+    fullmsg = "[%10.3f] (E) %s> %s\n" % (offset_time(), func, msg)
     if trace and env.flags["debug"]:
         from libpb import event
         msg = "  "
@@ -69,5 +69,5 @@ def exception():
     msg += traceback.format_exc()
     msg += "\n"
     with open(logfile(), "a") as log:
-        log.write("[%6.3f] (EXCEPTION)\n" % (offset_time()))
+        log.write("[%10.3f] (EXCEPTION)\n" % (offset_time()))
         log.write(msg.replace("\n", "\n  ")[:-2])
