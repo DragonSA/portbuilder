@@ -140,9 +140,6 @@ class Port(object):
 
         if not len(self.attr["options"]) or self._check_config():
             self.stage = Port.CONFIG
-            if self._fetched.issuperset(self.attr["distfiles"]):
-                # NOTE: if no distfiles above is always true
-                self.stage = Port.FETCH
 
     def __lt__(self, other):
         return self.dependent.priority > other.dependent.priority
@@ -172,8 +169,8 @@ class Port(object):
         if make and make.wait():
             self.failed = True
         if not self.failed and os.path.isfile(self.log_file) and \
-            (env.flags["mode"] == "clean" or self.stage >= Port.BUILD or
-             self.dependency.failed):
+                (env.flags["mode"] == "clean" or self.stage >= Port.BUILD or
+                 (self.dependency and self.dependency.failed)):
             os.unlink(self.log_file)
 
     def reset(self):
@@ -259,9 +256,6 @@ class Port(object):
         self.log_file = os.path.join(flags["log_dir"], self.attr["pkgname"])
         if log_file != self.log_file and os.path.isfile(log_file):
             os.rename(log_file, self.log_file)
-        if self._fetched.issuperset(self.attr["distfiles"]):
-            # NOTE: if no distfiles above is always true
-            self.stage = Port.FETCH
         self._finalise(self.stage, attr is not None)
 
     def _pre_depend(self):
@@ -273,6 +267,13 @@ class Port(object):
         depends = ("depend_build", "depend_extract", "depend_fetch",
                    "depend_lib", "depend_run", "depend_patch", "depend_package")
         self.dependency = Dependency(self, [self.attr[i] for i in depends])
+
+    def _post_depend(self, status):
+        """Advance to the build stage if nothing to fetch."""
+        if status and self._fetched.issuperset(self.attr["distfiles"]):
+            # NOTE: if no distfiles above is always true
+            self.stage = Port.FETCH
+        self._finalise(Port.CONFIG, status)
 
     def _pre_checksum(self):
         """Check if distfiles are available."""

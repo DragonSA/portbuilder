@@ -186,7 +186,7 @@ class Dependency(DependHandler):
         if not self._loading:
             from ..event import post_event
             self._update_priority()
-            post_event(self.port._finalise, Port.CONFIG, True)
+            post_event(self.port._post_depend, True)
 
     def __repr__(self):
         return "<Dependency(port=%s)>" % self.port.origin
@@ -219,7 +219,7 @@ class Dependency(DependHandler):
 
         if self._loading == 0:
             self._update_priority()
-            self.port._finalise(Port.CONFIG, not self._bad)
+            self.port._post_depend(not self._bad)
 
     def get(self, typ=None):
         """Retrieve a list of dependencies."""
