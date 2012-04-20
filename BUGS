@@ -6,3 +6,8 @@
     extra ports to be installed.  This may happen if a dependency is installed
     but it has an uninstalled dependency (e.g. options changed).  That
     uninstalled dependency will be installed, but is not required to be.
+
+[0.1.4-0] Corrupted output when using command display (-n)
+    When a port tries to configure it will corrupt the output as the commands
+    are still printed.  To avoid this use '-nc none' instead to prevent a port
+    from configuring.  To pre-configure the ports use '-N' instead of '-n'.

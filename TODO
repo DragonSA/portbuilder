@@ -18,7 +18,7 @@ Future release:
  - Add options for either individually executing make targets or in baulk
  - Check spelling for all documentation
  - Increase level of logging
- - Move to the python 2.6 naming and styles (and make compatible with 3)
+ - Move to the python 2.7 naming and styles (and make compatible with 3)
  - Implement proper recording of ports installation (i.e. when they fail)
  - Refactor:
    - Break ports into its own libraries
@@ -46,6 +46,7 @@ Future release:
  - Rename logging files for ports based on their unique-name
  - manual page(s)
  - ensure only one instance of portbuilder builds per chroot
+ - switch to debug off by default
 
 0.6 - Milestone 8 (Finish command line controller):
  - modules:
@@ -165,6 +166,11 @@ Future release:
  - only load port attributes that are needed
  - cleanup/refactor mk.py
  - update pkgng repo ('pkg update') when it is specified in env.flags["depend"]
+ - add support for licenses (accepting licenses...)
+ - don't install depends when installing from package or repo (pkgng)
+ - only install package if it matches port's options
+ - add support for jails
+ - split repo fetch and repo install stage
 
 0.2 - Milestone 4 (Command line controller):
  - Create target to build INDEX
@@ -217,7 +223,8 @@ Future release:
  * refactor all env.flags (like CONFIG) for better handling
  - rename/refactor make target (move into mk?)
  - fix module level definitions used by port (install status, build stage)
- - install `pkg' if env.flags["pkg_mgmt"] == "pkgng" (fix options.all)
+ - eliminate bottleneck in portbuilder for loading attr
+ * fix cleaning of ports (why is make call in CleanJob?)
 
 0.1.3 - Milestone 3 (Target Builders):
  * Finish call documentation
