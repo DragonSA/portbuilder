@@ -225,6 +225,7 @@ Future release:
  - fix module level definitions used by port (install status, build stage)
  - eliminate bottleneck in portbuilder for loading attr
  * fix cleaning of ports (why is make call in CleanJob?)
+ - fix `job' names in builder
 
 0.1.3 - Milestone 3 (Target Builders):
  * Finish call documentation

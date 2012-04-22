@@ -4,10 +4,9 @@ from __future__ import absolute_import
 
 from contextlib import contextmanager
 import os
-import subprocess
 import time
 
-from libpb import env, log, make, mk, pkg, queue
+from libpb import env, log, make, mk, pkg
 
 from ..signal import SignalProperty
 
@@ -148,6 +147,7 @@ class Port(object):
         return "<Port(%s)>" % (self.origin)
 
     def clean(self, force=False):
+        """Remove port's working director and log files."""
         assert not self.working or self.stage < Port.BUILD or \
                env.flags["mode"] == "clean"
 
@@ -163,10 +163,11 @@ class Port(object):
             log.debug("Port.clean()", "Port '%s': quick clean" % self.origin)
             return True
 
-    def _post_clean(self, make=None):
+    def _post_clean(self, pmake=None):
+        """Remove log file."""
         if self.stage >= Port.BUILD:
             self.working = False
-        if make and make.wait():
+        if pmake and pmake.wait():
             self.failed = True
         if not self.failed and os.path.isfile(self.log_file) and \
                 (env.flags["mode"] == "clean" or self.stage >= Port.BUILD or
@@ -194,6 +195,12 @@ class Port(object):
     def build_stage(self, stage):
         """Build the requested stage."""
         from ..job import StalledJob
+
+        assert not self.working
+        assert not self.failed
+        assert self.stage == stage - 1
+        assert self.stage >= Port.DEPEND
+        assert not self.dependency.check(stage)
 
         pre_map = (self._pre_config, self._pre_depend, self._pre_checksum,
                    self._pre_fetch, self._pre_build, self._pre_install,
@@ -371,9 +378,6 @@ class Port(object):
             pkg.db.remove(self)
         if status:
             pkg.db.add(self)
-        else:
-            # TODO???
-            pass
         self.install_status = pkg.db.status(self)
         return status
 
@@ -388,6 +392,11 @@ class Port(object):
 
     def repoinstall(self):
         """Prepare to install the port from a repository."""
+        assert not self.working
+        assert not self.failed
+        assert self.DEPEND <= self.stage < self.BUILD
+        assert not self.dependency.check(Port.REPOINSTALL)
+
         log.debug("Port.repoinstall()", "Port '%s': building stage %i" %
                       (self.origin, Port.REPOINSTALL))
 
@@ -403,35 +412,33 @@ class Port(object):
 
     def pkginstall(self):
         """Prepare to install the port from it's package."""
-        # TODO: proper asserts (valid stage).
-        from ..env import flags
-        from ..make import make_target
+        assert not self.working
+        assert not self.failed
+        assert self.DEPEND <= self.stage < self.BUILD
+        assert not self.dependency.check(Port.PKGINSTALL)
 
         log.debug("Port.pkginstall()", "Port '%s': building stage %i" %
                       (self.origin, Port.PKGINSTALL))
 
         if (self.working or self.attr["no_package"] or
-            not os.path.isfile(flags["chroot"] + self.attr["pkgfile"])):
+            not os.path.isfile(env.flags["chroot"] + self.attr["pkgfile"])):
             return False
 
         self.stage = Port.PKGINSTALL - 1
         self.working = time.time()
         if self.install_status > Port.ABSENT:
-            return make_target(self, "deinstall").connect(self._pkginstall)
+            return make.make_target(self, "deinstall").connect(self._pkginstall)
         else:
             return self._pkginstall()
 
-    def _repoinstall(self, make=None):
+    def _repoinstall(self, pmake=None):
         """Install the port from a repository package."""
-        return self._pkginstall(make, True)
+        return self._pkginstall(pmake, True)
 
-    def _pkginstall(self, make=None, repo=False):
+    def _pkginstall(self, pmake=None, repo=False):
         """Install the port from it's package."""
-        from ..env import flags
-        from ..make import SUCCESS
-
-        if make is not None:
-            status = make.wait() == SUCCESS
+        if pmake is not None:
+            status = pmake.wait() == make.SUCCESS
             if not status:
                 self.stage = Port.REPOINSTALL if repo else Port.PKGINSTALL
                 self.working = False
@@ -459,13 +466,10 @@ class Port(object):
 
     def _post_pkginstall(self, pkg_add, repo=False):
         """Report if the port successfully installed from it's package."""
-        from ..env import flags
-        from ..make import SUCCESS
-
         self.working = False
         self.stage = Port.REPOINSTALL if repo else Port.PKGINSTALL
 
-        if pkg_add.wait() == SUCCESS:
+        if pkg_add.wait() == make.SUCCESS:
             pkg.db.add(self)
             log.error("Port._post_pkginstall()",
                      "Port '%s': finished stage %d" % (self.origin, self.stage))
@@ -485,22 +489,18 @@ class Port(object):
 
         return make_target(self, targets, **kwargs).connect(self._make)
 
-    def _make(self, make):
+    def _make(self, pmake):
         """Call the _post_[stage] function and finalise the stage."""
-        from ..make import SUCCESS
-
         post_map = (self._post_config, None, self._post_checksum,
                     self._post_fetch, self._post_build, self._post_install,
                     self._post_package, None)
         stage = self.stage
-        status = post_map[stage](make, make.wait() == SUCCESS)
+        status = post_map[stage](pmake, pmake.wait() == make.SUCCESS)
         if status is not None:
             self._finalise(stage, status)
 
     def _finalise(self, stage, status):
         """Finalise the stage."""
-        from ..env import flags
-
         if not status:
             log.error("Port._finalise()", "Port '%s': failed stage %d" %
                           (self.origin, stage + 1))
@@ -512,7 +512,8 @@ class Port(object):
         self.stage = max(stage + 1, self.stage)
         self.stage_completed.emit(self)
         if (self.failed or
-            self.stage >= (Port.FETCH if flags["fetch_only"] else Port.INSTALL)):
+                self.stage >= (Port.FETCH if env.flags["fetch_only"] else
+                    Port.INSTALL)):
             self.dependent.status_changed()
 
     def _check_config(self):

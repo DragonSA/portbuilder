@@ -3,7 +3,6 @@
 from __future__ import absolute_import
 
 from abc import abstractmethod, ABCMeta
-import time
 
 from .signal import Signal, SignalProperty
 

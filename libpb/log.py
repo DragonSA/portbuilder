@@ -2,7 +2,6 @@
 
 from __future__ import absolute_import, with_statement
 
-import datetime
 import os
 import time
 import traceback
@@ -23,6 +22,7 @@ def get_tb(offset=0):
 
 
 def format_tb(tb, name):
+    """Format traceback (if present) into descriptive human format."""
     if tb is None:
         return ""
     msg = "Traceback from %s (most recent call last):\n" % name
@@ -31,14 +31,17 @@ def format_tb(tb, name):
 
 
 def logfile():
+    """Return path to log file."""
     return os.path.join(env.flags["log_dir"], env.flags["log_file"])
 
 
 def offset_time():
+    """Time since library initialisation, for log file tags."""
     return time.time() - start_time
 
 
 def debug(func, msg):
+    """Log a debug message to log file (only if in debug mode)."""
     if env.flags["debug"]:
         msg = msg.replace("\n", "n  ")
         msg = "[%10.3f] (D) %s> %s\n" % (offset_time(), func, msg)

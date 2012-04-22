@@ -6,7 +6,7 @@ import os
 import re
 import subprocess
 
-from libpb import env, job, log, make, pkg, queue, signal
+from libpb import env, job, log, make, queue, signal
 
 __all__ = ["Attr", "attr", "cache", "clean", "load_defaults"]
 
@@ -31,12 +31,12 @@ def load_defaults():
     args += ["-D%s" % k if v is True else "%s=%s" % (k, v) for k, v in env.env.items()]
     if env.flags["chroot"]:
         args = ["chroot", env.flags["chroot"]] + args
-    make = subprocess.Popen(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+    pmake = subprocess.Popen(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                             stderr=subprocess.PIPE, close_fds=True)
-    make.stdin.close()
-    make.stderr.close()
-    if make.wait() == 0:
-        make_env = dict((i, j.strip()) for i, j in zip(keys, make.stdout.readlines()))
+    pmake.stdin.close()
+    pmake.stderr.close()
+    if pmake.wait() == 0:
+        make_env = dict((i, j.strip()) for i, j in zip(keys, pmake.stdout.readlines()))
     else:
         make_env = dict((i, "") for i in keys)
 
@@ -59,7 +59,7 @@ def load_defaults():
                 raise ValueError("unsupported DEPENDS_TARGET: '%s'" % i)
         if "install" not in env.flags["target"] and \
                 "package" not in env.flags["target"]:
-            raise ValueError("DEPENDS_TARGET must have either install or package")
+            raise ValueError("DEPENDS_TARGET must have install or package")
     else:
         if make_env["DEPENDS_CLEAN"] and env.flags["target"][-1] != "clean":
             env.flags["target"] = env.flags["target"] + ["clean"]
@@ -123,9 +123,10 @@ def cache():
 
 def attr(origin):
     """Retrieve a ports attributes by using the attribute queue."""
-    attr = Attr(origin)
-    queue.attr.add(job.AttrJob(attr))
-    return attr
+    # TODO inline function to caller
+    attr_obj = Attr(origin)
+    queue.attr.add(job.AttrJob(attr_obj))
+    return attr_obj
 
 
 class Attr(signal.Signal):
@@ -145,18 +146,18 @@ class Attr(signal.Signal):
 
         return make.make_target(self.origin, args, True).connect(self.parse_attr)
 
-    def parse_attr(self, make):
+    def parse_attr(self, pmake):
         """Parse the attributes from a port and call the requested function."""
-        # TODO: if make.wait() != make.SUCCESS
-        if make.wait() != 0:
+        # TODO: if pmake.wait() != make.SUCCESS
+        if pmake.wait() != 0:
             log.error("Attr.parse_attr()",
                       "Failed to get port %s attributes (err=%s)\n%s" %
-                          (self.origin, make.returncode,
-                           "".join(make.stderr.readlines())))
+                          (self.origin, pmake.returncode,
+                           "".join(pmake.stderr.readlines())))
             self.emit(self.origin, None)
             return
 
-        errs = make.stderr.readlines()
+        errs = pmake.stderr.readlines()
         if len(errs):
             log.error("Attr.parse_attr()",
                       "Non-fatal errors in port %s attributes\n%s" %
@@ -166,10 +167,10 @@ class Attr(signal.Signal):
         for name, value in ports_attr.iteritems():
             if value[1] is str:
                 # Get the string (stripped)
-                attr_map[name] = make.stdout.readline().strip()
+                attr_map[name] = pmake.stdout.readline().strip()
             else:
                 # Pass the string through a special processing (like list/tuple)
-                attr_map[name] = value[1](make.stdout.readline().split())
+                attr_map[name] = value[1](pmake.stdout.readline().split())
             # Apply all filters for the attribute
             for i in value[2:]:
                 try:
