@@ -48,7 +48,7 @@ do_release() {
   echo "4. Tag and Release"
 
   echo "4.1) Create release tarball (excluding ./port)"
-  git archive 'master^{tree}' --prefix=portbuilder-$TAG/ | xz -9 > portbuilder-$TAG.tar.xz
+  git archive 'HEAD^{tree}' --prefix=portbuilder-$TAG/ | xz -9 > portbuilder-$TAG.tar.xz
 
   echo "4.2) Update port distinfo (and commit data)"
   make -C $PWD/port makesum DISTDIR=$PWD

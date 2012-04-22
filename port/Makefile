@@ -2,7 +2,7 @@
 # Date created:				2011/04/03
 # Whom:					David Naylor <naylor.b.david@gmail.com>
 #
-# $FreeBSD: ports/ports-mgmt/portbuilder/Makefile,v 1.3 2011/07/25 01:40:44 zi Exp $
+# $FreeBSD$
 
 PORTNAME=	portbuilder
 DISTVERSION=	0.1.4
