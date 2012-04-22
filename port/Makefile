@@ -6,7 +6,6 @@
 
 PORTNAME=	portbuilder
 DISTVERSION=	0.1.4
-PORTREVISION=	2
 CATEGORIES=	ports-mgmt
 MASTER_SITES=	http://cloud.github.com/downloads/DragonSA/portbuilder/
 
