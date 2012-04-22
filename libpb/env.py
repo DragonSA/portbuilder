@@ -45,7 +45,7 @@ env_master = {
 #               build   - build the dependency from a port
 #               package - install the dependency from the local package
 #                       repository (${PKGREPOSITORY})
-#               repo    - install the dependency from a repository (TODO)
+#               repo    - install the dependency from a repository
 #
 # fetch_only - Only fetch a port's distfiles.
 #
