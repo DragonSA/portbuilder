@@ -1,4 +1,6 @@
 X.Y.Z - YYYY MMM DD:
+
+0.1.4 - 2012 April 22:
  * Support pkgng as an alternative package manager
  * Support installing packages from a repository
  * Support port pre-cleaning
