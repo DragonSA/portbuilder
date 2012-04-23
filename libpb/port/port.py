@@ -199,8 +199,7 @@ class Port(object):
         assert not self.working
         assert not self.failed
         assert self.stage == stage - 1
-        assert self.stage >= Port.DEPEND
-        assert not self.dependency.check(stage)
+        assert self.stage < Port.DEPEND or not self.dependency.check(stage)
 
         pre_map = (self._pre_config, self._pre_depend, self._pre_checksum,
                    self._pre_fetch, self._pre_build, self._pre_install,
