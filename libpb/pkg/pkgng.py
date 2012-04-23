@@ -22,7 +22,7 @@ if [ "$clean_wrkdir" = "YES" ]; then
 fi
 """
 
-os.environ["ALWAYS_ASSUME_YES"] = "YES"
+os.environ["ASSUME_ALWAYS_YES"] = "YES"
 
 def add(port, repo=False):
     """Add a package for port."""
