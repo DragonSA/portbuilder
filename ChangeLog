@@ -1,4 +1,7 @@
 X.Y.Z - YYYY MMM DD:
+ * Fixes:
+   * Fix assertion for Port.build_stage (error prevented any port building)
+   * Suppress questions from pkgng (s/ALWAYS_ASSUME_YES/ASSUME_ALWAYS_YES/)
 
 0.1.4 - 2012 April 22:
  * Support pkgng as an alternative package manager
