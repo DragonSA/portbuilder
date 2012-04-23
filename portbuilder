@@ -217,7 +217,7 @@ def gen_parser():
     usage = ("\t%prog [-abdnpruFNU] [-c config] [-C chroot] [-D variable] "
              "[-f file] [long-options] [variable=value] port ...")
 
-    parser = optparse.OptionParser(usage, version="%prog 0.1.4")
+    parser = optparse.OptionParser(usage, version="%prog 0.1.4.1")
 
     parser.add_option("-a", "--all", action="store_true", default=False,
                       help="Add all installed ports to the list (aka `pkg_info"
