@@ -32,6 +32,7 @@ def add(port, repo=False):
         pkg_add = make.PopenNone(args, port)
     else:
         logfile = open(port.log_file, "a")
+        logfile.write("# %s\n" % " ".join(args))
         pkg_add = make.Popen(args, port, subprocess.PIPE, logfile, logfile)
         pkg_add.stdin.close()
     return pkg_add
