@@ -36,7 +36,7 @@ def add(port, repo=False):
     else:
         # Normal package add
         if repo:
-            args = ("install", port.attr["pkgname"])
+            args = ("install", "-y", port.attr["pkgname"])
         else:
             args = ("add", port.attr["pkgfile"])
     if args:
