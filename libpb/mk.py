@@ -70,7 +70,7 @@ def load_defaults():
     if make_env["BATCH"]:
         env.flags["config"] = "none"
     if make_env["USE_PACKAGE_DEPENDS"]:
-        env.flags["depend"] = ["package", "build"]
+        env.flags["method"] = ["package", "build"]
     if make_env["WITH_DEBUG"]:
         env.flags["debug"] = True
     if make_env["WITH_PKGNG"]:
