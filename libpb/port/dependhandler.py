@@ -33,6 +33,8 @@ class DependHandler(object):
       Port.INSTALL:     (LIB, RUN, PKG),
       Port.PACKAGE:     (LIB, RUN, PKG),
       Port.PKGINSTALL:  (LIB, RUN, PKG),
+      Port.REPOCONFIG:  (PKG),
+      Port.REPOFETCH:   (PKG),
       Port.REPOINSTALL: (LIB, RUN, PKG),
     }
 
