@@ -54,7 +54,7 @@ class Dependent(DependHandler):
         self.port = port  #: The port whom we handle
         self.priority = port.priority
         self.propogate = True
-        if flags["mode"] == "install" and port.install_status > flags["stage"]:
+        if port.install_status > flags["stage"]:
             self.status = Dependent.RESOLV
             # TODO: Change to actually check if we are resolved
         else:
