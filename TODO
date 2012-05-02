@@ -227,6 +227,7 @@ Future release:
  * fix cleaning of ports (why is make call in CleanJob?)
  - fix `job' names in builder
  - use pkg.remove instead of `make deinstall`
+ - fix fetch-only mode when using repo method (aka REPOFETCH)
 
 0.1.3 - Milestone 3 (Target Builders):
  * Finish call documentation

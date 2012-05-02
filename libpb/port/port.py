@@ -1,6 +1,6 @@
 """Modelling of FreeBSD ports."""
 
-from __future__ import absolute_import
+from __future__ import absolute_import, with_statement
 
 from contextlib import contextmanager
 import os
@@ -213,38 +213,51 @@ class Port(object):
             self.stage = Port.ZERO
 
     def build_stage(self, stage):
-        """Build the requested stage."""
+        """Do the requested stage for the "build" method."""
         from ..job import StalledJob
 
         assert not self.working
         assert not self.failed
         assert self.stage == stage - 1
         assert self.stage < Port.DEPEND or not self.dependency.check(stage)
+        assert Port.CONFIG <= stage <= Port.PACKAGE
 
         pre_map = (self._pre_config, self._pre_depend, self._pre_checksum,
                    self._pre_fetch, self._pre_build, self._pre_install,
-                   self._pre_package, None)
-
-        if self.working or self.stage != stage - 1 or self.failed or (
-            self.stage >= Port.DEPEND and self.dependency.check(stage)):
-            # Don't do stage if not able to
-            if self.working:
-                msg = "already busy"
-            elif self.stage != stage - 1:
-                msg = "haven't completed previous stage"
-            elif self.failed:
-                msg = "port failed previous stage"
-            elif self.stage >= Port.DEPEND and self.dependency.check(stage):
-                msg = "dependencies not resolved"
-            log.error("Port.build_stage()", ("Port '%s': cannot build stage "
-                      "%i: %s" % (self.origin, stage, msg),))
-            return False
+                   self._pre_package)
 
         log.debug("Port.build_stage()",
-                  "Port '%s': building stage %i" % (self.origin, stage))
+                  "Port '%s': doing stage %i" % (self.origin, stage))
         self.working = time.time()
         try:
-            status = pre_map[stage - 1]()
+            status = pre_map[stage - Port.CONFIG]()
+            if isinstance(status, bool):
+                self._finalise(stage - 1, status)
+                return True
+        except StalledJob:
+            self.working = False
+            raise
+        return status
+
+    def repo_stage(self, stage):
+        """Do the requested stage for the "repo" method."""
+        from ..job import StalledJob
+
+        assert not self.working
+        assert not self.failed
+        assert (stage >= Port.REPOCONFIG and self.stage == stage - 1) or self.stage < Port.BUILD
+        assert not self.dependency.check(stage)
+        assert self.REPOCONFIG <= self.stage <= Port.REPOINSTALL
+
+        pre_map = (self._pre_repoconfig, self._pre_repofetch,
+                   self._pre_repoinstall)
+
+        log.debug("Port.repo_stage()",
+                  "Port '%s': doing stage %i" % (self.origin, stage))
+        self.working = time.time()
+        self.stage = stage - 1
+        try:
+            status = pre_map[stage - Port.REPOCONFIG]()
             if isinstance(status, bool):
                 self._finalise(stage - 1, status)
                 return True
@@ -304,7 +317,7 @@ class Port(object):
             elif not self._bad_checksum.isdisjoint(self.attr["distfiles"]):
                 # If some files have already failed
                 self.stage = Port.CHECKSUM
-        self._finalise(Port.CONFIG, status)
+        self._finalise(Port.DEPEND - 1, status)
 
     def _pre_checksum(self):
         """Check if distfiles are available."""
@@ -414,6 +427,40 @@ class Port(object):
         """Indicate package status."""
         return status
 
+    def _pre_repoconfig(self):
+        """Check that the port has the same configuration as the package."""
+        if not self.attr["options"] or env.flags["pkg_mgmt"] == "pkg":
+            return True
+        return pkg.query(port, "%O").connect(self._post_repoconfig)
+
+    def _post_repoconfig(self, pkg_query):
+        """Compare package configuration"""
+        status = pkg_query.wait() == make.SUCCESS
+        if status:
+            options = {}
+            optionfile = flags["chroot"] + self.attr["optionsfile"]
+            if os.path.isfile(optionfile):
+                with open(optionfile, 'r') as optionfile:
+                    for i in optionfile:
+                for i in open(optionfile, 'r'):
+                    if i.startswith("WITH"):
+                        yesno = "yes"
+                        if i.startswith("WITHOUT"):
+                            yesno = "no"
+                        options[i.split('_', 1)[1].split('=', 1)[0]] = yesno;
+            pkgoption = pkg_query.stdout.readline()
+
+        self._finalise(Port.REPOCONFIG - 1, status)
+
+    def _pre_repofetch(self):
+        """Fetch the package from the repository."""
+        if env.flags["pkg_mgmt"] == "pkg":
+            return True
+
+    def _pre_repoinstall(self):
+        """
+        """
+
     def repoinstall(self):
         """Prepare to install the port from a repository."""
         assert not self.working
@@ -519,7 +566,8 @@ class Port(object):
                     self._post_fetch, self._post_build, self._post_install,
                     self._post_package, None)
         stage = self.stage
-        status = post_map[stage](pmake, pmake.wait() == make.SUCCESS)
+        status = pmake.wait() == make.SUCCESS
+        status = post_map[stage - Port.CONFIG](pmake, status)
         if status is not None:
             self._finalise(stage, status)
 
@@ -553,13 +601,14 @@ class Port(object):
         pkgname = self.attr["pkgname"]
         options = set()
         if os.path.isfile(optionfile):
-            for i in open(optionfile, 'r'):
-                if i.startswith('_OPTIONS_READ='):
-                    # The option set to the last pkgname this config file was
-                    # set for
-                    config_pkgname = i[14:-1]
-                elif i.startswith('WITH'):
-                    options.add(i.split('_', 1)[1].split('=', 1)[0])
+            with open(optionfile, 'r') as optionfile:
+                for i in optionfile:
+                    if i.startswith('_OPTIONS_READ='):
+                        # The option set to the last pkgname this config file
+                        # was set for
+                        config_pkgname = i[14:-1]
+                    elif i.startswith('WITH'):
+                        options.add(i.split('_', 1)[1].split('=', 1)[0])
         if flags["config"] == "changed" and options != set(self.attr["options"]):
             return False
         if (flags["config"] == "newer" and
