@@ -54,7 +54,7 @@ class Dependent(DependHandler):
         self.port = port  #: The port whom we handle
         self.priority = port.priority
         self.propogate = True
-        if flags["mode"] == "install" and port.install_status > flags["stage"]:
+        if port.install_status > flags["stage"]:
             self.status = Dependent.RESOLV
             # TODO: Change to actually check if we are resolved
         else:
@@ -72,17 +72,15 @@ class Dependent(DependHandler):
 
         self._dependants[typ].append((field, port))
 
-    def get(self, typ=None):
+    def get(self, stage=None):
         """Retrieve a list of dependants."""
-        if typ is None:
+        if stage is None:
             depends = set()
             for i in self._dependants:
                 depends.update(j[1] for j in i)
-        elif isinstance(typ, int):
-            depends = set(j[1] for j in self._dependants[typ])
         else:
             depends = set()
-            for i in typ:
+            for i in DependHandler.STAGE2DEPENDS[stage]:
                 depends.update(j[1] for j in self._dependants[i])
 
         return depends
@@ -221,17 +219,15 @@ class Dependency(DependHandler):
             self._update_priority()
             self.port._post_depend(not self._bad)
 
-    def get(self, typ=None):
+    def get(self, stage=None):
         """Retrieve a list of dependencies."""
-        if typ is None:
+        if stage is None:
             depends = set()
             for i in self._dependencies:
                 depends.update(i)
-        elif isinstance(typ, int):
-            depends = set(self._dependencies[typ])
         else:
             depends = set()
-            for i in typ:
+            for i in DependHandler.STAGE2DEPENDS[stage]:
                 depends.update(self._dependencies[i])
 
         return depends
@@ -240,10 +236,9 @@ class Dependency(DependHandler):
         """Check the dependency status for a given stage."""
         # DependHandler status might change without Port's changing
         bad = set()
-        for i in Dependency.STAGE2DEPENDS[stage]:
-            for j in self._dependencies[i]:
-                if j.dependent.status != Dependent.RESOLV:
-                    bad.add(j)
+        for i in DependHandler.STAGE2DEPENDS[stage]:
+            bad.add(j for j in self._dependencies[i]
+                        if j.dependent.status != Dependent.RESOLV)
         return bad
 
     def update(self, depend):
