@@ -335,7 +335,6 @@ class StageBuilder(Builder):
 
     def _add(self, port, pending=0):
         """Add a ports dependencies and prior stage to be built."""
-        from .env import flags
 
         # Don't try and build a port that has already failed
         # or cannot be built
@@ -343,7 +342,10 @@ class StageBuilder(Builder):
             self.ports[port].stage_done()
             return
 
-        depends = port.dependency.check(self.stage)
+        if env.flags["mode"] == "recursive":
+            depends = port.dependency.get(self.stage)
+        else:
+            depends = port.dependency.check(self.stage)
 
         # Add all outstanding ports to be installed
         self._pending[port] = len(depends) + pending
@@ -354,8 +356,7 @@ class StageBuilder(Builder):
             self._depends[p].add(port)
 
         # Build the previous stage if needed
-        if (self.prev_builder and (port.install_status <= flags["stage"] or
-                                   port.force) and port.stage < self.stage - 1):
+        if self.prev_builder and self._port_check(port):
             self._pending[port] += 1
             self.prev_builder.add(port).connect(self._stage_resolv)
 
@@ -464,6 +465,7 @@ class StageBuilder(Builder):
             self.ports[port].started.connect(self._started)
             self.queue.add(self.ports[port])
         else:
+            self.ports[port].stage_done()
             log.debug("StageBuilder._port_ready()",
                       "Port '%s': skipping stage %d" %
                           (port.origin, self.stage))
@@ -471,20 +473,14 @@ class StageBuilder(Builder):
     def _port_check(self, port):
         """Check if the port should build this stage."""
         from .port.dependhandler import Dependent
-        from .env import flags
 
-        if port.dependent.status == Dependent.RESOLV:
-            # port does not need to build
-            self.ports[port].stage_done()
-        elif port.install_status > flags["stage"] and not port.force:
-            # port already up to date, does not need to build
-            port.dependent.status_changed()
-            self.ports[port].stage_done()
-        elif port.stage >= self.stage:
-            self.ports[port].stage_done()
-        else:
-            return True
-        return False
+        # The port needs to be built if:
+        # 1) The port doesn't satisfy it's dependants, and
+        # 2) The port's install status is not sufficient or is forced to build, and
+        # 3) The port hasn't completed this stage
+        return (port.dependent.status != Dependent.RESOLV and
+                (port.install_status <= env.flags["stage"] or port.force) and
+                port.stage < self.stage)
 
 
 class BuildBuilder(StageBuilder):
@@ -509,13 +505,13 @@ class PackageBuilder(StageBuilder):
 
     def _port_check(self, port):
         """Check if the port should build this stage."""
-        if port.stage < self.stage - 1:
-            port.dependent.status_changed()
-            self.ports[port].stage_done()
-            return False
-        else:
-            assert port.stage == self.stage - 1
-            return True
+        # The port needs to be built if:
+        # 1) The base conditions are met, or
+        # 2) The port has completed the INSTALL stage (which implies it now
+        #       has a Dependent.RESOLV status).
+        return (super(PackageBuilder, self)._port_check(port) or
+                    port.stage == self.stage - 1)
+
 
 depend_resolve = DependLoader()
 
