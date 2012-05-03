@@ -476,10 +476,10 @@ class StageBuilder(Builder):
 
         # The port needs to be built if:
         # 1) The port doesn't satisfy it's dependants, and
-        # 2) The port's install status is not sufficient or is forced to build, and
+        # 2) The port's install status is not sufficient, and
         # 3) The port hasn't completed this stage
         return (port.dependent.status != Dependent.RESOLV and
-                (port.install_status <= env.flags["stage"] or port.force) and
+                port.install_status <= env.flags["stage"] and
                 port.stage < self.stage)
 
 
