@@ -115,7 +115,7 @@ class DependLoader(object):
         elif port.failed:
             return False
         if method == "build":
-            if "package" in flags["target"]:
+            if "package" in flags["target"] or "package" in port.flags:
                 # Connect to install job and give package ownership
                 job = package(port)
                 if port in install.ports:
@@ -478,8 +478,11 @@ class StageBuilder(Builder):
         # 1) The port doesn't satisfy it's dependants, and
         # 2) The port's install status is not sufficient or is forced to build, and
         # 3) The port hasn't completed this stage
+        status = env.flags["stage"]
+        if "upgrade" in port.flags and status < pkg.OLDER:
+            status = pkg.OLDER
         return (port.dependent.status != Dependent.RESOLV and
-                (port.install_status <= env.flags["stage"] or port.force) and
+                (port.install_status <= status or port.force) and
                 port.stage < self.stage)
 
 

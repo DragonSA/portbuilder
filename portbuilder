@@ -31,21 +31,18 @@ class PortDelegate(object):
 
         if isinstance(port, str):
             return
-        port.explicit = True
+        port.flags.add("explicit")
+        if self.upgrade:
+            ports.flags.add("upgrade")
+        if self.package:
+            ports.flags.add("package")
+        if self.force:
+            port.force = self.force
         if ((not (env.flags["mode"] == "recursive" or self.force) and
                 port.install_status > env.flags["stage"]) or
                 port in builder.depend_resolve.ports):
             return
-        if self.upgrade or self.force:
-            port.dependent.status = Dependent.UNRESOLV
-            port.force = self.force
-        if self.package:
-            job = builder.package(port)
-            if port in builder.install.ports:
-                job = builder.install.ports[port]
-        else:
-            job = builder.install(port)
-        builder.depend_resolve.register(job)
+        builder.depend_resolve(port)
 
 
 def sigterm():
