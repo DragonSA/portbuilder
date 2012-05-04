@@ -212,8 +212,8 @@ def report():
 
 def gen_parser():
     """Create the options parser object."""
-    usage = ("\t%prog [-abdnpruFNU] [-c config] [-C chroot] [-D variable] "
-             "[-f file] [long-options] [variable=value] port ...")
+    usage = ("\t%prog [-abdnpruFNU] [-c CONFIG] [-C CHROOT] [-D variable] "
+             "[-f PORTS_FILE] [-j J] [long-options] [variable=value] port ...")
 
     parser = optparse.OptionParser(usage, version="%prog 0.1.4.1")
 
@@ -256,6 +256,11 @@ def gen_parser():
     parser.add_option("-F", "--fetch-only", dest="fetch", action="store_true",
                       default=False, help="Only fetch the distribution files "
                       "for the ports")
+
+    parser.add_option("-j", action="callback", type="string",
+                      callback=parse_jobs, help="Set the queue loads [defaults:"
+                      " attr=#CPU, checksum=CPU/2, fetch=1, build=CPU*2, "
+                      "install=1, package=1]")
 
     parser.add_option("-n", dest="no_opt_print", action="store_true",
                       default=False, help="Display the commands that would "
@@ -447,12 +452,37 @@ def read_port_file(ports_file):
 
 def parse_config(_option, _opt_str, value, _parser):
     """Set the config requirements."""
-    from libpb.env import flags
-
     if value not in env.CONFIG:
         raise optparse.OptionValueError("config must be one of (%s)" %
                                         (", ".join(env.CONFIG)))
-    flags["config"] = value
+    env.flags["config"] = value
+
+def parse_jobs(_option, _opt_str, value, _parser):
+    """Set the queue loads."""
+    queues = {
+            "attr":     queue.attr,
+            "checksum": queue.checksum,
+            "fetch":    queue.fetch,
+            "build":    queue.build,
+            "install":  queue.install,
+            "package":  queue.package,
+        }
+    values = [i.split("=", 2) for i in value.split(",")]
+    for i in values:
+        if len(i) != 2:
+            raise optparse.OptionValueError("no queue load specified '%s'" % i)
+
+    for name, num in values:
+        for i in queues:
+            if i.startswith(name):
+                try:
+                    queues[i].load = int(num)
+                except ValueError:
+                    raise optparse.OptionValueError(
+                                            "unknown value for queue '%s'" % i)
+                break
+        else:
+            raise optparse.OptionValueError("unknown queue '%s'" % name)
 
 
 if __name__ == "__main__":
