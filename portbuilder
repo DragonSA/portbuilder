@@ -470,7 +470,8 @@ def parse_jobs(_option, _opt_str, value, _parser):
     values = [i.split("=", 2) for i in value.split(",")]
     for i in values:
         if len(i) != 2:
-            raise optparse.OptionValueError("no queue load specified '%s'" % i)
+            raise optparse.OptionValueError(
+                                        "no queue load specified '%s'" % i[0])
 
     for name, num in values:
         for i in queues:
@@ -479,7 +480,10 @@ def parse_jobs(_option, _opt_str, value, _parser):
                     queues[i].load = int(num)
                 except ValueError:
                     raise optparse.OptionValueError(
-                                            "unknown value for queue '%s'" % i)
+                                            "unknown load for queue '%s'" % i)
+                if queues[i].load <= 0:
+                    raise optparse.OptionValueError(
+                                          "queue must have load > 0 '%s'" % i)
                 break
         else:
             raise optparse.OptionValueError("unknown queue '%s'" % name)
