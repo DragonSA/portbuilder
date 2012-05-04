@@ -185,7 +185,7 @@ Future release:
  * pkg_mgmt interface (vs direct file inspection)
  * make compatible with pkgng
  - display skipped ports (with toggle)
- - add -j options to control queue loads
+ * add -j options to control queue loads
  x create a clean_builder
  * clean ports before trying other depend methods
  - indicate progress of each stage (i.e. fetched, built)

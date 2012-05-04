@@ -125,7 +125,6 @@ class Port(object):
         self.attr = attr
         self.log_file = os.path.join(flags["log_dir"], self.attr["pkgname"])
         self.failed = False
-        self.force = False
         self.load = attr["jobs_number"]
         self.origin = origin
         self.priority = 0

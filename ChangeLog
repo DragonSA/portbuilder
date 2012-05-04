@@ -1,4 +1,8 @@
 X.Y.Z - YYYY MMM DD:
+ * Added '-j' option to tune concurrency
+ * Removed '--force' and '--force-all' option to simplify code
+ * Fixes:
+   * Partial fix for bug 0.1.3.1-0 (superseded by bug 0.1.5-0)
 
 0.1.4.1 - 2012 April 23:
  * Fixes:

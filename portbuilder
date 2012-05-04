@@ -19,11 +19,10 @@ VAR_NAME = "^[a-zA-Z_][a-zA-Z0-9_]*$"
 class PortDelegate(object):
     """Choose if a port should be build and with which builder."""
 
-    def __init__(self, package, upgrade, force):
+    def __init__(self, package, upgrade):
         """Initialise port delegate."""
         self.package = package
         self.upgrade = upgrade
-        self.force = force
 
     def __call__(self, port):
         """Add a port to the required builder."""
@@ -31,13 +30,12 @@ class PortDelegate(object):
 
         if isinstance(port, str):
             return
-        if ((not (env.flags["mode"] == "recursive" or self.force) and
+        if ((env.flags["mode"] != "recursive" and
                 port.install_status > env.flags["stage"]) or
                 port in builder.depend_resolve.ports):
             return
-        if self.upgrade or self.force:
+        if self.upgrade:
             port.dependent.status = Dependent.UNRESOLV
-            port.force = self.force
         if self.package:
             job = builder.package(port)
             if port in builder.install.ports:
@@ -102,7 +100,7 @@ def main():
     event(signal.SIGTERM, "s").connect(sigterm)
 
     # Port delegate
-    delegate = PortDelegate(options.package, options.upgrade, options.force)
+    delegate = PortDelegate(options.package, options.upgrade)
 
     # Execute the primary build target
     for port in options.args:
@@ -214,8 +212,8 @@ def report():
 
 def gen_parser():
     """Create the options parser object."""
-    usage = ("\t%prog [-abdnpruFNU] [-c config] [-C chroot] [-D variable] "
-             "[-f file] [long-options] [variable=value] port ...")
+    usage = ("\t%prog [-abdnpruFNU] [-c CONFIG] [-C CHROOT] [-D variable] "
+             "[-f PORTS_FILE] [-j J] [long-options] [variable=value] port ...")
 
     parser = optparse.OptionParser(usage, version="%prog 0.1.4.1")
 
@@ -259,12 +257,10 @@ def gen_parser():
                       default=False, help="Only fetch the distribution files "
                       "for the ports")
 
-    parser.add_option("--force", action="store_true", default=False,
-                      help="Force (re)installation of specified ports.")
-
-    parser.add_option("--force-all", dest="forceA", action="store_true",
-                      default=False, help="Force (re)installation of "
-                      "specified ports and all its dependencies.")
+    parser.add_option("-j", action="callback", type="string",
+                      callback=parse_jobs, help="Set the queue loads [defaults:"
+                      " attr=#CPU, checksum=CPU/2, fetch=1, build=CPU*2, "
+                      "install=1, package=1]")
 
     parser.add_option("-n", dest="no_opt_print", action="store_true",
                       default=False, help="Display the commands that would "
@@ -397,15 +393,6 @@ def set_options(options):
         except IOError:
             options.parser.error("unable to open file: %s" % options.ports_file)
 
-    # Force build and install of ports
-    if options.force and len(options.args) > 1:
-        env.flags["mode"] = "recursive"
-
-    # Force build and install of all ports
-    if options.forceA:
-        env.flags["stage"] = max(env.flags["stage"], Port.NEWER)
-        env.flags["mode"] = "recursive"
-
     # ! (-n & -N)
     if options.no_opt and options.no_opt_print:
         options.parser.error("-n and -N are mutually exclusive")
@@ -465,12 +452,41 @@ def read_port_file(ports_file):
 
 def parse_config(_option, _opt_str, value, _parser):
     """Set the config requirements."""
-    from libpb.env import flags
-
     if value not in env.CONFIG:
         raise optparse.OptionValueError("config must be one of (%s)" %
                                         (", ".join(env.CONFIG)))
-    flags["config"] = value
+    env.flags["config"] = value
+
+def parse_jobs(_option, _opt_str, value, _parser):
+    """Set the queue loads."""
+    queues = {
+            "attr":     queue.attr,
+            "checksum": queue.checksum,
+            "fetch":    queue.fetch,
+            "build":    queue.build,
+            "install":  queue.install,
+            "package":  queue.package,
+        }
+    values = [i.split("=", 2) for i in value.split(",")]
+    for i in values:
+        if len(i) != 2:
+            raise optparse.OptionValueError(
+                                        "no queue load specified '%s'" % i[0])
+
+    for name, num in values:
+        for i in queues:
+            if i.startswith(name):
+                try:
+                    queues[i].load = int(num)
+                except ValueError:
+                    raise optparse.OptionValueError(
+                                            "unknown load for queue '%s'" % i)
+                if queues[i].load <= 0:
+                    raise optparse.OptionValueError(
+                                          "queue must have load > 0 '%s'" % i)
+                break
+        else:
+            raise optparse.OptionValueError("unknown queue '%s'" % name)
 
 
 if __name__ == "__main__":
