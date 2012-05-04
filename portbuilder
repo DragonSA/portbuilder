@@ -31,6 +31,7 @@ class PortDelegate(object):
 
         if isinstance(port, str):
             return
+        port.explicit = True
         if ((not (env.flags["mode"] == "recursive" or self.force) and
                 port.install_status > env.flags["stage"]) or
                 port in builder.depend_resolve.ports):
