@@ -39,12 +39,12 @@ class PortDelegate(object):
             port.dependent.status = Dependent.UNRESOLV
             port.force = self.force
         if self.package:
-            job = builder.package(port)
+            portjob = builder.package(port)
             if port in builder.install.ports:
-                job = builder.install.ports[port]
+                portjob = builder.install.ports[port]
         else:
-            job = builder.install(port)
-        builder.depend_resolve.register(job)
+            portjob = builder.install(port)
+        builder.depend_resolve.register(portjob)
 
 
 def sigterm():
