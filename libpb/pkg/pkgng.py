@@ -39,14 +39,9 @@ def add(port, repo=False):
             args = ("pkg", "install", "-y", port.attr["pkgname"])
         else:
             args = ("pkg", "add", port.attr["pkgfile"])
-    if args and env.flags["chroot"]:
-        args = ("chroot", env.flags["chroot"]) + args
     return args
 
 
 def info():
     """List all installed packages with their respective port origin."""
-    args = ("pkg", "info", "-ao")
-    if env.flags["chroot"]:
-        args = ("chroot", env.flags["chroot"]) + args
-    return args
+    return ("pkg", "info", "-ao")

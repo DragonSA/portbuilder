@@ -28,6 +28,8 @@ def add(port, repo=False):
 
     if not args:
         return args
+    if env.flags["chroot"]:
+        args = ("chroot", env.flags["chroot"]) + args
     if env.flags["no_op"]:
         pkg_add = make.PopenNone(args, port)
     else:
@@ -46,6 +48,9 @@ def info():
         args = pkgng.info()
     else:
         assert not "Unknown pkg_mgmt"
+
+    if env.flags["chroot"]:
+        args = ("chroot", env.flags["chroot"]) + args
 
     pkg_info = subprocess.Popen(args, stdin=subprocess.PIPE,
         stdout=subprocess.PIPE, stderr=subprocess.STDOUT, close_fds=True)
