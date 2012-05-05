@@ -233,11 +233,6 @@ def gen_parser():
     parser.add_option("-d", "--debug", action="store_false", default=True,
                       help="Turn off extra diagnostic information (faster)")
 
-    parser.add_option("--depend", action="store", type="string", default="",
-                      help="Comma separated list of methods to resolve "
-                      "dependencies (%s) [default: build]" %
-                      (", ".join(env.DEPEND),))
-
     parser.add_option("-D", dest="make_env", action="append", default=[],
                       metavar="variable", help="Define the given variable for "
                       "make (i.e. add ``-D variable'' to the make calls)")
@@ -253,6 +248,11 @@ def gen_parser():
                       callback=parse_jobs, help="Set the queue loads [defaults:"
                       " attr=#CPU, checksum=CPU/2, fetch=1, build=CPU*2, "
                       "install=1, package=1]")
+
+    parser.add_option("--method", action="store", type="string", default="",
+                      help="Comma separated list of methods to resolve "
+                      "dependencies (%s) [default: build]" %
+                      (", ".join(env.METHOD),))
 
     parser.add_option("-n", dest="no_opt_print", action="store_true",
                       default=False, help="Display the commands that would "
@@ -364,14 +364,14 @@ def set_options(options):
         env.flags["debug"] = True
 
     # Depend resolve methods
-    if options.depend:
-        depend = [i.strip() for i in options.depend.split(",")]
+    if options.method:
+        depend = [i.strip() for i in options.method.split(",")]
         for i in depend:
             if depend.count(i) > 1:
                 options.parser.error("depend method specified multiple times")
-            elif i not in env.DEPEND:
+            elif i not in env.METHOD:
                 options.parser.error("unknown depend method")
-        env.flags["depend"] = depend
+        env.flags["method"] = depend
 
     # Fetch only options:
     if options.fetch:

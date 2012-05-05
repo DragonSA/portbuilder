@@ -84,10 +84,28 @@ class FileLock(object):
 
 
 class Port(object):
-    """A FreeBSD port class.
+    """
+    A FreeBSD port class.
 
     Signals:
      - stage_completed(Port):     Indicates the port completed a stage
+
+    The port has multiple stages that it may be in.  The progression is as
+    follows:
+        For the "build" method:
+            ZERO -> CONFIG -> DEPEND (-> CHECKSUM) (->FETCH) -> BUILD -> INSTALL
+                (-> PACKAGE)
+        For the "package" method:
+            ZERO -> CONFIG -> DEPEND -> PKGINSTALL
+        For the "repo" method:
+            ZERO -> CONFIG -> DEPEND -> REPOCONFIG (-> REPOFETCH) -> REPOINSTALL
+
+    The CHECKSUM and FETCH stage may be skipped if either there are no distfiles
+    for the port or the distfiles have already been checked.  Furthermore, the
+    CHECKSUM stage may be skipped if the distfiles have already failed checksum.
+
+    The REPOFETCH stage may be skipped if the package has already been retrieved
+    from the repository.
     """
 
     # Installed status flags
@@ -106,7 +124,9 @@ class Port(object):
     INSTALL     = 6
     PACKAGE     = 7
     PKGINSTALL  = 8
-    REPOINSTALL = 9
+    REPOCONFIG  = 9
+    REPOFETCH   = 10
+    REPOINSTALL = 11
 
     _config_lock = Lock()
     _checksum_lock = FileLock()
@@ -288,9 +308,14 @@ class Port(object):
 
     def _post_depend(self, status):
         """Advance to the build stage if nothing to fetch."""
-        if status and self._fetched.issuperset(self.attr["distfiles"]):
-            # NOTE: if no distfiles above is always true
-            self.stage = Port.FETCH
+        if status:
+            if self._fetched.issuperset(self.attr["distfiles"])):
+                # NOTE: if no distfiles above is always true
+                # If files have already been fetched
+                self.stage = Port.FETCH
+            elif not self._bad_checksum.isdisjoint(self.attr["distfiles"]):
+                # If some files have already failed
+                self.stage = Port.CHECKSUM
         self._finalise(Port.CONFIG, status)
 
     def _pre_checksum(self):

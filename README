@@ -47,8 +47,6 @@ Options:
                         newer, all) [default: changed]
   -C CHROOT             Build ports in chroot environment
   -d, --debug           Turn off extra diagnostic information (faster)
-  --depend=DEPEND       Comma separated list of methods to resolve
-                        dependencies (build, package, repo) [default: build]
   -D variable           Define the given variable for make (i.e. add ``-D
                         variable'' to the make calls)
   -f PORTS_FILE, --ports-file=PORTS_FILE
@@ -57,6 +55,8 @@ Options:
   -j J                  Set the queue loads [defaults: attr=#CPU,
                         checksum=CPU/2, fetch=1, build=CPU*2, install=1,
                         package=1]
+  --method=METHOD       Comma separated list of methods to resolve
+                        dependencies (build, package, repo) [default: build]
   -n                    Display the commands that would have been executed,
                         but do not actually execute them.
   -N                    Do not execute any commands.
@@ -105,7 +105,7 @@ packages were possible
 
 Build ports using the pkgng package tool, and try install from a remote
 package repository first
-# portbuilder --depend=repo,build -f /root/ports -DWITH_PKGNG
+# portbuilder --method=repo,build -f /root/ports -DWITH_PKGNG
 
 Install all ports from a repository, installing 4 packages at a time and
 fetching 8 packages at a time

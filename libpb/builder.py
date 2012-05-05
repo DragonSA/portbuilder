@@ -42,7 +42,7 @@ class DependLoader(object):
             from .signal import Signal
 
             sig = Signal()
-            self.method[port] = flags["depend"][0]
+            self.method[port] = flags["method"][0]
 
             for builder, method in zip((install, pkginstall, repoinstall),
                                        ("build", "package", "repo")):
@@ -149,7 +149,7 @@ class DependLoader(object):
         from .env import flags
 
         try:
-            return flags["depend"][flags["depend"].index(method) + 1]
+            return flags["method"][flags["method"].index(method) + 1]
         except IndexError:
             return None
 

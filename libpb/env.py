@@ -39,20 +39,20 @@ env_master = {
 #       was connected and when a signal was emitted.  Results in slower
 #       performance and higher memory usage.
 #
-# depend - The methods used to resolve a dependency.  Multiple methods may be
-#       specified in a sequence but a method may only be used once.  Currently
-#       supported methods are:
-#               build   - build the dependency from a port
-#               package - install the dependency from the local package
-#                       repository (${PKGREPOSITORY})
-#               repo    - install the dependency from a repository
-#
 # fetch_only - Only fetch a port's distfiles.
 #
 # log_dir - Directory where the log files, of the port build, and for
 #       portbuilder, are stored.
 #
 # log_file - The log file for portbuilder
+#
+# method - The methods used to resolve a dependency.  Multiple methods may be
+#       specified in a sequence but a method may only be used once.  Currently
+#       supported methods are:
+#               build   - build the dependency from a port
+#               package - install the dependency from the local package
+#                       repository (${PKGREPOSITORY})
+#               repo    - install the dependency from a repository
 #
 # mode - The current mode of operation.  The currently supported modes are:
 #               install   - act when all port's direct dependencies are resolved
@@ -82,7 +82,7 @@ env_master = {
 #                       after the install/package target indicating that the
 #                       port should cleaned before or after, respectively.
 CONFIG   = ("none", "changed", "newer", "all")
-DEPEND   = ("build", "package", "repo")
+METHOD   = ("build", "package", "repo")
 MODE     = ("install", "recursive", "clean")
 PKG_MGMT = ("pkg", "pkgng")
 STAGE    = (0, 1, 2, 3)
@@ -91,10 +91,10 @@ flags = {
   "chroot"      : "",                   # Chroot directory of system
   "config"      : "changed",            # Configure ports based on criteria
   "debug"       : False,                # Print extra debug messages
-  "depend"      : ["build"],            # Resolve dependencies methods
   "fetch_only"  : False,                # Only fetch ports
   "log_dir"     : "/tmp/portbuilder",   # Directory for logging information
   "log_file"    : "portbuilder",        # General log file
+  "method"      : ["build"],            # Resolve dependencies methods
   "mode"        : "install",            # Mode of operation
   "no_op"       : False,                # Do nothing
   "no_op_print" : False,                # Print commands instead of execution
