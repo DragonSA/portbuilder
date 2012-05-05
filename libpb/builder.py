@@ -116,11 +116,8 @@ class DependLoader(object):
         if method == "build":
             if "package" in flags["target"] or "package" in port.flags:
                 # Connect to install job and give package ownership
-                portjob = package(port)
-                if port in install.ports:
-                    # Use the install job if it exists otherwise use the package
-                    # job.
-                    portjob = install.ports[port]
+                package(port)
+                portjob = install.add(port)
             elif "install" in flags["target"]:
                 portjob = install(port)
             else:
