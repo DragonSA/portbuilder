@@ -116,11 +116,8 @@ class DependLoader(object):
         if method == "build":
             if "package" in flags["target"] or "package" in port.flags:
                 # Connect to install job and give package ownership
-                portjob = package(port)
-                if port in install.ports:
-                    # Use the install job if it exists otherwise use the package
-                    # job.
-                    portjob = install.ports[port]
+                package(port)
+                portjob = install.add(port)
             elif "install" in flags["target"]:
                 portjob = install(port)
             else:
@@ -467,8 +464,6 @@ class StageBuilder(Builder):
 
     def _port_check(self, port):
         """Check if the port should build this stage."""
-        from .port.dependhandler import Dependent
-
         # The port needs to be built if:
         # 1) The port isn't "complete", and
         # 2) The port hasn't completed this stage

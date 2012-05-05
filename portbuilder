@@ -11,7 +11,7 @@ import signal
 import sys
 import traceback
 
-from libpb import builder, env, log, mk, pkg, queue
+from libpb import builder, env, event, log, mk, pkg, queue
 
 VAR_NAME = "^[a-zA-Z_][a-zA-Z0-9_]*$"
 
@@ -47,17 +47,15 @@ def sigterm():
 
 def sigint():
     """Ask politely for everything to stop at a convenient time."""
-    from libpb.event import event, post_event
     from libpb import stop
 
-    post_event(stop)
-    event(signal.SIGINT, "s").disconnect(sigint).connect(sigterm)
+    event.post_event(stop)
+    event.event(signal.SIGINT, "s").disconnect(sigint).connect(sigterm)
 
 
 def main():
     """The main event loop."""
     from libpb.env import flags
-    from libpb.event import event
     from libpb.monitor import Top
     from libpb.port import get_port
 
@@ -87,9 +85,9 @@ def main():
 
     # Install signal handlers
     signal.signal(signal.SIGINT, signal.SIG_IGN)
-    event(signal.SIGINT, "s").connect(sigint)
+    event.event(signal.SIGINT, "s").connect(sigint)
     signal.signal(signal.SIGTERM, signal.SIG_IGN)
-    event(signal.SIGTERM, "s").connect(sigterm)
+    event.event(signal.SIGTERM, "s").connect(sigterm)
 
     # Port delegate
     delegate = PortDelegate(options.package, options.upgrade)
@@ -137,14 +135,13 @@ def run_loop(options):
     except SystemExit:
         raise
     except BaseException:
-        from libpb.event import post_event, traceback as event_traceback
         from libpb import stop
 
-        msg = "".join(log.format_tb(tb, name) for tb, name in event_traceback())
+        msg = "".join(log.format_tb(tb, name) for tb, name in event.traceback())
         msg += traceback.format_exc()
         log.exception()
 
-        post_event(stop)
+        event.post_event(stop)
         try:
             run()
         finally:
