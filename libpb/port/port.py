@@ -124,6 +124,7 @@ class Port(object):
 
         self.attr = attr
         self.log_file = os.path.join(flags["log_dir"], self.attr["pkgname"])
+        self.flags = set()
         self.failed = False
         self.load = attr["jobs_number"]
         self.origin = origin
@@ -144,6 +145,18 @@ class Port(object):
 
     def __repr__(self):
         return "<Port(%s)>" % (self.origin)
+
+    def resolved(self):
+        """Indicate if the port meets it's dependencies."""
+        # TODO: use Dependent.RESOLV (current import issues)
+        RESOLV = 1
+        assert (self.dependent.status != RESOLV or
+          (self.install_status > env.flags["stage"] or "upgrade" in self.flags))
+        status = env.flags["stage"]
+        if "upgrade" in self.flags and status < pkg.OLDER:
+            status = pkg.OLDER
+        return (self.install_status > status and
+                self.dependent.status == RESOLV)
 
     def clean(self, force=False):
         """Remove port's working director and log files."""

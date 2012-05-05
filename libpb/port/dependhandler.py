@@ -237,8 +237,7 @@ class Dependency(DependHandler):
         # DependHandler status might change without Port's changing
         bad = set()
         for i in DependHandler.STAGE2DEPENDS[stage]:
-            bad.add(j for j in self._dependencies[i]
-                        if j.dependent.status != Dependent.RESOLV)
+            bad.add(j for j in self._dependencies[i] if not j.resolved())
         return bad
 
     def update(self, depend):

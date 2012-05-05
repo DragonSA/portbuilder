@@ -26,23 +26,15 @@ class PortDelegate(object):
 
     def __call__(self, port):
         """Add a port to the required builder."""
-        from libpb.port.dependhandler import Dependent
-
         if isinstance(port, str):
             return
-        if ((env.flags["mode"] != "recursive" and
-                port.install_status > env.flags["stage"]) or
-                port in builder.depend_resolve.ports):
-            return
+        port.flags.add("explicit")
         if self.upgrade:
-            port.dependent.status = Dependent.UNRESOLV
+            port.flags.add("upgrade")
         if self.package:
-            portjob = builder.package(port)
-            if port in builder.install.ports:
-                portjob = builder.install.ports[port]
-        else:
-            portjob = builder.install(port)
-        builder.depend_resolve.register(portjob)
+            port.flags.add("package")
+        if env.flags["mode"] == "recursive" or not port.resolved():
+            builder.depend_resolve(port)
 
 
 def sigterm():

@@ -114,7 +114,7 @@ class DependLoader(object):
         elif port.failed:
             return False
         if method == "build":
-            if "package" in flags["target"]:
+            if "package" in flags["target"] or "package" in port.flags:
                 # Connect to install job and give package ownership
                 portjob = package(port)
                 if port in install.ports:
@@ -470,12 +470,9 @@ class StageBuilder(Builder):
         from .port.dependhandler import Dependent
 
         # The port needs to be built if:
-        # 1) The port doesn't satisfy it's dependants, and
-        # 2) The port's install status is not sufficient, and
-        # 3) The port hasn't completed this stage
-        return (port.dependent.status != Dependent.RESOLV and
-                port.install_status <= env.flags["stage"] and
-                port.stage < self.stage)
+        # 1) The port isn't "complete", and
+        # 2) The port hasn't completed this stage
+        return not port.resolved() and port.stage < self.stage
 
 
 class BuildBuilder(StageBuilder):
