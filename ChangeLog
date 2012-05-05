@@ -1,4 +1,6 @@
 X.Y.Z - YYYY MMM DD:
+ * Use the DependHandler to install ports (i.e. explicit ports can now be
+    installed directly from repo or package if --method prescribes that)
 
 0.1.4.1 - 2012 April 23:
  * Fixes:
