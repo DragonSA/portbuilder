@@ -18,7 +18,7 @@ tar -xf %(pkgfile)s -C %(wrkdir)s -s ",/.*/,,g" "*/pkg-static";
 %(wrkdir)s/pkg-static add %(pkgfile)s;
 rm -f %(wrkdir)s/pkg-static;
 if [ "$clean_wrkdir" = "YES" ]; then
-    !rmdir %(wrkdir)s;
+    rmdir %(wrkdir)s || true;
 fi
 """
 
