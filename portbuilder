@@ -33,9 +33,9 @@ class PortDelegate(object):
             return
         port.flags.add("explicit")
         if self.upgrade:
-            ports.flags.add("upgrade")
+            port.flags.add("upgrade")
         if self.package:
-            ports.flags.add("package")
+            port.flags.add("package")
         if self.force:
             port.force = self.force
         if ((not (env.flags["mode"] == "recursive" or self.force) and

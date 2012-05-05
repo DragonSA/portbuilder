@@ -478,12 +478,7 @@ class StageBuilder(Builder):
         # 1) The port doesn't satisfy it's dependants, and
         # 2) The port's install status is not sufficient or is forced to build, and
         # 3) The port hasn't completed this stage
-        status = env.flags["stage"]
-        if "upgrade" in port.flags and status < pkg.OLDER:
-            status = pkg.OLDER
-        return (port.dependent.status != Dependent.RESOLV and
-                (port.install_status <= status or port.force) and
-                port.stage < self.stage)
+        return not port.resolved() and port.stage < self.stage
 
 
 class BuildBuilder(StageBuilder):
