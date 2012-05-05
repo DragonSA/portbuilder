@@ -467,8 +467,6 @@ class StageBuilder(Builder):
 
     def _port_check(self, port):
         """Check if the port should build this stage."""
-        from .port.dependhandler import Dependent
-
         # The port needs to be built if:
         # 1) The port isn't "complete", and
         # 2) The port hasn't completed this stage

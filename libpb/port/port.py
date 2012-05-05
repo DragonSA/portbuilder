@@ -309,7 +309,7 @@ class Port(object):
     def _post_depend(self, status):
         """Advance to the build stage if nothing to fetch."""
         if status:
-            if self._fetched.issuperset(self.attr["distfiles"])):
+            if self._fetched.issuperset(self.attr["distfiles"]):
                 # NOTE: if no distfiles above is always true
                 # If files have already been fetched
                 self.stage = Port.FETCH
