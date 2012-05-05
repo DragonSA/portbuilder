@@ -14,7 +14,7 @@ __all__ = ["Port"]
 
 # TODO:
 # Non-privileged mode
-# remove NO_DEPENDS once thoroughly tested???
+# remove NO_DEPENDS (currently doesn't work with pkgng)
 # handle IS_INTERACTIVE
 
 
@@ -124,9 +124,7 @@ class Port(object):
     INSTALL     = 6
     PACKAGE     = 7
     PKGINSTALL  = 8
-    REPOCONFIG  = 9
-    REPOFETCH   = 10
-    REPOINSTALL = 11
+    REPOINSTALL = 9
 
     _config_lock = Lock()
     _checksum_lock = FileLock()
