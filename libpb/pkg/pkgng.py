@@ -18,7 +18,7 @@ tar -xf %(pkgfile)s -C %(wrkdir)s -s ",/.*/,,g" "*/pkg-static";
 %(wrkdir)s/pkg-static add %(pkgfile)s;
 rm -f %(wrkdir)s/pkg-static;
 if [ "$clean_wrkdir" = "YES" ]; then
-    rmdir %(wrkdir)s;
+    !rmdir %(wrkdir)s;
 fi
 """
 
@@ -32,25 +32,21 @@ def add(port, repo=False):
         if repo:
             args = False
         else:
-            args = ("sh", "-c", shell_pkg_add % port.attr)
+            args = ("sh", "-ec", shell_pkg_add % port.attr)
     else:
         # Normal package add
         if repo:
-            args = ("install", "-y", port.attr["pkgname"])
+            args = ("pkg", "install", "-y", port.attr["pkgname"])
         else:
-            args = ("add", port.attr["pkgfile"])
-    if args:
-        if env.flags["chroot"]:
-            args = ("pkg", "-c", env.flags["chroot"]) + args
-        else:
-            args = ("pkg",) + args
+            args = ("pkg", "add", port.attr["pkgfile"])
+    if args and env.flags["chroot"]:
+        args = ("chroot", env.flags["chroot"]) + args
     return args
 
 
 def info():
     """List all installed packages with their respective port origin."""
+    args = ("pkg", "info", "-ao")
     if env.flags["chroot"]:
-        args = ("pkg", "-c", env.flags["chroot"], "info", "-ao")
-    else:
-        args = ("pkg", "info", "-ao")
+        args = ("chroot", env.flags["chroot"]) + args
     return args
