@@ -17,12 +17,12 @@ NEWER   = 3
 
 __all__ = ["add", "db", "version"]
 
-def add(port, repo=False):
+def add(port, repo=False, pkg_dir=None):
     """Add a package for port."""
     if env.flags["pkg_mgmt"] == "pkg":
-        args = pkg.add(port, repo)
+        args = pkg.add(port, repo, pkg_dir)
     elif env.flags["pkg_mgmt"] == "pkgng":
-        args = pkgng.add(port, repo)
+        args = pkgng.add(port, repo, pkg_dir)
     else:
         assert not "Unknown pkg_mgmt"
 
@@ -115,7 +115,7 @@ def cmp_attr(old, new, sym):
 
 
 class PKGDB(object):
-    """A package database that tracks the installed status of packages."""
+    """A package database that tracks the installed packages."""
 
     def __init__(self):
         super(PKGDB, self).__init__()
@@ -129,7 +129,7 @@ class PKGDB(object):
             self.db[port.origin] = set([port.attr['pkgname']])
 
     def load(self):
-        """(Re)Load the package database."""
+        """(Re)load the package database."""
         self.db = info()
 
     def remove(self, port):

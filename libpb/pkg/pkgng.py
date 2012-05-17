@@ -24,12 +24,13 @@ fi
 
 os.environ["ASSUME_ALWAYS_YES"] = "YES"
 
-def add(port, repo=False):
+def add(port, repo=False, pkg_dir=None):
     """Add a package for port."""
     if port.attr["pkgname"].rsplit('-', 1)[0] == "pkg":
         # Special case when adding the `pkg' as it provides the functionality
         # and thus cannot add itself (or so one would thing).
-        if repo:
+        if repo or pkg_dir:
+            # TODO: support installing pkg from a custom $PKGDIR
             args = False
         else:
             args = ("sh", "-c", shell_pkg_add % port.attr)
@@ -37,6 +38,8 @@ def add(port, repo=False):
         # Normal package add
         if repo:
             args = ("install", "-y", port.attr["pkgname"])
+        elif pkg_dir:
+            args = ("add", os.path.join(pkg_dir, port.attr["pkgname"], ".txz"))
         else:
             args = ("add", port.attr["pkgfile"])
     if args:
