@@ -35,9 +35,7 @@ class Deinstall(base.Stage):
         else:
             pkg.db.remove(self.port)
             self.port.install_status = pkg.ABSENT
-            #self.pid = pkg.remove(self.port).connect(self.__post_pkg_remove).pid
-            pmake = make.make_target(self.port, "deinstall")
-            self.pid = pmake.connect(self.__post_pkg_remove).pid
+            self.pid = pkg.remove(self.port).connect(self.__post_pkg_remove).pid
 
     def __post_pkg_remove(self, pkg_remove):
         """Process the results from pkg.remove."""
