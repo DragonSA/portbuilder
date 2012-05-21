@@ -30,7 +30,7 @@ def add(port, repo=False, pkg_dir=None):
         # Special case when adding the `pkg' as it provides the functionality
         # and thus cannot add itself (or so one would thing).
         if repo or pkg_dir:
-            # TODO: support installing pkg from a custom $PKGDIR
+            # TODO: support installing ``pkg'' from a custom $PKGDIR
             args = False
         else:
             args = ("sh", "-c", shell_pkg_add % port.attr)
@@ -57,6 +57,17 @@ def info():
     else:
         args = ("pkg", "info", "-ao")
     return args
+
+
+def query(port, prop, repo=False):
+    """Query q property of a package."""
+    args = ("pkg", "rquery" if repo else "query", "-F", port.attr["pkgname"])
+    if prop == "config":
+        args += ("%O",)
+    else:
+        assert not "unknown package property '%s'" % prop
+    return args
+
 
 def remove(pkgs):
     """Remove a package from port."""

@@ -15,7 +15,7 @@ OLDER   = 1
 CURRENT = 2
 NEWER   = 3
 
-__all__ = ["add", "db", "version"]
+__all__ = ["add", "db", "query", "remove", "version"]
 
 def add(port, repo=False, pkg_dir=None):
     """Add a package for port."""
@@ -51,6 +51,17 @@ def info():
             else:
                 pkgdb[origin] = set((pkgname,))
     return pkgdb
+
+
+def query(port, prop, repo=False):
+    """Query a property of a package."""
+    if env.flags["pkg_mgmt"] == "pkg":
+        args = pkg.query(port, prop, repo)
+    elif env.flags["pkg_mgmt"] == "pkgng":
+        args = pkg.query(port, prop, repo)
+    else:
+        assert not "Unknown pkg_mgmt"
+    return cmd(port, args)
 
 
 def remove(port):

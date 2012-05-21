@@ -7,7 +7,7 @@ import os
 
 from libpb import env
 
-__all__ = ["add", "info", "remove"]
+__all__ = ["add", "info", "query", "remove"]
 
 def add(port, repo=False, pkg_dir=None):
     """Add a package from port."""
@@ -30,6 +30,14 @@ def info():
     if env.flags["chroot"]:
         args = ("chroot", env.flags["chroot"]) + args
     return args
+
+
+def query(_port, prop, _repo=False):
+    """Query q property of a package."""
+    if prop == "config":
+        return False
+    else:
+        assert not "unknown package property '%s'" % prop
 
 
 def remove(pkgs):
