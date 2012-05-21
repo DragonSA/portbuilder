@@ -25,17 +25,7 @@ def add(port, repo=False, pkg_dir=None):
         args = pkgng.add(port, repo, pkg_dir)
     else:
         assert not "Unknown pkg_mgmt"
-
-    if not args:
-        return args
-    if env.flags["no_op"]:
-        pkg_add = make.PopenNone(args, port)
-    else:
-        logfile = open(port.log_file, "a")
-        logfile.write("# %s\n" % " ".join(args))
-        pkg_add = make.Popen(args, port, subprocess.PIPE, logfile, logfile)
-        pkg_add.stdin.close()
-    return pkg_add
+    return cmd(port, args)
 
 
 def info():
@@ -61,6 +51,32 @@ def info():
             else:
                 pkgdb[origin] = set((pkgname,))
     return pkgdb
+
+
+def remove(port):
+    """Remove a package for a port."""
+    pkgs = tuple(db.get(port))
+    if env.flags["pkg_mgmt"] == "pkg":
+        args = pkg.remove(pkgs)
+    elif env.flags["pkg_mgmt"] == "pkgng":
+        args = pkg.remove(pkgs)
+    else:
+        assert not "Unknown pkg_mgmt"
+    return cmd(port, args)
+
+
+def cmd(port, args):
+    """Issue a pkg_mgmt command and log the command to the port's logfile."""
+    if not args:
+        return args
+    if env.flags["no_op"]:
+        pkg_cmd = make.PopenNone(args, port)
+    else:
+        logfile = open(port.log_file, "a")
+        logfile.write("# %s\n" % " ".join(args))
+        pkg_cmd = make.Popen(args, port, subprocess.PIPE, logfile, logfile)
+        pkg_cmd.stdin.close()
+    return pkg_cmd
 
 
 def version(old, new):
@@ -141,6 +157,14 @@ class PKGDB(object):
                 if pkgname.rsplit('-', 1)[0] == portname:
                     pkgs.add(pkgname)
             self.db[port.origin] -= pkgs
+
+    def get(self, port):
+        """Get a list of packages installed for a port."""
+        if port.origin in self.db:
+            portname = port.attr['pkgname'].rsplit('-', 1)[0]
+            for pkgname in self.db[port.origin]:
+                if pkgname.rsplit('-', 1)[0] == portname:
+                    yield pkgname
 
     def status(self, port):
         """Query the install status of a port."""

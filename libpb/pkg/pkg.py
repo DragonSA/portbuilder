@@ -7,7 +7,7 @@ import os
 
 from libpb import env
 
-__all__ = ["add", "info"]
+__all__ = ["add", "info", "remove"]
 
 def add(port, repo=False, pkg_dir=None):
     """Add a package from port."""
@@ -30,3 +30,12 @@ def info():
     if env.flags["chroot"]:
         args = ("chroot", env.flags["chroot"]) + args
     return args
+
+
+def remove(pkgs):
+    """Remove a package from port."""
+    if env.flags["chroot"]:
+        args = ("pkg_delete", "-C", env.flags["chroot"])
+    else:
+        args = ("pkg_delete",)
+    return args + pkgs

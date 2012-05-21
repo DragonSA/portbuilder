@@ -7,7 +7,7 @@ import os
 
 from libpb import env
 
-__all__ = ["add", "info"]
+__all__ = ["add", "info", "remove"]
 
 shell_pkg_add = """
 if [ ! -d %(wrkdir)s ]; then
@@ -57,3 +57,11 @@ def info():
     else:
         args = ("pkg", "info", "-ao")
     return args
+
+def remove(pkgs):
+    """Remove a package from port."""
+    if env.flags["chroot"]:
+        args = ("chroot", env.flags["chroot"], "pkg", "remove", "-y")
+    else:
+        args = ("pkg", "delete", "-y")
+    return args + pkgs
