@@ -73,8 +73,8 @@ class MakeStage(base.Stage):
 
     def __make(self, pmake):
         """Call the _post_[stage] function and finalise the stage."""
-        status = self._post_make(pmake.wait() == make.SUCCESS)
         self.pid = None
+        status = self._post_make(pmake.wait() == make.SUCCESS)
         if status is not None:
             self._finalise(status)
 
