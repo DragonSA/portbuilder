@@ -7,6 +7,7 @@ import contextlib
 import os
 
 from libpb import env, event, job, mk, pkg
+from libpb.port import dependhandler
 from libpb.stacks import base, mutators
 
 __all__ = ["Config", "Depend"]
@@ -88,12 +89,14 @@ class Config(mutators.MakeStage):
         """Refetch attr data if ports were configured successfully."""
         self._config_lock.release()
         if status:
+            # TODO: report pid of attr getter
             mk.Attr(self.port.origin).connect(self._load_attr).get()
             return None
         return status
 
     def _load_attr(self, _origin, attr):
         """Load the attributes for this port."""
+        self.pid = None
         if attr:
             self.port.attr = attr
             log_file = self.port.log_file
@@ -110,3 +113,31 @@ class Depend(base.Stage):
     name = "depend"
     prev = Config
     stack = "common"
+
+    def _do_stage(self):
+        distfiles = self.port.attr["distfiles"]
+        distinfo = env.flags["chroot"] + self.port.attr["distinfo"]
+        if not len(distfiles) or not os.path.isfile(distinfo):
+            return 0
+        priority = 0
+        with open(distinfo, 'r') as file:
+            for i in file:
+                if i.startswith("SIZE"):
+                    i = i.split()
+                    name, size = i[1], i[-1]
+                    name = name[1:-1]
+                    name = name.rsplit('/', 1)[-1]
+                    if name in distfiles:
+                        priority += int(size)
+        self.port.priority = priority
+        self.port.dependent.priority += self.priority
+        depends = ("depend_build", "depend_extract", "depend_fetch",
+                   "depend_lib", "depend_run", "depend_patch", "depend_package")
+        depends = [self.port.attr[i] for i in depends]
+        self.port.dependency = dependhandler.Dependency(self.port, depends)
+        self.port.dependency.loaded.connect(self._post_depend)
+
+    def _post_depend(self, status):
+        """Advance to the build stage if nothing to fetch."""
+        self.port.dependency.loaded.disconnect(self._post_depend)
+        self._finalise(status)
