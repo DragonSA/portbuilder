@@ -33,6 +33,7 @@ class PkgInstall(mutators.Deinstall, mutators.Packagable, mutators.Resolves):
 
     def _post_pkg_add(self, pkg_add):
         """Process the result of pkg.add()."""
+        self.pid = None
         status = pkg_add.wait() == make.SUCCESS
         if status:
             log.debug("PkgInstall._post_pkg_add()",
