@@ -9,11 +9,15 @@ The stacks are (using the env.flags["target"] notation):
  repo    - install a port from a remote repository
 """
 
+from libpb.stacks.base import Stage, Stack
 from libpb.stacks.common import Config, Depend
 from libpb.stacks.build import Checksum, Fetch, Build, Install, Package
+from libpb.stacks.package import PkgInstall
 from libpb.stacks.repo import RepoConfig, RepoFetch, RepoInstall
 
 __all__ = [
+        # The base elements
+        "Stage", "Stack"
         # "Common" stack"
         "Config", "Depend",
         # "Build" stack
