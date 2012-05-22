@@ -4,9 +4,7 @@ from __future__ import absolute_import
 
 import collections
 
-from .port import Port
-
-from libpb import log
+from libpb import log, pkg, signal, stacks
 
 __all__ = ['Dependent', 'Dependency']
 
@@ -25,17 +23,17 @@ class DependHandler(object):
 
     #: The dependencies for a given stage
     STAGE2DEPENDS = {
-      Port.CONFIG:      (),
-      Port.DEPEND:      (),
-      Port.CHECKSUM:    (),
-      Port.FETCH:       (FETCH,),
-      Port.BUILD:       (EXTRACT, PATCH, LIB, BUILD, PKG),
-      Port.INSTALL:     (LIB, RUN, PKG),
-      Port.PACKAGE:     (LIB, RUN, PKG),
-      Port.PKGINSTALL:  (LIB, RUN, PKG),
-      Port.REPOCONFIG:  (PKG),
-      Port.REPOFETCH:   (PKG),
-      Port.REPOINSTALL: (LIB, RUN, PKG),
+      stacks.Config:      (),
+      stacks.Depend:      (),
+      stacks.Checksum:    (),
+      stacks.Fetch:       (FETCH,),
+      stacks.Build:       (EXTRACT, PATCH, LIB, BUILD, PKG),
+      stacks.Install:     (LIB, RUN, PKG),
+      stacks.Package:     (LIB, RUN, PKG),
+      stacks.PkgInstall:  (LIB, RUN, PKG),
+      stacks.RepoConfig:  (PKG),
+      stacks.RepoFetch:   (PKG),
+      stacks.RepoInstall: (LIB, RUN, PKG),
     }
 
 
@@ -127,7 +125,7 @@ class Dependent(DependHandler):
         """Check if a dependent has been resolved."""
         from ..env import flags
 
-        if flags["fetch_only"] and self.port.stage >= Port.FETCH:
+        if flags["fetch_only"] and stacks.Fetch in self.port.stages:
             return True
 
         if typ == DependHandler.BUILD:
@@ -145,7 +143,7 @@ class Dependent(DependHandler):
         elif typ == DependHandler.PKG:
             pass
 
-        return self.port.install_status != Port.ABSENT
+        return self.port.install_status != pkg.ABSENT
 
     def _verify(self):
         """Check that we actually satisfy all dependants."""
@@ -158,6 +156,8 @@ class Dependent(DependHandler):
 
 class Dependency(DependHandler):
     """Tracks the dependencies for a Port."""
+
+    loaded = signal.SignalProperty()
 
     def __init__(self, port, depends=None):
         """Initialise the databases of dependencies."""
@@ -188,7 +188,7 @@ class Dependency(DependHandler):
         if not self._loading:
             from ..event import post_event
             self._update_priority()
-            post_event(self.port._post_depend, True)
+            post_event(self.loaded, True)
 
     def __repr__(self):
         return "<Dependency(port=%s)>" % self.port.origin
@@ -221,7 +221,7 @@ class Dependency(DependHandler):
 
         if self._loading == 0:
             self._update_priority()
-            self.port._post_depend(not self._bad)
+            self.port.loaded.emit(not self._bad)
 
     def get(self, typ=None):
         """Retrieve a list of dependencies."""
