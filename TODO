@@ -5,7 +5,7 @@
  - PEP 0008
 
 Pylint:
- - enable pylint E0611,W0404
+ - enable pylint E0611
  - verify module level names (e.g. libpb/events)
 
 Low Handing Fruit:
@@ -16,45 +16,30 @@ Low Handing Fruit:
 Future release:
  - Speed up port_version()
  - Add options for either individually executing make targets or in baulk
- - Check spelling for all documentation
+ * Check spelling for all documentation
  - Increase level of logging
- - Move to the python 2.7 naming and styles (and make compatible with 3)
+ + Move to the python 2.7 naming and styles (and make compatible with 3)
  - Implement proper recording of ports installation (i.e. when they fail)
- - Refactor:
+ + Refactor:
    - Break ports into its own libraries
-   - Try isolate system and ports dependent code
+   + Try isolate system and ports dependent code
  - move DependHandler to using signals (for status changed)
  - support DESTDIR...
  - handle alternative dependencies
  - update @pkgdep lines
  - add `-x` (and `-X` recursive) to exclude ports
- - directly call pkg_delete when uninstalling port (install/pkginstall?)
  - rework DependHandlers to use sets, dictionaries
- - build-only dependencies:
-   - uninstall after use
-   - install from packages
 
 0.7 - Milestone 9 (Sundry modules):
- - modules:
-   - cache
-   - cache/cachedb
-   - env
- - Refine and condense code
- - Implement proper and complete logging (and comments)
- - Add all assertions
  - Logging infrastructure (for messages for user)
- - Rename logging files for ports based on their unique-name
  - manual page(s)
- - ensure only one instance of portbuilder builds per chroot
+ - ensure only one instance of portbuilder builds per chroot/jail
  - switch to debug off by default
 
 0.6 - Milestone 8 (Finish command line controller):
  - modules:
    - exit
    - monitor
- - Refine and condense code
- - Implement proper and complete logging (and comments)
- - Add all assertions
  - Get relative option parity with portupgrade
  - Improve logging settings (such as location, level)
  - index_builder:
@@ -62,16 +47,16 @@ Future release:
    - Add appropriate checks for duplicate port names...
    - Do we need to sort per category, overall, if at all?
    - Check for 100% compatibility
- - monitor:
-   - Show information about failed ports
+ + monitor:
+   * Show information about failed ports
    - Split into separate modules
    - Stat:
      - Make options a class variable
-   - Top:
-     - Add option to:
-       - Exit program
+   + Top:
+     + Add option to:
+       * Exit program
        - Change update rate
-       - Filter viewed ports (i.e. only active and or pending...)
+       * Filter viewed ports (i.e. only active and or pending...)
        - A help menu
      - Add some colour???
      - View output of port (via a window)
@@ -79,59 +64,39 @@ Future release:
      - Improve output when rendering to small screens
      - Remove /[workers] from output
  - report on failures
- - pypkg:
+ - portbuilder:
    - Allow fuzzy port specification
    - Implement most of portupgrade
    - Handle passwords properly
    - Allow option for no-interactive
-   - Add no cache option
+ - profile memory usage
 
 0.5 - Milestone 7 (Finish Target Builders):
  - modules:
    - queue
    - target
- - Refine and condense code
- - Implement proper and complete logging (and comments)
 
 0.4 - Milestone 6 (Finish Dependent Handling):
  - modules:
    - port/dependhandler
- - Refine and condense code
- - Implement proper and complete logging (and comments)
  - DependHandler:
    - Ensure _count is done properly
    - Handle depenancies with fetch_only
    - Fix check (with ref to usage)
    - DependHandler must handle the case when a dependency fails unresolved
    - Check for cyclic dependencies
-   - _verify:
-     - Add caching of dependencies (no need to check them multiple times)
    - Implement type specific checking (bin vs lib) [mimic ports]
    - Handle stale dependencies (with a dummy PortDepend)
    - Handle a port having failed and still satisfy its dependents
-   - Add a concurrent implementation (and probably a cache of sorts)
-   - When doing individual checks, cache as they can be duplicated
    - Check for conflicts (and handle)
 
 0.3 - Milestone 5 (Finish basic ports infrastructure):
  - modules:
    - make
-   - port/arch
-   - port/arch/freebsd_ports
-   - port/cache
    - port/port
- - Refine and condense code
- - Implement proper and complete logging (and comments)
- - Add all assertions
- - Find proper $HOME
- - CacheDB:
-   - When user, synchronise db with master
-   - Add --no-cache option for pypkg (the functionality)
-   - Add fallback when bsddb not installed
- - env:
-   - Set db dirs according to user (aka root->/var/db/pypkg)
- - Port:
-   - Add logging of port targets
+ + Implement proper and complete logging (and comments)
+ + Port:
+   * Add logging of port targets
    - Handle pkg-message
    - Check need for status
    - Attributes:
@@ -148,8 +113,8 @@ Future release:
      - etc
    - Handlers:
      - Provide output stream (as work in progress)
- - make:
-   - Have logging of build commands (with archival)
+ + make:
+   * Have logging of build commands (with archival)
    - Add a command prefix (such as for socksify?)
    - Add sudo support
    - Make to class
@@ -165,27 +130,29 @@ Future release:
  - mark installed ports/packages as dependency/explicit (or (in)?direct)
  - only load port attributes that are needed
  - cleanup/refactor mk.py
- - update pkgng repo ('pkg update') when it is specified in env.flags["depend"]
+ - update pkgng repo ('pkg update') when it is specified in env.flags["method"]
  - add support for licenses (accepting licenses...)
- - don't install depends when installing from package or repo (pkgng)
+ * don't install depends when installing from package or repo (pkgng)
  - only install package if it matches port's options
  - add support for jails
  - split repo fetch and repo install stage
+ - add soft dependency (aka, conditional dependency, on depend if another port
+                        actually needs it).
 
 0.2 - Milestone 4 (Command line controller):
  - Create target to build INDEX
  - Port:
    - Add the describe method (same as the ports version)
  - Create progress monitor type 2 (aka stat mode)
- - Implement build logging for the ports
+ * Implement build logging for the ports
  - Fix preparation for stages
- - Implement logging (using logging library?)
+ * Implement logging (using logging library?)
  - Use Port when referring to defined flags (i.e. INSTALL, BUILD)
  - Use MOVED for port.mk.status (fallback)
  * pkg_mgmt interface (vs direct file inspection)
  * make compatible with pkgng
  - display skipped ports (with toggle)
- - add -j options to control queue loads
+ * add -j options to control queue loads
  x create a clean_builder
  * clean ports before trying other depend methods
  - indicate progress of each stage (i.e. fetched, built)
@@ -225,9 +192,10 @@ Future release:
  - fix module level definitions used by port (install status, build stage)
  - eliminate bottleneck in portbuilder for loading attr
  * fix cleaning of ports (why is make call in CleanJob?)
- - fix `job' names in builder
+ * fix `job' names in builder
  - use pkg.remove instead of `make deinstall`
  - fix fetch-only mode when using repo method (aka REPOFETCH)
+ - rename flags["stage"] to flags["(inst)status"]
 
 0.1.3 - Milestone 3 (Target Builders):
  * Finish call documentation

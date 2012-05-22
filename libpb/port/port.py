@@ -10,7 +10,7 @@ __all__ = ["Port"]
 
 # TODO:
 # Non-privileged mode
-# remove NO_DEPENDS once thoroughly tested???
+# remove NO_DEPENDS (currently doesn't work with pkgng)
 # handle IS_INTERACTIVE
 
 
@@ -26,6 +26,8 @@ class Port(object):
 
         self.attr = attr
         self.log_file = os.path.join(flags["log_dir"], self.attr["pkgname"])
+        self.flags = set()
+        self.load = attr["jobs_number"]
         self.origin = origin
         self.priority = 0
         self.stages = set((None,))
@@ -42,6 +44,18 @@ class Port(object):
 
     def __repr__(self):
         return "<Port(%s)>" % (self.origin)
+
+    def resolved(self):
+        """Indicate if the port meets it's dependencies."""
+        # TODO: use Dependent.RESOLV (current import issues)
+        RESOLV = 1
+        assert (self.dependent.status != RESOLV or
+          (self.install_status > env.flags["stage"] or "upgrade" in self.flags))
+        status = env.flags["stage"]
+        if "upgrade" in self.flags and status < pkg.OLDER:
+            status = pkg.OLDER
+        return (self.install_status > status and
+                self.dependent.status == RESOLV)
 
     def clean(self, force=False):
         """Remove port's working director and log files."""
@@ -63,4 +77,3 @@ class Port(object):
                 (env.flags["mode"] == "clean" or stacks.Build in self.stages or
                  (self.dependency and self.dependency.failed)):
             os.unlink(self.log_file)
-

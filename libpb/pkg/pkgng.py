@@ -5,8 +5,6 @@ from __future__ import absolute_import
 
 import os
 
-from libpb import env
-
 __all__ = ["add", "info", "remove"]
 
 shell_pkg_add = """
@@ -18,7 +16,7 @@ tar -xf %(pkgfile)s -C %(wrkdir)s -s ",/.*/,,g" "*/pkg-static";
 %(wrkdir)s/pkg-static add %(pkgfile)s;
 rm -f %(wrkdir)s/pkg-static;
 if [ "$clean_wrkdir" = "YES" ]; then
-    rmdir %(wrkdir)s;
+    rmdir %(wrkdir)s || true;
 fi
 """
 
@@ -33,30 +31,22 @@ def add(port, repo=False, pkg_dir=None):
             # TODO: support installing ``pkg'' from a custom $PKGDIR
             args = False
         else:
-            args = ("sh", "-c", shell_pkg_add % port.attr)
+            args = ("sh", "-ec", shell_pkg_add % port.attr)
     else:
         # Normal package add
         if repo:
-            args = ("install", "-y", port.attr["pkgname"])
+            args = ("pkg", "install", "-y", port.attr["pkgname"])
         elif pkg_dir:
-            args = ("add", os.path.join(pkg_dir, port.attr["pkgname"], ".txz"))
+            pkgfile = os.path.join(pkg_dir, port.attr["pkgname"], ".txz")
+            args = ("pkg", "add", pkgfile)
         else:
-            args = ("add", port.attr["pkgfile"])
-    if args:
-        if env.flags["chroot"]:
-            args = ("pkg", "-c", env.flags["chroot"]) + args
-        else:
-            args = ("pkg",) + args
+            args = ("pkg", "add", port.attr["pkgfile"])
     return args
 
 
 def info():
     """List all installed packages with their respective port origin."""
-    if env.flags["chroot"]:
-        args = ("pkg", "-c", env.flags["chroot"], "info", "-ao")
-    else:
-        args = ("pkg", "info", "-ao")
-    return args
+    return ("pkg", "info", "-ao")
 
 
 def query(port, prop, repo=False):
@@ -71,8 +61,4 @@ def query(port, prop, repo=False):
 
 def remove(pkgs):
     """Remove a package from port."""
-    if env.flags["chroot"]:
-        args = ("chroot", env.flags["chroot"], "pkg", "remove", "-y")
-    else:
-        args = ("pkg", "delete", "-y")
-    return args + pkgs
+    return ("pkg", "delete", "-y") + pkgs

@@ -37,6 +37,9 @@ def info():
     else:
         assert not "Unknown pkg_mgmt"
 
+    if env.flags["chroot"]:
+        args = ("chroot", env.flags["chroot"]) + args
+
     pkg_info = subprocess.Popen(args, stdin=subprocess.PIPE,
         stdout=subprocess.PIPE, stderr=subprocess.STDOUT, close_fds=True)
     pkg_info.stdin.close()
@@ -80,6 +83,8 @@ def cmd(port, args):
     """Issue a pkg_mgmt command and log the command to the port's logfile."""
     if not args:
         return args
+    if env.flags["chroot"]:
+        args = ("chroot", env.flags["chroot"]) + args
     if env.flags["no_op"]:
         pkg_cmd = make.PopenNone(args, port)
     else:

@@ -30,8 +30,9 @@ tree.  For example, to build all of KDE specify x11/kde4, or for VLC specify
 multimedia/vlc
 
 
-Usage:  portbuilder [-abdnpruFNU] [-c config] [-C chroot] [-D variable]
-                    [-f file] [long-options] [variable=value] port ...
+Usage:  portbuilder [-abdnpruFNU] [-c CONFIG] [-C CHROOT] [-D variable]
+                    [-f PORTS_FILE] [-j J] [long-options] [variable=value]
+                    port ...
 
 Options:
   --version             show program's version number and exit
@@ -51,9 +52,9 @@ Options:
   -f PORTS_FILE, --ports-file=PORTS_FILE
                         Use ports from file
   -F, --fetch-only      Only fetch the distribution files for the ports
-  --force               Force (re)installation of specified ports.
-  --force-all           Force (re)installation of specified ports and all its
-                        dependencies.
+  -j J                  Set the queue loads [defaults: attr=#CPU,
+                        checksum=CPU/2, fetch=1, build=CPU*2, install=1,
+                        package=1]
   --method=METHOD       Comma separated list of methods to resolve
                         dependencies (build, package, repo) [default: build]
   -n                    Display the commands that would have been executed,
@@ -82,8 +83,9 @@ devel/svk       # For development
 ^C
 # portbuilder -f /root/ports
 
-Fetch all the files required to update all ports in a file
-# portbuilder -Fuf /root/ports
+Fetch all the files required to update all ports in a file, fetch 4 ports at a
+time
+# portbuilder -Fuf /root/ports -j f=4
 
 Reconfigure and upgrade all ports (and their dependencies) in a file
 # portbuilder -c all -Uf /root/ports
@@ -103,7 +105,11 @@ packages were possible
 
 Build ports using the pkgng package tool, and try install from a remote
 package repository first
-# portbuilder --depend=repo,build -f /root/ports -DWITH_PKGNG
+# portbuilder --method=repo,build -f /root/ports -DWITH_PKGNG
+
+Install all ports from a repository, installing 4 packages at a time and
+fetching 8 packages at a time
+# portbuilder --method=repo -f /root/ports -j f=8,i=4
 
 
 INTERFACE
@@ -129,7 +135,7 @@ NOTES
    /usr/ports/distfiles if ports need to fetch).
  * The load per stage can be seen under libpb/queue.py (at end of file).
    Default values (build load can be as high as cpus * 3 - 1, or more):
-      attr     = CPUS * 2
+      attr     = CPUS
       config   = 1
       clean    = 1
       checksum = max(CPUS // 2, 1)

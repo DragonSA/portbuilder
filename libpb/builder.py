@@ -6,7 +6,6 @@ from abc import ABCMeta, abstractmethod
 import os
 
 from libpb import env, job, log, queue
-from libpb.job import CleanJob
 
 from .port.port import Port
 from .signal import SignalProperty
@@ -35,50 +34,50 @@ class DependLoader(object):
             from .event import post_event
             from .signal import Signal
 
-            job = Signal()
-            post_event(job.emit, port)
-            return job
+            sig = Signal()
+            post_event(sig.emit, port)
+            return sig
         else:
             from .env import flags
             from .signal import Signal
 
-            job = Signal()
+            sig = Signal()
             self.method[port] = flags["method"][0]
 
             for builder, method in zip((install, pkginstall, repoinstall),
                                        ("build", "package", "repo")):
                 if port in builder.ports:
                     builder.add(port).connect(self._clean)
-                    self.ports[port] = job
+                    self.ports[port] = sig
                     self.method[port] = self._next(method)
                     break
             else:
                 if not self._find_method(port):
                     from .event import post_event
                     self.finished.add(port)
-                    post_event(job.emit, port)
+                    post_event(sig.emit, port)
                 else:
-                    self.ports[port] = job
-            return job
+                    self.ports[port] = sig
+            return sig
 
-    def register(self, job):
+    def register(self, portjob):
         """Register a build job as a dependency."""
         from .signal import Signal
 
-        assert job.port not in self.ports
-        self.ports[job.port] = Signal()
-        self.method[job.port] = None
-        job.connect(self._clean)
+        assert portjob.port not in self.ports
+        self.ports[portjob.port] = Signal()
+        self.method[portjob.port] = None
+        portjob.connect(self._clean)
 
-    def _clean(self, job):
+    def _clean(self, portjob):
         """Cleanup after a port has finished."""
-        if job.port.failed and self.method[job.port]:
+        if portjob.port.failed and self.method[portjob.port]:
             # If the port failed and there is another method to try
-            if self._find_method(job.port):
+            if self._find_method(portjob.port):
                 return
 
-        self.ports.pop(job.port).emit(job.port)
-        self.finished.add(job.port)
+        self.ports.pop(portjob.port).emit(portjob.port)
+        self.finished.add(portjob.port)
 
     def _find_method(self, port):
         """Find a method to resolve the port."""
@@ -115,15 +114,12 @@ class DependLoader(object):
         elif port.failed:
             return False
         if method == "build":
-            if "package" in flags["target"]:
+            if "package" in flags["target"] or "package" in port.flags:
                 # Connect to install job and give package ownership
-                job = package(port)
-                if port in install.ports:
-                    # Use the install job if it exists otherwise use the package
-                    # job.
-                    job = install.ports[port]
+                package(port)
+                portjob = install.add(port)
             elif "install" in flags["target"]:
-                job = install(port)
+                portjob = install(port)
             else:
                 assert not "Unknown dependency target"
         elif method == "package":
@@ -132,16 +128,16 @@ class DependLoader(object):
                 pkginstall.update.emit(pkginstall, Builder.ADDED, port)
                 pkginstall.update.emit(pkginstall, Builder.FAILED, port)
                 return False
-            job = pkginstall(port)
+            portjob = pkginstall(port)
         elif method == "repo":
             if port.attr["no_package"]:
                 repoinstall.update.emit(repoinstall, Builder.ADDED, port)
                 repoinstall.update.emit(repoinstall, Builder.FAILED, port)
                 return False
-            job = repoinstall(port)
+            portjob = repoinstall(port)
         else:
             assert not "Unknown port resolve method"
-        job.connect(self._clean)
+        portjob.connect(self._clean)
         return True
 
     @staticmethod
@@ -212,25 +208,23 @@ class ConfigBuilder(Builder):
         if port in self.ports:
             return self.ports[port]
         else:
-            from .job import PortJob
-
             # Create a config stage job and add it to the queue
-            job = PortJob(port, Port.CONFIG)
-            job.connect(self._cleanup)
-            self.ports[port] = job
+            portjob = job.PortJob(port, Port.CONFIG)
+            portjob.connect(self._cleanup)
+            self.ports[port] = portjob
             self.update.emit(self, Builder.ADDED, port)
-            self.queue.add(job)
+            self.queue.add(portjob)
             self.update.emit(self, Builder.QUEUED, port)
-            return job
+            return portjob
 
-    def _cleanup(self, job):
+    def _cleanup(self, portjob):
         """Cleanup after the port was configured."""
-        if job.port.failed:
-            self.failed.append(job.port)
-            self.update.emit(self, Builder.FAILED, job.port)
+        if portjob.port.failed:
+            self.failed.append(portjob.port)
+            self.update.emit(self, Builder.FAILED, portjob.port)
         else:
-            self.update.emit(self, Builder.SUCCEEDED, job.port)
-        del self.ports[job.port]
+            self.update.emit(self, Builder.SUCCEEDED, portjob.port)
+        del self.ports[portjob.port]
 
 
 class DependBuilder(Builder):
@@ -264,10 +258,10 @@ class DependBuilder(Builder):
                 self._add(port=port)
             return sig
 
-    def _add(self, job=None, port=None):
+    def _add(self, portjob=None, port=None):
         """Load a ports dependencies."""
-        if job is not None:
-            port = job.port
+        if portjob is not None:
+            port = portjob.port
         self.update.emit(self, Builder.QUEUED, port)
         self.update.emit(self, Builder.ACTIVE, port)
         port.stage_completed.connect(self._loaded)
@@ -317,12 +311,10 @@ class StageBuilder(Builder):
         if port in self.ports:
             return self.ports[port]
         else:
-            from .job import PortJob
-
             # Create stage job
-            job = PortJob(port, self.stage)
-            job.connect(self._cleanup)
-            self.ports[port] = job
+            portjob = job.PortJob(port, self.stage)
+            portjob.connect(self._cleanup)
+            self.ports[port] = portjob
             self.update.emit(self, Builder.ADDED, port)
 
             # Configure port then process it
@@ -331,11 +323,10 @@ class StageBuilder(Builder):
             else:
                 assert port not in depend.ports
                 self._add(port)
-            return job
+            return portjob
 
     def _add(self, port, pending=0):
         """Add a ports dependencies and prior stage to be built."""
-        from .env import flags
 
         # Don't try and build a port that has already failed
         # or cannot be built
@@ -343,7 +334,10 @@ class StageBuilder(Builder):
             self.ports[port].stage_done()
             return
 
-        depends = port.dependency.check(self.stage)
+        if env.flags["mode"] == "recursive":
+            depends = port.dependency.get(self.stage)
+        else:
+            depends = port.dependency.check(self.stage)
 
         # Add all outstanding ports to be installed
         self._pending[port] = len(depends) + pending
@@ -354,8 +348,7 @@ class StageBuilder(Builder):
             self._depends[p].add(port)
 
         # Build the previous stage if needed
-        if (self.prev_builder and (port.install_status <= flags["stage"] or
-                                   port.force) and port.stage < self.stage - 1):
+        if self.prev_builder and self._port_check(port):
             self._pending[port] += 1
             self.prev_builder.add(port).connect(self._stage_resolv)
 
@@ -367,53 +360,53 @@ class StageBuilder(Builder):
         if not self._pending[port]:
             self._port_ready(port)
 
-    def _started(self, job):
+    def _started(self, portjob):
         """Emit a signal to indicate a port for this stage has become active."""
-        job.started.disconnect(self._started)
-        self.update.emit(self, Builder.ACTIVE, job.port)
+        portjob.started.disconnect(self._started)
+        self.update.emit(self, Builder.ACTIVE, portjob.port)
 
-    def _cleanup(self, job):
+    def _cleanup(self, portjob):
         """Cleanup after the port has completed its stage."""
         from .env import flags
 
         log.debug("StageBuilder._cleanup()",
                   "Port '%s': completed job for stage %d" %
-                      (job.port.origin, self.stage))
+                      (portjob.port.origin, self.stage))
 
-        del self.ports[job.port]
-        failed = self._port_failed(job.port)
-        if job.port in self.cleanup and not flags["mode"] == "clean":
-            self.cleanup.remove(job.port)
+        del self.ports[portjob.port]
+        failed = self._port_failed(portjob.port)
+        if portjob.port in self.cleanup and not flags["mode"] == "clean":
+            self.cleanup.remove(portjob.port)
             if not failed:
-                self.done.append(job.port)
-                self.update.emit(self, Builder.DONE, job.port)
+                self.done.append(portjob.port)
+                self.update.emit(self, Builder.DONE, portjob.port)
             if env.flags["target"][-1] == "clean":
-                queue.clean.add(CleanJob(job.port))
+                queue.clean.add(job.CleanJob(portjob.port))
         elif not failed:
-            self.succeeded.append(job.port)
-            self.update.emit(self, Builder.SUCCEEDED, job.port)
+            self.succeeded.append(portjob.port)
+            self.update.emit(self, Builder.SUCCEEDED, portjob.port)
         if failed:
-            self.update.emit(self, Builder.FAILED, job.port)
+            self.update.emit(self, Builder.FAILED, portjob.port)
 
-    def _depend_resolv(self, depend):
+    def _depend_resolv(self, port):
         """Update dependency structures for resolved dependency."""
-        if not self._port_failed(depend):
-            all_depends = ["'%s'" % i.origin for i in self._depends[depend]]
+        if not self._port_failed(port):
+            all_depends = ["'%s'" % i.origin for i in self._depends[port]]
             log.debug("StageBuilder._depend_resolv()",
                       "Port '%s': resolved stage %d for ports %s" %
-                          (depend.origin, self.stage, ", ".join(all_depends)))
-            for port in self._depends.pop(depend):
+                          (port.origin, self.stage, ", ".join(all_depends)))
+            for port in self._depends.pop(port):
                 if not self._port_failed(port):
                     self._pending[port] -= 1
                     if not self._pending[port]:
                         self._port_ready(port)
 
-    def _stage_resolv(self, job):
+    def _stage_resolv(self, portjob):
         """Update pending structures for resolved prior stage."""
-        if not self._port_failed(job.port):
-            self._pending[job.port] -= 1
-            if not self._pending[job.port]:
-                self._port_ready(job.port)
+        if not self._port_failed(portjob.port):
+            self._pending[portjob.port] -= 1
+            if not self._pending[portjob.port]:
+                self._port_ready(portjob.port)
 
     def _port_failed(self, port):
         """Handle a failing port."""
@@ -464,27 +457,17 @@ class StageBuilder(Builder):
             self.ports[port].started.connect(self._started)
             self.queue.add(self.ports[port])
         else:
+            self.ports[port].stage_done()
             log.debug("StageBuilder._port_ready()",
                       "Port '%s': skipping stage %d" %
                           (port.origin, self.stage))
 
     def _port_check(self, port):
         """Check if the port should build this stage."""
-        from .port.dependhandler import Dependent
-        from .env import flags
-
-        if port.dependent.status == Dependent.RESOLV:
-            # port does not need to build
-            self.ports[port].stage_done()
-        elif port.install_status > flags["stage"] and not port.force:
-            # port already up to date, does not need to build
-            port.dependent.status_changed()
-            self.ports[port].stage_done()
-        elif port.stage >= self.stage:
-            self.ports[port].stage_done()
-        else:
-            return True
-        return False
+        # The port needs to be built if:
+        # 1) The port isn't "complete", and
+        # 2) The port hasn't completed this stage
+        return not port.resolved() and port.stage < self.stage
 
 
 class BuildBuilder(StageBuilder):
@@ -497,11 +480,11 @@ class BuildBuilder(StageBuilder):
             queue.clean.add(job.CleanJob(port, True).connect(self._port_clean))
         super(BuildBuilder, self)._add(port, pending)
 
-    def _port_clean(self, job):
+    def _port_clean(self, cleanjob):
         """A port has finished cleaning."""
-        self._pending[job.port] -= 1
-        if not self._pending[job.port]:
-            self._port_ready(job.port)
+        self._pending[cleanjob.port] -= 1
+        if not self._pending[cleanjob.port]:
+            self._port_ready(cleanjob.port)
 
 
 class PackageBuilder(StageBuilder):
@@ -509,13 +492,13 @@ class PackageBuilder(StageBuilder):
 
     def _port_check(self, port):
         """Check if the port should build this stage."""
-        if port.stage < self.stage - 1:
-            port.dependent.status_changed()
-            self.ports[port].stage_done()
-            return False
-        else:
-            assert port.stage == self.stage - 1
-            return True
+        # The port needs to be built if:
+        # 1) The base conditions are met, or
+        # 2) The port has completed the INSTALL stage (which implies it now
+        #       has a Dependent.RESOLV status).
+        return (super(PackageBuilder, self)._port_check(port) or
+                    port.stage == self.stage - 1)
+
 
 depend_resolve = DependLoader()
 
