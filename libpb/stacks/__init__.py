@@ -17,7 +17,7 @@ from libpb.stacks.repo import RepoConfig, RepoFetch, RepoInstall
 
 __all__ = [
         # The base elements
-        "Stage", "Stack"
+        "Stage", "Stack",
         # "Common" stack"
         "Config", "Depend",
         # "Build" stack
