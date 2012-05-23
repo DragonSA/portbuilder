@@ -419,19 +419,20 @@ class StageBuilder(Builder):
         assert not port.dependency.check(self.stage)
         del self._pending[port]
         stagejob = self.ports[port]
-        if stagejob.complete():
-            stagejob.run()
-            log.debug("StageBuilder._port_ready()",
-                      "Port '%s': stage %s complete" %
-                      (port.origin, str(self.stage)))
-        if self._port_check(port) and not self.ports[port].complete():
-            log.debug("StageBuilder._port_ready()",
-                      "Port '%s': queuing job for stage %s" %
-                          (port.origin, str(self.stage)))
-            assert self.stage.prev in port.stages
-            self.update.emit(self, Builder.QUEUED, port)
-            stagejob.started.connect(self._started)
-            self.queue.add(stagejob)
+        if self._port_check(port):
+            if stagejob.complete():
+                stagejob.run()
+                log.debug("StageBuilder._port_ready()",
+                        "Port '%s': stage %s complete" %
+                        (port.origin, str(self.stage)))
+            else:
+                log.debug("StageBuilder._port_ready()",
+                        "Port '%s': queuing job for stage %s" %
+                            (port.origin, str(self.stage)))
+                assert self.stage.prev in port.stages
+                self.update.emit(self, Builder.QUEUED, port)
+                stagejob.started.connect(self._started)
+                self.queue.add(stagejob)
         else:
             stagejob.done()
             log.debug("StageBuilder._port_ready()",
@@ -443,7 +444,9 @@ class StageBuilder(Builder):
         # The port needs to be built if:
         # 1) The port isn't "complete", and
         # 2) The port hasn't completed this stage
-        return not port.resolved() and self.stage not in port.stages
+        # 3) It is possible for the pot to complete this stage
+        return (not port.resolved() and self.stage not in port.stages and
+                self.stage.check(port))
 
 
 class BuildBuilder(StageBuilder):
