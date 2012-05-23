@@ -94,10 +94,11 @@ class StateTracker(object):
     def __init__(self):
         """Initialise the StateTracker."""
         self.stages = []
-        for b in builder.builders:
+        for b in builder.builders.values():
             self.stages.append(StateTracker.Stage(b, self))
 
         self._resort = False
+        # Resort when the port has initialised it's dependency class.
         builder.depend.update.connect(self._sort)
 
     def __del__(self):
@@ -108,16 +109,7 @@ class StateTracker(object):
 
     def __getitem__(self, stage):
         """Get the Stage object for stage."""
-        if isinstance(stage, slice):
-            stop = stage.stop - 1
-            if stage.start is not None:
-                start = stage.start - 1
-            else:
-                start = None
-            stage = slice(start, stop, stage.step)
-            return self.stages[stage]
-        else:
-            return self.stages[stage - 1]
+        return self.stages[stage]
 
     def sort(self):
         """Do any sorting required for the various stages."""
