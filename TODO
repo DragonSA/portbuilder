@@ -138,6 +138,7 @@ Future release:
  - split repo fetch and repo install stage
  - add soft dependency (aka, conditional dependency, on depend if another port
                         actually needs it).
+ - prioritise ports with resolved dependencies over non-resolved
 
 0.2 - Milestone 4 (Command line controller):
  - Create target to build INDEX
@@ -170,6 +171,7 @@ Future release:
    - subprocess (and others)
    - create oneshot signals
    ? split into own project
+   - delayed signal (aka event.post(signal.emit)...)
  * support `reinstall' target
  * add support for installing from different package sources (repo, local)
  * refactor/improve make.conf dynamic configuration:
@@ -197,6 +199,7 @@ Future release:
  * use pkg.remove instead of `make deinstall`
  - fix fetch-only mode when using repo method (aka REPOFETCH)
  - rename flags["stage"] to flags["(inst)status"]
+ - make the port cache allow instantaneous retrieval (i.e. dict mixin + __in__)
 
 0.1.3 - Milestone 3 (Target Builders):
  * Finish call documentation

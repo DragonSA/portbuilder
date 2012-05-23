@@ -3,6 +3,7 @@ X.Y.Z - YYYY MMM DD:
  * Removed '--force' and '--force-all' option to simplify code
  * Major rewrite of stage handling code
  * Initial work for splitting the repo method into multiple stages
+ * Use a separate log directory for chroot builds.
  * Use the DependHandler to install ports (i.e. explicit ports can now be
     installed directly from repo or package if --method prescribes that)
  * Fixes:
