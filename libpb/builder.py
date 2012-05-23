@@ -57,7 +57,7 @@ class DependLoader(object):
 
     def _clean(self, stagejob):
         """Cleanup after a port has finished."""
-        if stagejob.stack.failed and self.method[stagejob.port]:
+        if stagejob.stack.failed:
             # If the port failed and there is another method to try
             if self._find_method(stagejob.port):
                 return
@@ -72,8 +72,7 @@ class DependLoader(object):
             if not method:
                 # No method left, port failed to resolve
                 del self.method[port]
-                port.dependent.failed = True
-                port.dependent.status_changed()
+                port.dependent.status_changed(exhausted=True)
                 log.debug("DependLoader._find_method()",
                           "Port '%s': no viable resolve method found" %
                               (port.origin,))
@@ -96,17 +95,17 @@ class DependLoader(object):
         if port.dependent.failed:
             return False
         if method == "build":
+            if not install.stage.check(port):
+                install.update.emit(install, Builder.ADDED, port)
+                install.update.emit(install, Builder.SKIPPED, port)
+                return False
+            stagejob = install(port)
             if "package" in env.flags["target"] or "package" in port.flags:
                 # Connect to install job and give package ownership
                 if package.stage.check(port):
                     package(port)
             elif "install" not in env.flags["target"]:
                 assert not "Unknown dependency target"
-            if not install.stage.check(port):
-                install.update.emit(install, Builder.ADDED, port)
-                install.update.emit(install, Builder.SKIPPED, port)
-                return False
-            stagejob = install(port)
         elif method == "package":
             if not pkginstall.stage.check(port):
                 pkginstall.update.emit(pkginstall, Builder.ADDED, port)
@@ -352,7 +351,7 @@ class StageBuilder(Builder):
                   "Port '%s': completed job for stage %s" %
                       (stagejob.port.origin, self.stage.name))
 
-        failed = self._port_failed(port)
+        failed = stagejob.stack.failed or env.flags["mode"] == "clean"
         del self.ports[port]
         if port in self.cleanup and not env.flags["mode"] == "clean":
             self.cleanup.remove(port)
@@ -369,55 +368,39 @@ class StageBuilder(Builder):
 
     def _depend_resolv(self, port):
         """Update dependency structures for resolved dependency."""
-        if not self._port_failed(port):
+        if not port.dependent.failed and env.flags["mode"] != "clean":
             all_depends = ["'%s'" % i.origin for i in self._depends[port]]
             resolved_ports = ", ".join(all_depends)
             log.debug("StageBuilder._depend_resolv()",
                       "Port '%s': resolved stage %s for ports %s" %
                           (port.origin, self.stage.name, resolved_ports))
-            for port in self._depends.pop(port):
-                if not self._port_failed(port):
+        for port in self._depends.pop(port):
+            if port not in self.failed:
+                if not port.dependency.failed and env.flags["mode"] != "clean":
                     self._pending[port] -= 1
                     if not self._pending[port]:
                         self._port_ready(port)
+                else:
+                    self.ports[port].stack.failed = True
+                    self._port_failed(port)
 
     def _stage_resolv(self, stagejob):
         """Update pending structures for resolved prior stage."""
         port = stagejob.port
-        if not self._port_failed(port):
+        if not stagejob.stack.failed and env.flags["mode"] != "clean":
             self._pending[port] -= 1
             if not self._pending[port]:
                 self._port_ready(port)
+        else:
+            self._port_failed(stagejob.port)
 
     def _port_failed(self, port):
-        """Handle a failing port."""
-        if port in self.failed or env.flags["mode"] == "clean":
-            return True
-        # TODO stagejob = self.ports[port]
-        elif port.stacks[self.stage.stack].failed or port.dependency.failed:
-            if port.dependent.failed:
-                if port in self.ports:
-                    del self._pending[port]
-                    for depends in (d for d in self._depends.values() if port in d):
-                        depends.remove(port)
-                    self.ports[port].done()
-                return True
-
-            if port in self._depends:
-                # Inform all dependants that they have failed (because of port)
-                for deps in self._depends.pop(port):
-                    if ((not self.stage.prev or
-                         deps not in builders[self.stage.prev].ports) and
-                        deps not in self.failed):
-                        event.post_event(self._port_failed, deps)
-
-            if stagejob.failed:
-                self.failed.append(port)
-                if port in self.ports:
-                    del self._pending[port]
-                    self.ports[port].done()
-            return True
-        return False
+        if port not in self.failed:
+            self.failed.append(port)
+            del self._pending[port]
+            # If a dependency failed then so does the stack
+            self.ports[port].stack.failed = True
+            self.ports[port].done()
 
     def _port_ready(self, port):
         """Add a port to the stage queue."""
