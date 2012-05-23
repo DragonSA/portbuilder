@@ -151,16 +151,13 @@ def run_loop(options):
 def report():
     """Print report about failed ports"""
     from libpb.port.port import Port
-    from libpb.monitor import STAGE
     from libpb.port import get_ports
-
-    stage = dict((k, v.lower()) for k, v in STAGE)
 
     noport, failed, didepends, independs = [], [], [], []
     for port in get_ports():
         if not isinstance(port, Port):
             noport.append(port)
-        elif port.failed:
+        elif port.dependent.failed:
             failed.append(port)
         elif port.dependency and port.dependency.failed:
             for depend in port.dependency.get():
@@ -193,7 +190,7 @@ def report():
     if len(failed):
         print ("Failed to complete port:\n\t%s" %
             "\n\t".join("%s (%s)" % (i.attr["pkgname"],
-                                     stage[i.stage]) for i in reversed(failed)))
+                                     str(i.stage)) for i in reversed(failed)))
 
     if len(noport):
         print "No port found for:\n\t%s" % "\n\t".join(noport)
