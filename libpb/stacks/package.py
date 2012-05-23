@@ -14,7 +14,7 @@ __all__ = []
 class PkgInstall(mutators.Deinstall, mutators.Packagable, mutators.Resolves):
     """Install a port from a local package."""
 
-    name = "pkginstall"
+    name = "PkgInstall"
     prev = common.Depend
     stack = "package"
 

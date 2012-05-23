@@ -14,7 +14,7 @@ __all__ = ["RepoConfig", "RepoFetch", "RepoInstall"]
 class RepoConfig(mutators.Packagable):
     """Check if a repo package was built using the correct configuration."""
 
-    name = "repoconfig"
+    name = "RepoConfig"
     prev = common.Depend
     stack = "repo"
 

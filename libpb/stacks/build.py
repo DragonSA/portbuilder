@@ -53,7 +53,7 @@ class Distfiles(base.Stage):
 class Checksum(Distfiles, mutators.MakeStage):
     """Check if the port's files are available."""
 
-    name = "checksum"
+    name = "Checksum"
     prev = common.Depend
     stack = "build"
 
@@ -100,7 +100,7 @@ class Checksum(Distfiles, mutators.MakeStage):
 class Fetch(Distfiles, mutators.MakeStage):
     """Fetch a port's files."""
 
-    name = "fetch"
+    name = "Fetch"
     prev = Checksum
     stack = "build"
 
@@ -146,7 +146,7 @@ class Fetch(Distfiles, mutators.MakeStage):
 class Build(mutators.MakeStage):
     """Build a port."""
 
-    name = "build"
+    name = "Build"
     prev = Fetch
     stack = "build"
 
@@ -161,7 +161,7 @@ class Build(mutators.MakeStage):
 class Install(mutators.Deinstall, mutators.MakeStage, mutators.Resolves):
     """Install a port from source."""
 
-    name = "install"
+    name = "Install"
     prev = Build
     stack = "build"
 
@@ -180,7 +180,7 @@ class Install(mutators.Deinstall, mutators.MakeStage, mutators.Resolves):
 class Package(mutators.MakeStage, mutators.Packagable):
     """Package a port."""
 
-    name = "package"
+    name = "Package"
     prev = Install
     stack = "build"
 
