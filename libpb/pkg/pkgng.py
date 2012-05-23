@@ -60,5 +60,5 @@ def query(port, prop, repo=False):
 
 
 def remove(pkgs):
-    """Remove a package from port."""
-    return ("pkg", "delete", "-y") + pkgs
+    """Remove a package for a port."""
+    return ("pkg", "delete", "-fy") + pkgs
