@@ -143,7 +143,7 @@ class Fetch(Distfiles, mutators.MakeStage):
         return status
 
 
-class Build(mutators.MakeStage):
+class Build(mutators.MakeStage, mutators.PostFetch):
     """Build a port."""
 
     name = "Build"
@@ -158,7 +158,8 @@ class Build(mutators.MakeStage):
         self._make_target(("all",), BATCH=True, NO_DEPENDS=True)
 
 
-class Install(mutators.Deinstall, mutators.MakeStage, mutators.Resolves):
+class Install(mutators.Deinstall, mutators.MakeStage, mutators.PostFetch,
+              mutators.Resolves):
     """Install a port from source."""
 
     name = "Install"
@@ -177,7 +178,7 @@ class Install(mutators.Deinstall, mutators.MakeStage, mutators.Resolves):
         self._make_target(target, BATCH=True, NO_DEPENDS=True)
 
 
-class Package(mutators.MakeStage, mutators.Packagable):
+class Package(mutators.MakeStage, mutators.Packagable, mutators.PostFetch):
     """Package a port."""
 
     name = "Package"

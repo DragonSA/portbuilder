@@ -11,7 +11,8 @@ from libpb.stacks import common, mutators
 __all__ = []
 
 
-class PkgInstall(mutators.Deinstall, mutators.Packagable, mutators.Resolves):
+class PkgInstall(mutators.Deinstall, mutators.Packagable, mutators.PostFetch,
+                 mutators.Resolves):
     """Install a port from a local package."""
 
     name = "PkgInstall"
