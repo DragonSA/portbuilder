@@ -93,8 +93,6 @@ class Dependent(DependHandler):
                 (self.port.dependency and self.port.dependency.failed)):
             status = Dependent.FAILURE
             # TODO: We might have failed and yet still satisfy our dependants
-        elif env.flags["fetch_only"]:
-            status = Dependent.RESOLV
         elif self.port.install_status > env.flags["stage"]:
             status = Dependent.RESOLV
             if not self._verify():
