@@ -7,7 +7,6 @@ import contextlib
 import os
 
 from libpb import env, event, job, mk, pkg
-from libpb.port import dependhandler
 from libpb.stacks import base, mutators
 
 __all__ = ["Config", "Depend"]
@@ -115,6 +114,7 @@ class Depend(base.Stage):
     stack = "common"
 
     def _do_stage(self):
+        from libpb.port.dependhandler import Dependency
         distfiles = self.port.attr["distfiles"]
         distinfo = env.flags["chroot"] + self.port.attr["distinfo"]
         if not len(distfiles) or not os.path.isfile(distinfo):
@@ -134,7 +134,7 @@ class Depend(base.Stage):
         depends = ("depend_build", "depend_extract", "depend_fetch",
                    "depend_lib", "depend_run", "depend_patch", "depend_package")
         depends = [self.port.attr[i] for i in depends]
-        self.port.dependency = dependhandler.Dependency(self.port, depends)
+        self.port.dependency = Dependency(self.port, depends)
         self.port.dependency.loaded.connect(self._post_depend)
 
     def _post_depend(self, status):
