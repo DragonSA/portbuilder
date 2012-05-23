@@ -114,7 +114,7 @@ def mkdir(directory):
     else:
         try:
             base = os.path.dirname(directory)
-            if os.path.exists(base) and
+            if os.path.exists(base):
                 if not os.path.isdir(base):
                     print "%s: not a directory" % base
                 else:
@@ -159,39 +159,31 @@ def report():
     from libpb.port.port import Port
     from libpb.port import get_ports
 
-    noport, failed, didepends, independs = [], [], [], []
+    noport, failed, depends = [], [], []
     for port in get_ports():
         if not isinstance(port, Port):
             noport.append(port)
         elif port.dependent.failed:
             failed.append(port)
         elif port.dependency and port.dependency.failed:
-            for depend in port.dependency.get():
-                if depend.failed:
-                    didepends.append(port)
-                    break
-            else:
-                independs.append(port)
+            depends.append(port)
 
     noport.sort()
     failed.sort()
-    didepends.sort()
-    independs.sort()
+    depends.sort()
 
-    # TODO independs
-
-    if len(didepends):
+    if len(depends):
         def bad_depends(ports):
             """Return all bad dependencies by pkgname."""
             for port in ports.dependency.get():
                 if not isinstance(port, Port):
                     yield port
-                elif port.failed:
+                elif port.dependent.failed:
                     yield port.attr["pkgname"]
-        print ("Failed due to direct dependency:\n\t%s" %
+        print ("Failed due to dependency:\n\t%s" %
             "\n\t".join("%s (%s)" % (i.attr["pkgname"],
                                      ", ".join(bad_depends(i))) for i in
-                                        reversed(didepends)))
+                                        reversed(depends)))
 
     if len(failed):
         print ("Failed to complete port:\n\t%s" %
