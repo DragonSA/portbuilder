@@ -168,6 +168,7 @@ Future release:
    - signal / event
    - job / queue
    - subprocess (and others)
+   - create oneshot signals
    ? split into own project
  * support `reinstall' target
  * add support for installing from different package sources (repo, local)
@@ -180,20 +181,20 @@ Future release:
  * implement clean flags["target"]
  * refactor env/mk code
  * remove reinstall from flags["target"]
- - implement sysctl using ctypes
+ - implement sysctl using ctypes (waiting on FFI from pypy)
  + cleanup namespace
- - add support to verify if stage is possible (can_do_stage)
+ * add support to verify if stage is possible (can_do_stage)
  - allow pkg.version to use "pkg_version" as alternative
  - periodically check that the state tracked pkgdb agrees with pkg_info
  * document libpb initialisation procedure (cache/clean env, load defaults, db init)
  * make pre/post cleaning the default
  * refactor all env.flags (like CONFIG) for better handling
  - rename/refactor make target (move into mk?)
- - fix module level definitions used by port (install status, build stage)
+ + fix module level definitions used by port (install status, build stage)
  - eliminate bottleneck in portbuilder for loading attr
  * fix cleaning of ports (why is make call in CleanJob?)
  * fix `job' names in builder
- - use pkg.remove instead of `make deinstall`
+ * use pkg.remove instead of `make deinstall`
  - fix fetch-only mode when using repo method (aka REPOFETCH)
  - rename flags["stage"] to flags["(inst)status"]
 
