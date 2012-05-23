@@ -60,15 +60,19 @@ class Stage(job.Job):
         return self.port < other.port
 
     def work(self):
-        assert self.prev in self.port.stages
         assert not self.stack.working
         assert not self.failed
-        assert self.check(self.port)
-        assert (not self.port.dependency or
-                not self.port.dependency.check(self.__class__))
 
         log.debug("Stage.work()", "Port '%s': starting stage %s" %
                       (self.port.origin, self.name))
+        if not self.check(self.port):
+            # Cannot call self._finalise(True) directly as self.done() cannot
+            # be called from within the scope of self.work()
+            event.post_event(self._finalise, False)
+            return
+        assert self.prev in self.port.stages
+        assert (not self.port.dependency or
+                not self.port.dependency.check(self.__class__))
         if self.complete():
             # Cannot call self._finalise(True) directly as self.done() cannot
             # be called from within the scope of self.work()
