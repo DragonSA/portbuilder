@@ -14,7 +14,7 @@ __all__ = ["RepoConfig", "RepoFetch", "RepoInstall"]
 class RepoConfig(mutators.Packagable):
     """Check if a repo package was built using the correct configuration."""
 
-    name = "repoconfig"
+    name = "RepoConfig"
     prev = common.Depend
     stack = "repo"
 
@@ -78,7 +78,8 @@ class RepoFetch(mutators.Packagable):
         return os.path.isfile(env.flags["chroot"] + self.port.attr["pkgfile"])
 
 
-class RepoInstall(mutators.Deinstall, mutators.Packagable, mutators.Resolves):
+class RepoInstall(mutators.Deinstall, mutators.Packagable, mutators.PostFetch,
+                  mutators.Resolves):
     """Install a port from a repo package."""
 
     name = "repoinstall"

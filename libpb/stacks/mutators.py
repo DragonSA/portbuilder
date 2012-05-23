@@ -6,7 +6,7 @@ behaviour of Stages.
 import abc
 import functools
 
-from libpb import log, make, pkg
+from libpb import env, log, make, pkg
 from libpb.stacks import base
 
 __all__ = ["Deinstall", "MakeStage", "Packagable", "Resolves"]
@@ -33,9 +33,9 @@ class Deinstall(base.Stage):
             self._do_stage = _ds
             self._do_stage()
         else:
-            pkg.db.remove(self.port)
             self.port.install_status = pkg.ABSENT
             self.pid = pkg.remove(self.port).connect(self.__post_pkg_remove).pid
+            pkg.db.remove(self.port)
 
     def __post_pkg_remove(self, pkg_remove):
         """Process the results from pkg.remove."""
@@ -81,7 +81,6 @@ class MakeStage(base.Stage):
 
 class Packagable(base.Stage):
     """A stage depending on the packagability of a port."""
-    __metaclass__ = abc.ABCMeta
 
     @staticmethod
     def check(port):
@@ -90,6 +89,12 @@ class Packagable(base.Stage):
             # Stages that depend on packability cannot be done if NO_PACKAGE=yes
             return False
         return True
+
+class PostFetch(base.Stage):
+    """Indicate this stage is post fetch (and complete if fetch-only)."""
+
+    def complete(self):
+        return env.flags["fetch_only"] or super(PostFetch, self).complete()
 
 
 class Resolves(base.Stage):

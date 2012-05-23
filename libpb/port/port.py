@@ -46,7 +46,7 @@ class Port(object):
         return "<Port(%s)>" % (self.origin)
 
     def resolved(self):
-        """Indicate if the port meets it's dependencies."""
+        """Indicate if the port meets it's dependents."""
         # TODO: use Dependent.RESOLV (current import issues)
         RESOLV = 1
         assert (self.dependent.status != RESOLV or

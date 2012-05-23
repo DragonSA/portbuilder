@@ -43,7 +43,7 @@ class Job(Signal):
         This method should be subclassed so as to do something useful."""
         pass
 
-    def run(self, manager):
+    def run(self, manager=None):
         """Run the job.
 
         The method may throw StalledJob, indicating the job should be placed on

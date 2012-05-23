@@ -60,13 +60,19 @@ class Stage(job.Job):
         return self.port < other.port
 
     def work(self):
-        assert self.prev in self.port.stages
         assert not self.stack.working
         assert not self.failed
-        assert self.check(self.port)
-        assert (not self.port.dependency or
-                self.port.dependency.check(self.__class__))
 
+        log.debug("Stage.work()", "Port '%s': starting stage %s" %
+                      (self.port.origin, self.name))
+        if not self.check(self.port):
+            # Cannot call self._finalise(True) directly as self.done() cannot
+            # be called from within the scope of self.work()
+            event.post_event(self._finalise, False)
+            return
+        assert self.prev in self.port.stages
+        assert (not self.port.dependency or
+                not self.port.dependency.check(self.__class__))
         if self.complete():
             # Cannot call self._finalise(True) directly as self.done() cannot
             # be called from within the scope of self.work()
@@ -78,16 +84,16 @@ class Stage(job.Job):
     def _finalise(self, status):
         """Finalise the stage."""
         if not status:
-            log.error("MakeStage._finalise()", "Port '%s': failed stage %s" %
+            log.error("Stage._finalise()", "Port '%s': failed stage %s" %
                           (self.port.origin, self.name))
             if self.stack.name == "common":
                 for stack in self.port.stacks.values():
-                    stack.failed = True
+                    stack.failed = self.__class__
             else:
-                self.stack.failed = True
+                self.stack.failed = self.__class__
             self.failed = True
         else:
-            log.debug("MakeStage._finalise()", "Port '%s': finished stage %s" %
+            log.debug("Stage._finalise()", "Port '%s': finished stage %s" %
                           (self.port.origin, self.name))
         self.stack.working = False
         self.port.stages.add(self.__class__)

@@ -4,7 +4,7 @@ from __future__ import absolute_import
 
 import collections
 
-from libpb import env, log, pkg, signal, stacks
+from libpb import env, event, log, pkg, signal, stacks
 
 __all__ = ['Dependent', 'Dependency']
 
@@ -87,14 +87,12 @@ class Dependent(DependHandler):
         """Shorthand for self.status() == Dependent.FAILURE."""
         return self.status == Dependent.FAILURE
 
-    def status_changed(self):
+    def status_changed(self, exhausted=False):
         """Indicates that our port's status has changed."""
         if (self.failed or
                 (self.port.dependency and self.port.dependency.failed)):
             status = Dependent.FAILURE
             # TODO: We might have failed and yet still satisfy our dependants
-        elif env.flags["fetch_only"]:
-            status = Dependent.RESOLV
         elif self.port.install_status > env.flags["stage"]:
             status = Dependent.RESOLV
             if not self._verify():
@@ -103,7 +101,7 @@ class Dependent(DependHandler):
                 # failed?
                 status = Dependent.FAILURE
         else:
-            status = Dependent.UNRESOLV
+            status = Dependent.FAILURE if exhausted else Dependent.UNRESOLV
 
         if status != self.status:
             self.status = status
@@ -179,9 +177,8 @@ class Dependency(DependHandler):
                 self._loading += 1
                 get_port(j[1]).connect(adder(j[0], i))
         if not self._loading:
-            from ..event import post_event
             self._update_priority()
-            post_event(self.loaded, True)
+            event.post_event(self.loaded.emit, True)
 
     def __repr__(self):
         return "<Dependency(port=%s)>" % self.port.origin
@@ -214,7 +211,7 @@ class Dependency(DependHandler):
 
         if self._loading == 0:
             self._update_priority()
-            self.port.loaded.emit(not self._bad)
+            self.loaded.emit(not self._bad)
 
     def get(self, stage=None):
         """Retrieve a list of dependencies."""

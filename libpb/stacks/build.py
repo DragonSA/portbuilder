@@ -53,7 +53,7 @@ class Distfiles(base.Stage):
 class Checksum(Distfiles, mutators.MakeStage):
     """Check if the port's files are available."""
 
-    name = "checksum"
+    name = "Checksum"
     prev = common.Depend
     stack = "build"
 
@@ -100,7 +100,7 @@ class Checksum(Distfiles, mutators.MakeStage):
 class Fetch(Distfiles, mutators.MakeStage):
     """Fetch a port's files."""
 
-    name = "fetch"
+    name = "Fetch"
     prev = Checksum
     stack = "build"
 
@@ -110,7 +110,8 @@ class Fetch(Distfiles, mutators.MakeStage):
     def check(port):
         """Check if any distfiles have failed to fetch."""
         # If files have failed to fetch
-        return not Fetch._fetch_failed.issuperset(port.attr["distfiles"])
+        return not (port.attr["distfiles"] and
+                    Fetch._fetch_failed.issuperset(port.attr["distfiles"]))
 
     def complete(self):
         """Check if all distfiles have been fetched."""
@@ -143,10 +144,10 @@ class Fetch(Distfiles, mutators.MakeStage):
         return status
 
 
-class Build(mutators.MakeStage):
+class Build(mutators.MakeStage, mutators.PostFetch):
     """Build a port."""
 
-    name = "build"
+    name = "Build"
     prev = Fetch
     stack = "build"
 
@@ -158,10 +159,11 @@ class Build(mutators.MakeStage):
         self._make_target(("all",), BATCH=True, NO_DEPENDS=True)
 
 
-class Install(mutators.Deinstall, mutators.MakeStage, mutators.Resolves):
+class Install(mutators.Deinstall, mutators.MakeStage, mutators.PostFetch,
+              mutators.Resolves):
     """Install a port from source."""
 
-    name = "install"
+    name = "Install"
     prev = Build
     stack = "build"
 
@@ -177,10 +179,10 @@ class Install(mutators.Deinstall, mutators.MakeStage, mutators.Resolves):
         self._make_target(target, BATCH=True, NO_DEPENDS=True)
 
 
-class Package(mutators.MakeStage, mutators.Packagable):
+class Package(mutators.MakeStage, mutators.Packagable, mutators.PostFetch):
     """Package a port."""
 
-    name = "package"
+    name = "Package"
     prev = Install
     stack = "build"
 
