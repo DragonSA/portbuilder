@@ -163,10 +163,10 @@ def report():
     for port in get_ports():
         if not isinstance(port, Port):
             noport.append(port)
+        elif "failed" in port.flags:
+            failed.append(port)
         elif port.dependency and port.dependency.failed:
             depends.append(port)
-        elif port.dependent.failed:
-            failed.append(port)
 
     noport.sort()
     failed.sort()
@@ -175,11 +175,15 @@ def report():
     if len(depends):
         def bad_depends(port):
             """Return all bad dependencies by pkgname."""
+            bad = set()
             for port in port.dependency.get():
                 if not isinstance(port, Port):
-                    yield port
-                elif port.dependent.failed:
-                    yield port.attr["pkgname"]
+                    bad.add(port)
+                elif "failed" in port.flags:
+                    bad.add(port.attr["pkgname"])
+                elif port.dependency and port.dependency.failed:
+                    bad.update(bad_depends(port))
+            return bad
         print ("Failed due to dependency:\n\t%s" %
             "\n\t".join("%s (%s)" % (i.attr["pkgname"],
                                      ", ".join(bad_depends(i)))
