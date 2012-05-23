@@ -61,10 +61,10 @@ def query(port, prop, repo=False):
     if env.flags["pkg_mgmt"] == "pkg":
         args = pkg.query(port, prop, repo)
     elif env.flags["pkg_mgmt"] == "pkgng":
-        args = pkg.query(port, prop, repo)
+        args = pkgng.query(port, prop, repo)
     else:
         assert not "Unknown pkg_mgmt"
-    return cmd(port, args)
+    return cmd(port, args, do_op=True)
 
 
 def remove(port):
@@ -73,19 +73,19 @@ def remove(port):
     if env.flags["pkg_mgmt"] == "pkg":
         args = pkg.remove(pkgs)
     elif env.flags["pkg_mgmt"] == "pkgng":
-        args = pkg.remove(pkgs)
+        args = pkgng.remove(pkgs)
     else:
         assert not "Unknown pkg_mgmt"
     return cmd(port, args)
 
 
-def cmd(port, args):
+def cmd(port, args, do_op=False):
     """Issue a pkg_mgmt command and log the command to the port's logfile."""
     if not args:
         return args
     if env.flags["chroot"]:
         args = ("chroot", env.flags["chroot"]) + args
-    if env.flags["no_op"]:
+    if env.flags["no_op"] and not do_op:
         pkg_cmd = make.PopenNone(args, port)
     else:
         logfile = open(port.log_file, "a")
