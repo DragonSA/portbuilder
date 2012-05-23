@@ -173,9 +173,11 @@ def report():
     depends.sort()
 
     if len(depends):
-        def bad_depends(port):
+        def bad_depends(port, _cache=dict()):
             """Return all bad dependencies by pkgname."""
-            bad = set()
+            if port in _cache:
+                return _cache[port]
+            _cache[port] = bad = set()
             for port in port.dependency.get():
                 if not isinstance(port, Port):
                     bad.add(port)
