@@ -33,6 +33,9 @@ class Stage(job.Job):
         self.stack = port.stacks[self.stack]
         self.failed = self.stack.failed
 
+    def __str__(self):
+        return self.name
+
     @abc.abstractmethod
     def _do_stage(self):
         """Execute commands required to complete this stage."""
