@@ -84,10 +84,10 @@ class StateTracker(object):
                     self.active.remove(port)
                 elif port in self.queued:
                     self.queued.remove(port)
-                else: # port in self.pending:
+                elif port in self.pending:
                     self.pending.remove(port)
                 if self.stage in port.stages:
-                    if status in (Builder.FAILED, Builder.SKIPPED):
+                    if status == Builder.FAILED:
                         self.failed.append(port)
                     elif status == Builder.DONE:
                         self.done.append(port)
@@ -126,7 +126,7 @@ class StateTracker(object):
             self._resort = False
 
     def stage_started(self, stage, port):
-        """Indicate if the stage is the currently primary for port."""
+        """Indicate if the stage is the current primary for port."""
         stage_no = stage.stage
         stages = set((stage.stage,))
         stage = stage.stage.prev
@@ -148,9 +148,10 @@ class StateTracker(object):
         for stage in self.stages:
             if stage.prev in stages:
                 if port in self.stages[stage].ports:
+                    if port in self.stages[stage].failed:
+                        continue
                     assert (port not in self.stages[stage].pending and
-                            port not in self.stages[stage].done and
-                            port not in self.stages[stage].failed)
+                            port not in self.stages[stage].done)
                     if self._resort:
                         self.stages[stage].pending.append(port)
                     else:
