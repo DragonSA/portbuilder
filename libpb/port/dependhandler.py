@@ -4,7 +4,7 @@ from __future__ import absolute_import
 
 import collections
 
-from libpb import env, log, pkg, signal, stacks
+from libpb import env, event, log, pkg, signal, stacks
 
 __all__ = ['Dependent', 'Dependency']
 
@@ -179,9 +179,8 @@ class Dependency(DependHandler):
                 self._loading += 1
                 get_port(j[1]).connect(adder(j[0], i))
         if not self._loading:
-            from ..event import post_event
             self._update_priority()
-            post_event(self.loaded, True)
+            event.post_event(self.loaded.emit, True)
 
     def __repr__(self):
         return "<Dependency(port=%s)>" % self.port.origin
@@ -214,7 +213,7 @@ class Dependency(DependHandler):
 
         if self._loading == 0:
             self._update_priority()
-            self.port.loaded.emit(not self._bad)
+            self.loaded.emit(not self._bad)
 
     def get(self, stage=None):
         """Retrieve a list of dependencies."""
