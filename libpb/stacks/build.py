@@ -110,7 +110,8 @@ class Fetch(Distfiles, mutators.MakeStage):
     def check(port):
         """Check if any distfiles have failed to fetch."""
         # If files have failed to fetch
-        return not Fetch._fetch_failed.issuperset(port.attr["distfiles"])
+        return not (port.attr["distfiles"] and
+                    Fetch._fetch_failed.issuperset(port.attr["distfiles"]))
 
     def complete(self):
         """Check if all distfiles have been fetched."""
