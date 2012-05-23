@@ -84,9 +84,9 @@ class Stage(job.Job):
                           (self.port.origin, self.name))
             if self.stack.name == "common":
                 for stack in self.port.stacks.values():
-                    stack.failed = True
+                    stack.failed = self.__class__
             else:
-                self.stack.failed = True
+                self.stack.failed = self.__class__
             self.failed = True
         else:
             log.debug("Stage._finalise()", "Port '%s': finished stage %s" %
