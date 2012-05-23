@@ -333,7 +333,6 @@ def set_early_options(options):
 
 def set_options(options):
     """Set all the global options."""
-    from libpb.port.port import Port
 
     # Force 'none' config mode if in batch mode
     if options.batch:
@@ -415,7 +414,7 @@ def set_options(options):
 
     # Upgrade all ports (-U)
     if options.upgradeA:
-        env.flags["stage"] = max(env.flags["stage"], Port.OLDER)
+        env.flags["stage"] = max(env.flags["stage"], pkg.OLDER)
         env.flags["mode"] = "recursive"
 
     # Pre-clean before building ports
