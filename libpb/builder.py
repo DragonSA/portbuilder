@@ -103,12 +103,14 @@ class DependLoader(object):
                 install.update.emit(install, Builder.ADDED, port)
                 install.update.emit(install, Builder.SKIPPED, port)
                 return False
-            stagejob = install(port)
             if "package" in env.flags["target"] or "package" in port.flags:
                 # Connect to install job and give package ownership
                 if package.stage.check(port):
                     package(port)
-            elif "install" not in env.flags["target"]:
+                stagejob = install.add(port)
+            elif "install" in env.flags["target"]:
+                stagejob = install(port)
+            else:
                 assert not "Unknown dependency target"
         elif method == "package":
             if not pkginstall.stage.check(port):
@@ -286,7 +288,7 @@ class StageBuilder(Builder):
         return self.add(port)
 
     def __repr__(self):
-        return "<StageBuilder(%i)>" % self.stage
+        return "<StageBuilder(%s)>" % self.stage.name
 
     def add(self, port):
         """Add a port to be build for this stage."""
@@ -306,7 +308,8 @@ class StageBuilder(Builder):
                 depend.add(port).connect(self._add)
             else:
                 assert port not in depend.ports
-                self._add(port)
+                # self._add() needs to be asynchronous to self.add()
+                event.post_event(self._add, port)
             return stagejob
 
     def _add(self, port, pending=0):
@@ -415,9 +418,6 @@ class StageBuilder(Builder):
         if self._port_check(port):
             if stagejob.complete():
                 stagejob.run()
-                log.debug("StageBuilder._port_ready()",
-                        "Port '%s': stage %s complete" %
-                        (port.origin, self.stage.name))
             else:
                 log.debug("StageBuilder._port_ready()",
                         "Port '%s': queuing job for stage %s" %
@@ -427,10 +427,13 @@ class StageBuilder(Builder):
                 stagejob.started.connect(self._started)
                 self.queue.add(stagejob)
         else:
-            stagejob.done()
-            log.debug("StageBuilder._port_ready()",
-                      "Port '%s': skipping stage %s" %
-                          (port.origin, self.stage.name))
+            if not self.stage.check(port):
+                stagejob.run()
+            else:
+                stagejob.done()
+                log.debug("StageBuilder._port_ready()",
+                        "Port '%s': skipping stage %s" %
+                            (port.origin, self.stage.name))
 
     def _port_check(self, port):
         """Check if the port should build this stage."""
@@ -454,9 +457,10 @@ class BuildBuilder(StageBuilder):
 
     def _port_clean(self, cleanjob):
         """A port has finished cleaning."""
-        self._pending[cleanjob.port] -= 1
-        if not self._pending[cleanjob.port]:
-            self._port_ready(cleanjob.port)
+        if cleanjob.port not in self.failed:
+            self._pending[cleanjob.port] -= 1
+            if not self._pending[cleanjob.port]:
+                self._port_ready(cleanjob.port)
 
 
 class PackageBuilder(StageBuilder):
