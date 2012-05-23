@@ -161,7 +161,7 @@ class StateTracker(object):
     def _sort(self, _builder, status, _port):
         """Handle changes that require a resort (due to changes in priority)"""
         from .builder import Builder
-        if status in (Builder.FAILED, Builder.SUCCEEDED, Builder.DONE):
+        if status in (Builder.FAILED, Builder.SUCCEEDED):
             self._resort = True
 
 
@@ -206,12 +206,11 @@ def stop(kill=False, kill_clean=False):
     active = set()
     for q in queue.queues:
         for job in q.active:
-            port = job.port
-            active.add(port)
-            port.stage_completed.connect(lambda x: x.clean())
+            active.add(job.port)
+            job.connect(lambda x: x.port.clean())
 
     # Clean all other outstanding ports
-    for b in builder.builders:
+    for b in builder.builders.values():
         for port in b.ports:
             if port not in active:
                 port.clean()
