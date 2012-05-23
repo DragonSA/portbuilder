@@ -33,9 +33,9 @@ class Deinstall(base.Stage):
             self._do_stage = _ds
             self._do_stage()
         else:
-            pkg.db.remove(self.port)
             self.port.install_status = pkg.ABSENT
             self.pid = pkg.remove(self.port).connect(self.__post_pkg_remove).pid
+            pkg.db.remove(self.port)
 
     def __post_pkg_remove(self, pkg_remove):
         """Process the results from pkg.remove."""
