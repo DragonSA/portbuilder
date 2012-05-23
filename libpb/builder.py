@@ -72,6 +72,10 @@ class DependLoader(object):
             if not method:
                 # No method left, port failed to resolve
                 del self.method[port]
+                for stack in port.stacks.values():
+                    if stack.failed and stack.failed is not True:
+                        port.flags.add("failed")
+                        break
                 port.dependent.status_changed(exhausted=True)
                 log.debug("DependLoader._find_method()",
                           "Port '%s': no viable resolve method found" %
@@ -381,7 +385,8 @@ class StageBuilder(Builder):
                     if not self._pending[port]:
                         self._port_ready(port)
                 else:
-                    self.ports[port].stack.failed = True
+                    if not self.ports[port].stack.failed:
+                        self.ports[port].stack.failed = True
                     self._port_failed(port)
 
     def _stage_resolv(self, stagejob):
@@ -398,8 +403,6 @@ class StageBuilder(Builder):
         if port not in self.failed:
             self.failed.append(port)
             del self._pending[port]
-            # If a dependency failed then so does the stack
-            self.ports[port].stack.failed = True
             self.ports[port].done()
 
     def _port_ready(self, port):
