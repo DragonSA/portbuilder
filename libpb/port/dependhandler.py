@@ -4,7 +4,7 @@ from __future__ import absolute_import
 
 import collections
 
-from libpb import log, pkg, signal, stacks
+from libpb import env, log, pkg, signal, stacks
 
 __all__ = ['Dependent', 'Dependency']
 
@@ -47,14 +47,11 @@ class Dependent(DependHandler):
 
     def __init__(self, port):
         """Initialise the databases of dependants."""
-        from ..env import flags
-
         DependHandler.__init__(self)
         self._dependants = [[], [], [], [], [], [], []]  #: All dependants
         self.port = port  #: The port whom we handle
         self.priority = port.priority
-        self.propogate = True
-        if port.install_status > flags["stage"]:
+        if port.install_status > env.flags["stage"]:
             self.status = Dependent.RESOLV
             # TODO: Change to actually check if we are resolved
         else:
@@ -92,15 +89,13 @@ class Dependent(DependHandler):
 
     def status_changed(self):
         """Indicates that our port's status has changed."""
-        from ..env import flags
-
-        if ((self.propogate and self.port.failed) or
-            (self.port.dependency and self.port.dependency.failed)):
+        if (self.failed or
+                (self.port.dependency and self.port.dependency.failed)):
             status = Dependent.FAILURE
             # TODO: We might have failed and yet still satisfy our dependants
-        elif flags["fetch_only"]:
+        elif env.flags["fetch_only"]:
             status = Dependent.RESOLV
-        elif self.port.install_status > flags["stage"]:
+        elif self.port.install_status > env.flags["stage"]:
             status = Dependent.RESOLV
             if not self._verify():
                 # TODO: We may satisfy some dependants, but not others,
