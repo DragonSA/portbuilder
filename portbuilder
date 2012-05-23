@@ -113,6 +113,12 @@ def mkdir(directory):
             exit(1)
     else:
         try:
+            base = os.path.dirname(directory)
+            if os.path.exists(base) and
+                if not os.path.isdir(base):
+                    print "%s: not a directory" % base
+                else:
+                    mkdir(base)
             os.mkdir(directory)
         except OSError, e:
             print "%s: unable to create directory (%s)" % (directory, e)
@@ -322,6 +328,7 @@ def set_early_options(options):
         env.flags["chroot"] = os.path.join(os.getcwd(), options.chroot)
         if os.getuid() != 0:
             options.parser.error("chroot option only works with root account")
+        env.flags["log_dir"] += options.chroot.replace("/", "__")
 
     # Use pkgng for ports-mgmt (--pkgng)
     if options.pkgng:
