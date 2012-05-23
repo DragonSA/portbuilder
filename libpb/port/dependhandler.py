@@ -87,7 +87,7 @@ class Dependent(DependHandler):
         """Shorthand for self.status() == Dependent.FAILURE."""
         return self.status == Dependent.FAILURE
 
-    def status_changed(self):
+    def status_changed(self, exhausted=False):
         """Indicates that our port's status has changed."""
         if (self.failed or
                 (self.port.dependency and self.port.dependency.failed)):
@@ -101,7 +101,7 @@ class Dependent(DependHandler):
                 # failed?
                 status = Dependent.FAILURE
         else:
-            status = Dependent.UNRESOLV
+            status = Dependent.FAILURE if exhausted else Dependent.UNRESOLV
 
         if status != self.status:
             self.status = status
