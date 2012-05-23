@@ -246,7 +246,7 @@ class Top(Monitor):
                 if stat not in (Builder.FAILED, Builder.DONE):
                     ports += len(stage[stat])
                 if stat == Builder.FAILED and not self._indirect:
-                    msg[status] -= len([i for i in stage[stat] if not i.failed])
+                    msg[status] -= len([i for i in stage[stat] if not i.dependent.failed])
 
         msg = ", ".join("%i %s" % (msg[i], i) for i in STATUS.values() if msg[i])
         scr.addstr(
@@ -262,7 +262,9 @@ class Top(Monitor):
             if stage.status[state]:
                 length = len(stage[state])
                 if state == Builder.FAILED and not self._indirect:
-                    length -= len([i for i in stage[state] if not i.failed])
+                    length -= len([i for i in stage[state] if not i.dependent.failed])
+                    if not length:
+                        continue
                 msg.append("%i %s" % (length, status))
 
         if msg:
@@ -283,7 +285,7 @@ class Top(Monitor):
                 if self._skip:
                     length = len(stat)
                     if status == Builder.FAILED and not self._indirect:
-                        length -= len([i for i in stat if not i.failed])
+                        length -= len([i for i in stat if not i.dependent.failed])
                     if self._skip >= length:
                         self._skip -= length
                         continue
@@ -292,7 +294,7 @@ class Top(Monitor):
                         self._skip = 0
                 for port in stat:
                     if (status == Builder.FAILED and not self._indirect and
-                        not port.failed):
+                        not port.dependent.failed):
                         continue
                     yield port, stage.stage
 
