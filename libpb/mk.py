@@ -124,6 +124,7 @@ def cache():
 def attr(origin):
     """Retrieve a ports attributes by using the attribute queue."""
     # TODO inline function to caller
+    log.debug("attr()", "Port '%s': getting attribute" % origin)
     attr_obj = Attr(origin)
     queue.attr.add(job.AttrJob(attr_obj))
     return attr_obj
