@@ -163,32 +163,40 @@ def report():
     for port in get_ports():
         if not isinstance(port, Port):
             noport.append(port)
-        elif port.dependent.failed:
-            failed.append(port)
         elif port.dependency and port.dependency.failed:
             depends.append(port)
+        elif port.dependent.failed:
+            failed.append(port)
 
     noport.sort()
     failed.sort()
     depends.sort()
 
     if len(depends):
-        def bad_depends(ports):
+        def bad_depends(port):
             """Return all bad dependencies by pkgname."""
-            for port in ports.dependency.get():
+            for port in port.dependency.get():
                 if not isinstance(port, Port):
                     yield port
                 elif port.dependent.failed:
                     yield port.attr["pkgname"]
         print ("Failed due to dependency:\n\t%s" %
             "\n\t".join("%s (%s)" % (i.attr["pkgname"],
-                                     ", ".join(bad_depends(i))) for i in
-                                        reversed(depends)))
+                                     ", ".join(bad_depends(i)))
+                                                   for i in reversed(depends)))
 
     if len(failed):
+        def bad_stacks(port):
+            prev_stages = set(stage.prev for stage in port.stages if stage)
+            tips = port.stages.difference(prev_stages)
+            for stage in tips:
+                if port.stacks[stage.stack].failed:
+                    yield stage.name.lower()
+
         print ("Failed to complete port:\n\t%s" %
             "\n\t".join("%s (%s)" % (i.attr["pkgname"],
-                                     str(i.stage)) for i in reversed(failed)))
+                                     ", ".join(bad_stacks(i)))
+                                                    for i in reversed(failed)))
 
     if len(noport):
         print "No port found for:\n\t%s" % "\n\t".join(noport)
