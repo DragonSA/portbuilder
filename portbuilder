@@ -68,17 +68,17 @@ def main():
     if len(options.args) == 0 and not options.all and not options.ports_file:
         print parser.get_usage()
         return
-    print "Loading /etc/make.conf (defaults)...",
+    sys.stderr.write("Loading /etc/make.conf (defaults)...")
     mk.load_defaults()
-    print "done"
-    print "Loading package datebase...",
+    sys.stderr.write("done\n")
+    sys.stderr.write("Loading package datebase...")
     pkg.db.load()
-    print "done"
+    sys.stderr.write("done\n")
     set_options(options)
-    print "Caching variables...",
+    sys.stderr.write("Caching variables...")
     mk.clean()
     mk.cache()
-    print "done"
+    sys.stderr.write("done\n")
 
     # Make sure log_dir is available
     mkdir(flags["log_dir"])
@@ -109,19 +109,19 @@ def mkdir(directory):
     """Make a given directory if needed."""
     if os.path.exists(directory):
         if not os.path.isdir(directory):
-            print "%s: not a directory" % directory
+            sys.stderr.write("%s: not a directory\n" % directory)
             exit(1)
     else:
         try:
             base = os.path.dirname(directory)
             if os.path.exists(base):
                 if not os.path.isdir(base):
-                    print "%s: not a directory" % base
+                    print "%s: not a directory\n" % base
                 else:
                     mkdir(base)
             os.mkdir(directory)
         except OSError, e:
-            print "%s: unable to create directory (%s)" % (directory, e)
+            sys.stderr.write("%s: unable to create directory (%s)\n" % (directory, e))
             exit(2)
 
 
@@ -184,7 +184,7 @@ def report():
                 elif port.dependency and port.dependency.failed:
                     bad.update(bad_depends(port))
             return bad
-        print ("Failed due to dependency:\n\t%s" %
+        sys.stderr.write("Failed due to dependency:\n\t%s\n" %
             "\n\t".join("%s (%s)" % (i.attr["pkgname"],
                                      ", ".join(bad_depends(i)))
                                                    for i in reversed(depends)))
@@ -197,13 +197,13 @@ def report():
                 if port.stacks[stage.stack].failed:
                     yield stage.name.lower()
 
-        print ("Failed to complete port:\n\t%s" %
+        sys.stderr.write("Failed to complete port:\n\t%s\n" %
             "\n\t".join("%s (%s)" % (i.attr["pkgname"],
                                      ", ".join(bad_stacks(i)))
                                                     for i in reversed(failed)))
 
     if len(noport):
-        print "No port found for:\n\t%s" % "\n\t".join(noport)
+        sys.stderr.write("No port found for:\n\t%s\n" % "\n\t".join(noport))
 
 
 def gen_parser():
