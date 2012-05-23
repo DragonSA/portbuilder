@@ -370,6 +370,10 @@ def set_options(options):
     if options.fetch:
         env.flags["fetch_only"] = True
         queue.checksum.load = env.CPUS
+        if env.flags["target"][0] == "clean":
+            env.flags["target"].pop(0)
+        if env.flags["target"][-1] == "clean":
+            env.flags["target"].pop()
 
     # Fetch ports list from file
     if options.ports_file:
