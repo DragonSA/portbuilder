@@ -46,7 +46,7 @@ class Lock(object):
 class Config(mutators.MakeStage):
     """Configure a port."""
 
-    name = "config"
+    name = "Config"
     stack = "common"
 
     _config_lock = Lock()
@@ -109,26 +109,25 @@ class Config(mutators.MakeStage):
 class Depend(base.Stage):
     """Load a port's dependencies."""
 
-    name = "depend"
+    name = "Depend"
     prev = Config
     stack = "common"
 
     def _do_stage(self):
         from libpb.port.dependhandler import Dependency
+        priority = 0
         distfiles = self.port.attr["distfiles"]
         distinfo = env.flags["chroot"] + self.port.attr["distinfo"]
-        if not len(distfiles) or not os.path.isfile(distinfo):
-            return 0
-        priority = 0
-        with open(distinfo, 'r') as file:
-            for i in file:
-                if i.startswith("SIZE"):
-                    i = i.split()
-                    name, size = i[1], i[-1]
-                    name = name[1:-1]
-                    name = name.rsplit('/', 1)[-1]
-                    if name in distfiles:
-                        priority += int(size)
+        if len(distfiles) and os.path.isfile(distinfo):
+            with open(distinfo, 'r') as file:
+                for i in file:
+                    if i.startswith("SIZE"):
+                        i = i.split()
+                        name, size = i[1], i[-1]
+                        name = name[1:-1]
+                        name = name.rsplit('/', 1)[-1]
+                        if name in distfiles:
+                            priority += int(size)
         self.port.priority = priority
         self.port.dependent.priority += self.priority
         depends = ("depend_build", "depend_extract", "depend_fetch",
