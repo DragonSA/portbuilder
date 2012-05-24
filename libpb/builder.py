@@ -77,9 +77,10 @@ class DependLoader(object):
                         port.flags.add("failed")
                         break
                 port.dependent.status_changed(exhausted=True)
-                log.debug("DependLoader._find_method()",
-                          "Port '%s': no viable resolve method found" %
-                              (port.origin,))
+                if port.dependent.failed and not port.dependency.failed:
+                    log.debug("DependLoader._find_method()",
+                              "Port '%s': no viable resolve method found" %
+                                 (port.origin,))
                 return False
             else:
                 self.method[port] = self._next(self.method[port])
