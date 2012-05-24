@@ -65,10 +65,13 @@ class Monitor(object):
         """Run any denitialisation required."""
         pass
 
+# when altering check "fetch_only" code below.
 STAGES = (
     stacks.Depend,
+    stacks.RepoConfig,
     stacks.Checksum,
     stacks.Fetch,
+    stacks.RepoFetch,
     stacks.Build,
     stacks.Install,
     stacks.PkgInstall,
@@ -117,7 +120,7 @@ class Top(Monitor):
 
         state.sort()
         if env.flags["fetch_only"]:
-            stages = tuple(state[i] for i in STAGES[:3])
+            stages = tuple(state[i] for i in STAGES[:5])
         else:
             stages = tuple(state[i] for i in STAGES)
         self._curr_time = time.time()
@@ -271,7 +274,7 @@ class Top(Monitor):
             stage_name = stage.stage.name
             scr.addstr(
                     self._offset, 0, "%s:%s%s" %
-                    (stage_name, " " * (9 - len(stage_name)), ", ".join(msg)))
+                    (stage_name[:8], " " * (9 - min(8, len(stage_name))), ", ".join(msg)))
             self._offset += 1
 
     def _update_rows(self, scr, stages):
