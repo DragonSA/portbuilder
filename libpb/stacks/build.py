@@ -176,7 +176,11 @@ class Install(mutators.Deinstall, mutators.MakeStage, mutators.PostFetch,
         # pylint: disable-msg=E1101
         # NOTE: pylint doesn't detect self._make_target() inherited from
         # mutators.MakeStage()
-        self._make_target(target, BATCH=True, NO_DEPENDS=True)
+        if "explicit" in self.port.flags:
+            self._make_target(target, BATCH=True, NO_DEPENDS=True)
+        else:
+            self._make_target(target, BATCH=True, NO_DEPENDS=True,
+                                      INSTALLS_DEPENDS=True)
 
 
 class Package(mutators.MakeStage, mutators.Packagable, mutators.PostFetch):
