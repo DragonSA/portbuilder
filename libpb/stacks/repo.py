@@ -75,7 +75,10 @@ class RepoFetch(mutators.Packagable):
 
     def complete(self):
         """Check if the package needs to be fetched from the repository."""
-        return os.path.isfile(env.flags["chroot"] + self.port.attr["pkgfile"])
+        suffix = pkg.mgmt[env.flags["pkg_mgmt"]].suffix
+        path = os.path.join(env.env["PKG_CACHEDIR"],
+                            self.port.attr["pkgfile"] + suffix)
+        return os.path.isfile(env.flags["chroot"] + path)
 
 
 class RepoInstall(mutators.Deinstall, mutators.Packagable, mutators.PostFetch,
