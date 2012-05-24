@@ -11,7 +11,7 @@ from libpb.stacks import common, mutators
 __all__ = ["RepoConfig", "RepoFetch", "RepoInstall"]
 
 
-class RepoConfig(mutators.Packagable):
+class RepoConfig(mutators.Repo):
     """Check if a repo package was built using the correct configuration."""
 
     name = "RepoConfig"
@@ -24,7 +24,7 @@ class RepoConfig(mutators.Packagable):
 
     def complete(self):
         """Check if the package's configuration needs to be validated."""
-        return not self.port.attr["config"] or env.flags["pkg_mgmt"] == "pkg"
+        return not self.port.attr["options"] or env.flags["pkg_mgmt"] == "pkg"
 
     def _do_stage(self):
         pkg_query = pkg.query(self.port, "config")
@@ -66,10 +66,10 @@ class RepoConfig(mutators.Packagable):
         self._finalise(config == self._pkgconfig)
 
 
-class RepoFetch(mutators.Packagable):
+class RepoFetch(mutators.Repo):
     """Fetch the repo package."""
 
-    name = "repofetch"
+    name = "RepoFetch"
     prev = RepoConfig
     stack = "repo"
 
@@ -81,12 +81,12 @@ class RepoFetch(mutators.Packagable):
         return os.path.isfile(env.flags["chroot"] + path)
 
 
-class RepoInstall(mutators.Deinstall, mutators.Packagable, mutators.PostFetch,
+class RepoInstall(mutators.Deinstall, mutators.PostFetch, mutators.Repo,
                   mutators.PackageInstaller, mutators.Resolves):
     """Install a port from a repo package."""
 
-    name = "repoinstall"
-    prev = common.Depend
+    name = "RepoInstall"
+    prev = RepoConfig
     stack = "repo"
 
     def _add_pkg(self):

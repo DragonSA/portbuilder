@@ -148,6 +148,15 @@ class PostFetch(base.Stage):
         return env.flags["fetch_only"] or super(PostFetch, self).complete()
 
 
+class Repo(base.Stage):
+    """Indicate if the port is in the repository."""
+
+    @staticmethod
+    def check(port):
+        """Check if the port is available via the repository."""
+        return port in pkg.repo_db
+
+
 class Resolves(base.Stage):
     """A stage that resolves a port."""
 
