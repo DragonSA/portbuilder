@@ -31,8 +31,8 @@ class DependHandler(object):
       stacks.Install:     (LIB, RUN, PKG),
       stacks.Package:     (LIB, RUN, PKG),
       stacks.PkgInstall:  (LIB, RUN, PKG),
-      stacks.RepoConfig:  (PKG),
-      stacks.RepoFetch:   (PKG),
+      stacks.RepoConfig:  (PKG,),
+      stacks.RepoFetch:   (PKG,),
       stacks.RepoInstall: (LIB, RUN, PKG),
     }
 
