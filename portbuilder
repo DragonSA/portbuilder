@@ -75,6 +75,10 @@ def main():
     pkg.db.load()
     sys.stderr.write("done\n")
     set_options(options)
+    if "repo" in env.flags["method"]:
+        sys.stderr.write("Loading repository database...")
+        pkg.repo_db.load()
+        sys.stderr.write("done\n")
     sys.stderr.write("Caching variables...")
     mk.clean()
     mk.cache()
@@ -159,7 +163,7 @@ def report():
     from libpb.port.port import Port
     from libpb.port import get_ports
 
-    noport, failed, depends = [], [], []
+    noport, failed, depends, nomethod = [], [], [], []
     for port in get_ports():
         if not isinstance(port, Port):
             noport.append(port)
@@ -167,10 +171,13 @@ def report():
             failed.append(port)
         elif port.dependency and port.dependency.failed:
             depends.append(port)
+        elif port.dependent.failed:
+            nomethod.append(port)
 
     noport.sort()
     failed.sort()
     depends.sort()
+    nomethod.sort()
 
     if len(depends):
         def bad_depends(port, _cache=dict()):
@@ -203,6 +210,12 @@ def report():
             "\n\t".join("%s (%s)" % (i.attr["pkgname"],
                                      ", ".join(bad_stacks(i)))
                                                     for i in reversed(failed)))
+
+    if len(nomethod):
+        sys.stderr.write("Failed due to no valid method%s (%s):\n\t%s\n" %
+            ("%s" if len(env.flags["method"]) > 1 else "",
+             ", ".join(env.flags["method"]),
+             "\n\t".join(i.attr["pkgname"] for i in reversed(nomethod))))
 
     if len(noport):
         sys.stderr.write("No port found for:\n\t%s\n" % "\n\t".join(noport))
