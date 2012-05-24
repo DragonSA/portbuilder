@@ -5,7 +5,9 @@ from __future__ import absolute_import
 
 import os
 
-__all__ = ["add", "info", "remove"]
+__all__ = ["add", "change", "info", "query", "remove"]
+
+suffix = ".txz"
 
 shell_pkg_add = """
 if [ ! -d %(wrkdir)s ]; then
@@ -37,7 +39,7 @@ def add(port, repo=False, pkg_dir=None):
         if repo:
             args = ("pkg", "install", "-y", port.attr["pkgname"])
         elif pkg_dir:
-            pkgfile = os.path.join(pkg_dir, port.attr["pkgname"], ".txz")
+            pkgfile = os.path.join(pkg_dir, port.attr["pkgname"] + suffix)
             args = ("pkg", "add", pkgfile)
         else:
             args = ("pkg", "add", port.attr["pkgfile"])

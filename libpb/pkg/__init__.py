@@ -17,26 +17,26 @@ NEWER   = 3
 
 __all__ = ["add", "change", "db", "query", "remove", "version"]
 
-pkg_mgmt = {
+mgmt = {
         "pkg":   pkg,
         "pkgng": pkgng,
     }
 
 def add(port, repo=False, pkg_dir=None):
     """Add a package for port."""
-    args = pkg_mgmt[env.flags["pkg_mgmt"]].add(port, repo, pkg_dir)
+    args = mgmt[env.flags["pkg_mgmt"]].add(port, repo, pkg_dir)
     return cmd(port, args)
 
 
 def change(port, prop, value):
     """Change a property of a package,"""
-    args = pkg_mgmt[env.flags["pkg_mgmt"]].change(port, prop, value)
+    args = mgmt[env.flags["pkg_mgmt"]].change(port, prop, value)
     return cmd(port, args)
 
 
 def info():
     """List all installed packages with their respective port origin."""
-    args = pkg_mgmt[env.flags["pkg_mgmt"]].info()
+    args = mgmt[env.flags["pkg_mgmt"]].info()
 
     if env.flags["chroot"]:
         args = ("chroot", env.flags["chroot"]) + args
@@ -59,19 +59,19 @@ def info():
 
 def query(port, prop, repo=False):
     """Query a property of a package."""
-    args = pkg_mgmt[env.flags["pkg_mgmt"]].query(port, prop, repo)
+    args = mgmt[env.flags["pkg_mgmt"]].query(port, prop, repo)
     return cmd(port, args, do_op=True)
 
 
 def remove(port):
     """Remove a package for a port."""
     pkgs = tuple(db.get(port))
-    args = pkg_mgmt[env.flags["pkg_mgmt"]].remove(pkgs)
+    args = mgmt[env.flags["pkg_mgmt"]].remove(pkgs)
     return cmd(port, args)
 
 
 def cmd(port, args, do_op=False):
-    """Issue a pkg_mgmt command and log the command to the port's logfile."""
+    """Issue a mgmt command and log the command to the port's logfile."""
     if not args:
         return args
     if env.flags["chroot"]:

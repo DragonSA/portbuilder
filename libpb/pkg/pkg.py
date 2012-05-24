@@ -7,12 +7,14 @@ import os
 
 __all__ = ["add", "change", "info", "query", "remove"]
 
+suffix = ".tbz"
+
 def add(port, repo=False, pkg_dir=None):
     """Add a package from port."""
     if repo:
         args = ("pkg_add", "-r", port.attr["pkgname"])
     elif pkg_dir:
-        args = ("pkg_add", os.path.join(pkg_dir, port.attr["pkgname"], ".tbz"))
+        args = ("pkg_add", os.path.join(pkg_dir, port.attr["pkgname"] + suffix))
     else:
         args = ("pkg_add", port.attr["pkgfile"],)
     return args
