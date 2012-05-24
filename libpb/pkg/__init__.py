@@ -34,10 +34,12 @@ def change(port, prop, value):
     return cmd(port, args)
 
 
-def info():
+def info(repo=False):
     """List all installed packages with their respective port origin."""
-    args = mgmt[env.flags["pkg_mgmt"]].info()
+    args = mgmt[env.flags["pkg_mgmt"]].info(repo)
 
+    if not args:
+        return {}
     if env.flags["chroot"]:
         args = ("chroot", env.flags["chroot"]) + args
 
@@ -140,48 +142,54 @@ def cmp_attr(old, new, sym):
 class PKGDB(object):
     """A package database that tracks the installed packages."""
 
-    def __init__(self):
+    def __init__(self, repo=False):
         super(PKGDB, self).__init__()
-        self.db = {}
+        self.ports = {}
+        self.repo = repo
+
+    def __contains__(self, port):
+        return (port.origin in self.ports and
+                port.attr["pkgname"] in self.ports[port.origin])
 
     def add(self, port):
         """Indicate that a port has been installed."""
-        if port.origin in self.db:
-            self.db[port.origin].add(port.attr['pkgname'])
+        if port.origin in self.ports:
+            self.ports[port.origin].add(port.attr["pkgname"])
         else:
-            self.db[port.origin] = set([port.attr['pkgname']])
+            self.ports[port.origin] = set([port.attr["pkgname"]])
 
     def load(self):
         """(Re)load the package database."""
-        self.db = info()
+        self.ports = info(self.repo)
 
     def remove(self, port):
         """Indicate that a port has been uninstalled."""
-        if port.origin in self.db:
-            portname = port.attr['pkgname'].rsplit('-', 1)[0]
+        if port.origin in self.ports:
+            portname = port.attr["pkgname"].rsplit('-', 1)[0]
             pkgs = set()
-            for pkgname in self.db[port.origin]:
+            for pkgname in self.ports[port.origin]:
                 if pkgname.rsplit('-', 1)[0] == portname:
                     pkgs.add(pkgname)
-            self.db[port.origin] -= pkgs
+            self.ports[port.origin] -= pkgs
 
     def get(self, port):
         """Get a list of packages installed for a port."""
-        if port.origin in self.db:
-            portname = port.attr['pkgname'].rsplit('-', 1)[0]
-            for pkgname in self.db[port.origin]:
+        if port.origin in self.ports:
+            portname = port.attr["pkgname"].rsplit('-', 1)[0]
+            for pkgname in self.ports[port.origin]:
                 if pkgname.rsplit('-', 1)[0] == portname:
                     yield pkgname
 
     def status(self, port):
         """Query the install status of a port."""
         pstatus = ABSENT
-        if port.origin in self.db:
-            portname = port.attr['pkgname'].rsplit('-', 1)[0]
-            for pkgname in self.db[port.origin]:
+        if port.origin in self.ports:
+            portname = port.attr["pkgname"].rsplit('-', 1)[0]
+            for pkgname in self.ports[port.origin]:
                 if pkgname.rsplit('-', 1)[0] == portname:
                     pstatus = max(pstatus,
-                                  version(pkgname, port.attr['pkgname']))
+                                  version(pkgname, port.attr["pkgname"]))
         return pstatus
 
 db = PKGDB()
+repo_db = PKGDB(repo=True)

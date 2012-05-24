@@ -27,8 +27,10 @@ def change(_port, prop, _value):
         assert not "unknown package property '%s'" % prop
 
 
-def info():
+def info(repo=False):
     """List all installed packages with their respective port origin."""
+    if repo:
+        return False
     return ("pkg_info", "-aoQ")
 
 

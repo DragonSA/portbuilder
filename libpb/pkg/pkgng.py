@@ -55,9 +55,12 @@ def change(port, prop, value):
         assert not "unknown package property '%s'" % prop
 
 
-def info():
+def info(repo=False):
     """List all installed packages with their respective port origin."""
-    return ("pkg", "info", "-ao")
+    if repo:
+        return ("pkg", "rquery", "%n-%v:%o")
+    else:
+        return ("pkg", "query", "%n-%v:%o")
 
 
 def query(port, prop, repo=False):
