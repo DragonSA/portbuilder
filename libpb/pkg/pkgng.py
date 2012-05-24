@@ -44,6 +44,15 @@ def add(port, repo=False, pkg_dir=None):
     return args
 
 
+def change(port, prop, value):
+    """Change a property of a package,"""
+    if prop == "explicit":
+        auto = "0" if value else "1"
+        return ("pkg", "set", "-ya", auto, port.attr["pkgname"])
+    else:
+        assert not "unknown package property '%s'" % prop
+
+
 def info():
     """List all installed packages with their respective port origin."""
     return ("pkg", "info", "-ao")
@@ -53,7 +62,7 @@ def query(port, prop, repo=False):
     """Query q property of a package."""
     args = ("pkg", "rquery" if repo else "query", "-F", port.attr["pkgname"])
     if prop == "config":
-        args += ("%O",)
+        args += ("%Ok%Ov",)
     else:
         assert not "unknown package property '%s'" % prop
     return args

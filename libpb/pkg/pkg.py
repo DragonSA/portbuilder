@@ -5,7 +5,7 @@ from __future__ import absolute_import
 
 import os
 
-__all__ = ["add", "info", "query", "remove"]
+__all__ = ["add", "change", "info", "query", "remove"]
 
 def add(port, repo=False, pkg_dir=None):
     """Add a package from port."""
@@ -17,6 +17,13 @@ def add(port, repo=False, pkg_dir=None):
         args = ("pkg_add", port.attr["pkgfile"],)
     return args
 
+def change(_port, prop, _value):
+    """Change a property of a package,"""
+    if prop == "explicit":
+        return False
+    else:
+        assert not "unknown package property '%s'" % prop
+
 
 def info():
     """List all installed packages with their respective port origin."""
@@ -24,7 +31,7 @@ def info():
 
 
 def query(_port, prop, _repo=False):
-    """Query q property of a package."""
+    """Query a property of a package."""
     if prop == "config":
         return False
     else:

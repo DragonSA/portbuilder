@@ -15,27 +15,28 @@ OLDER   = 1
 CURRENT = 2
 NEWER   = 3
 
-__all__ = ["add", "db", "query", "remove", "version"]
+__all__ = ["add", "change", "db", "query", "remove", "version"]
+
+pkg_mgmt = {
+        "pkg":   pkg,
+        "pkgng": pkgng,
+    }
 
 def add(port, repo=False, pkg_dir=None):
     """Add a package for port."""
-    if env.flags["pkg_mgmt"] == "pkg":
-        args = pkg.add(port, repo, pkg_dir)
-    elif env.flags["pkg_mgmt"] == "pkgng":
-        args = pkgng.add(port, repo, pkg_dir)
-    else:
-        assert not "Unknown pkg_mgmt"
+    args = pkg_mgmt[env.flags["pkg_mgmt"]].add(port, repo, pkg_dir)
+    return cmd(port, args)
+
+
+def change(port, prop, value):
+    """Change a property of a package,"""
+    args = pkg_mgmt[env.flags["pkg_mgmt"]].change(port, prop, value)
     return cmd(port, args)
 
 
 def info():
     """List all installed packages with their respective port origin."""
-    if env.flags["pkg_mgmt"] == "pkg":
-        args = pkg.info()
-    elif env.flags["pkg_mgmt"] == "pkgng":
-        args = pkgng.info()
-    else:
-        assert not "Unknown pkg_mgmt"
+    args = pkg_mgmt[env.flags["pkg_mgmt"]].info()
 
     if env.flags["chroot"]:
         args = ("chroot", env.flags["chroot"]) + args
@@ -58,24 +59,14 @@ def info():
 
 def query(port, prop, repo=False):
     """Query a property of a package."""
-    if env.flags["pkg_mgmt"] == "pkg":
-        args = pkg.query(port, prop, repo)
-    elif env.flags["pkg_mgmt"] == "pkgng":
-        args = pkgng.query(port, prop, repo)
-    else:
-        assert not "Unknown pkg_mgmt"
+    args = pkg_mgmt[env.flags["pkg_mgmt"]].query(port, prop, repo)
     return cmd(port, args, do_op=True)
 
 
 def remove(port):
     """Remove a package for a port."""
     pkgs = tuple(db.get(port))
-    if env.flags["pkg_mgmt"] == "pkg":
-        args = pkg.remove(pkgs)
-    elif env.flags["pkg_mgmt"] == "pkgng":
-        args = pkgng.remove(pkgs)
-    else:
-        assert not "Unknown pkg_mgmt"
+    args = pkg_mgmt[env.flags["pkg_mgmt"]].remove(pkgs)
     return cmd(port, args)
 
 
