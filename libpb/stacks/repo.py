@@ -38,7 +38,7 @@ class RepoConfig(mutators.Packagable):
         """Process the pkg.query() command and issue a make(1) command."""
         self.pid = None
         if pkg_query.wait() == make.SUCCESS:
-            for opt in pkg_query.stdout.read().split(','):
+            for opt in pkg_query.stdout.readlines():
                 optn, optv = opt.split(':', 1)
                 self._pkgconfig[optn] = optv.strip()
             args = []
@@ -79,38 +79,12 @@ class RepoFetch(mutators.Packagable):
 
 
 class RepoInstall(mutators.Deinstall, mutators.Packagable, mutators.PostFetch,
-                  mutators.Resolves):
+                  mutators.PackageInstaller, mutators.Resolves):
     """Install a port from a repo package."""
 
     name = "repoinstall"
     prev = common.Depend
     stack = "repo"
 
-    def _do_stage(self):  # pylint: disable-msg=E0202
-        """Issue a pkg.add() to install the package from a repo."""
-        log.debug("RepoInstall._do_stage()", "Port '%s': building stage %s" %
-                      (self.port.origin, self.name))
-
-        pkg_add = pkg.add(self.port, True)
-        # pkg_add may be False if installing `ports-mgmt/pkg` and
-        # env.flags["pkg_mgmt"] == "pkgng"
-        if pkg_add:
-            self.pid = pkg_add.connect(self._post_pkg_add).pid
-        else:
-            # Cannot call self._finalise from within self.work() ->
-            #   self._do_stage()
-            event.post_event(self._finalise, False)
-
-    def _post_pkg_add(self, pkg_add):
-        """Process the results of pkg.add()."""
-        self.pid = None
-        status = pkg_add.wait() == make.SUCCESS
-        if status:
-            log.debug("PepoInstall._post_pkg_add()",
-                     "Port '%s': finished stage %s" %
-                        (self.port.origin, self.name))
-        else:
-            log.error("PepoInstall._port_pkg_add()",
-                      "Port '%s': failed stage %s" %
-                        (self.port.origin, self.name))
-        self._finalise(status)
+    def _add_pkg(self):
+        return pkg.add(self.port, True)

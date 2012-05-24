@@ -12,7 +12,7 @@ __all__ = []
 
 
 class PkgInstall(mutators.Deinstall, mutators.Packagable, mutators.PostFetch,
-                 mutators.Resolves):
+                 mutators.PackageInstaller, mutators.Resolves):
     """Install a port from a local package."""
 
     name = "PkgInstall"
@@ -24,24 +24,5 @@ class PkgInstall(mutators.Deinstall, mutators.Packagable, mutators.PostFetch,
         """Check if the package exists in $PKGDIR."""
         return os.path.isfile(env.flags["chroot"] + port.attr["pkgfile"])
 
-    def _do_stage(self):   # pylint: disable-msg=E0202
-        """Issue a pkg.add() to install the package from $PKGDIR."""
-        log.debug("PkgInstall._do_stage()", "Port '%s': building stage %s" %
-                      (self.port.origin, self.name))
-
-        # pkg.add() should never be False for $PKGDIR installs
-        self.pid = pkg.add(self.port).connect(self._post_pkg_add).pid
-
-    def _post_pkg_add(self, pkg_add):
-        """Process the result of pkg.add()."""
-        self.pid = None
-        status = pkg_add.wait() == make.SUCCESS
-        if status:
-            log.debug("PkgInstall._post_pkg_add()",
-                      "Port '%s': finished stage %s" %
-                        (self.port.origin, self.name))
-        else:
-            log.error("PkgInstall._port_pkg_add()",
-                      "Port '%s': failed stage %s" %
-                        (self.port.origin, self.name))
-        self._finalise(status)
+    def _add_pkg(self):
+        return pkg.add(self.port)

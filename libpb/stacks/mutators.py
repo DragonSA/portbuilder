@@ -9,7 +9,10 @@ import functools
 from libpb import env, log, make, pkg
 from libpb.stacks import base
 
-__all__ = ["Deinstall", "MakeStage", "Packagable", "Resolves"]
+__all__ = [
+        "Deinstall", "MakeStage", "Packagable", "PackageInstaller", "PostFetch",
+        "Resolves"
+    ]
 
 
 class Deinstall(base.Stage):
@@ -85,10 +88,58 @@ class Packagable(base.Stage):
     @staticmethod
     def check(port):
         """Check if the port is compatible with packaging."""
-        if not port.attr["no_package"]:
-            # Stages that depend on packability cannot be done if NO_PACKAGE=yes
-            return False
-        return True
+        return not port.attr["no_package"]
+
+
+class PackageInstaller(base.Stage):
+    """Install a port from a package."""
+    __metaclass__ = abc.ABCMeta
+
+    @abc.abstractmethod
+    def _add_pkg(self):
+        """Issue a pkg.add() command."""
+        pass
+
+    def _do_stage(self):  # pylint: disable-msg=E0202
+        """Issue a pkg.add() to install the package from a repo."""
+        log.debug("PackageInstaller._do_stage()", "Port '%s': building stage %s" %
+                      (self.port.origin, self.name))
+
+
+        pkg_add = self._add_pkg()
+        # pkg_add may be False if installing `ports-mgmt/pkg` and
+        # env.flags["pkg_mgmt"] == "pkgng"
+        if pkg_add:
+            self.pid = pkg_add.connect(self._post_pkg_add).pid
+        else:
+            # Cannot call self._finalise from within self.work() ->
+            #   self._do_stage()
+            event.post_event(self._finalise, False)
+
+    def _post_pkg_add(self, pkg_add):
+        """Process the results of pkg.add()."""
+        self.pid = None
+        if pkg_add.wait() == make.SUCCESS:
+            log.debug("PackageInstaller._post_pkg_add()",
+                     "Port '%s': finished stage %s" %
+                        (self.port.origin, self.name))
+            if "explicit" not in self.port.flags:
+                pkg_change = self.pid = pkg.change(self.port, "explicit", False)
+                if pkg_change:
+                    self.pid = pkg_change.connect(self._post_pkg_change).pid
+                    return
+            self._finalise(True)
+        else:
+            log.error("PackageInstaller._port_pkg_add()",
+                      "Port '%s': failed stage %s" %
+                        (self.port.origin, self.name))
+            self._finalise(False)
+
+    def _post_pkg_change(self, _pkg_change):
+        """Process the results of pkg.change()."""
+        self.pid = None
+        self._finalise(True)
+
 
 class PostFetch(base.Stage):
     """Indicate this stage is post fetch (and complete if fetch-only)."""
