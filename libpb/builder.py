@@ -404,6 +404,7 @@ class StageBuilder(Builder):
             self._port_failed(stagejob.port)
 
     def _port_failed(self, port):
+        """Cleanup after a failed port."""
         if port not in self.failed:
             self.failed.append(port)
             del self._pending[port]

@@ -216,11 +216,13 @@ class Top(Monitor):
         running = "running %i+%02i:%02i:%02i  " % (days, hours, mins, secs)
         # Display current time
         running += time.strftime("%H:%M:%S")
-        events, self._last_event_count = self._last_event_count, event.event_count()
+        events = self._last_event_count
+        self._last_event_count = event.event_count()
         events = self._last_event_count - events - 1
         if events > 0:
             # Display pending events
-            running = "event%s %i  " % ("s" if events > 1 else "", events) + running
+            event_msg = "event%s %i  " % ("s" if events > 1 else "", events)
+            running = event_msg + running
         scr.addstr(0, scr.getmaxyx()[1] - len(running) - 1, running)
 
     def _update_ports(self, scr):
@@ -249,9 +251,11 @@ class Top(Monitor):
                 if stat not in (Builder.FAILED, Builder.DONE):
                     ports += len(stage[stat])
                 if stat == Builder.FAILED and not self._indirect:
-                    msg[status] -= len([i for i in stage[stat] if "failed" not in i.flags])
+                    msg[status] -= len([i for i in stage[stat]
+                                                  if "failed" not in i.flags])
 
-        msg = ", ".join("%i %s" % (msg[i], i) for i in STATUS.values() if msg[i])
+        msg = ", ".join("%i %s" % (msg[i], i) for i in STATUS.values()
+                                                                    if msg[i])
         scr.addstr(
                 self._offset, 0, "%i port%s remaining: %s" %
                 (ports, " " if ports == 1 else "s", msg))
@@ -265,7 +269,8 @@ class Top(Monitor):
             if stage.status[state]:
                 length = len(stage[state])
                 if state == Builder.FAILED and not self._indirect:
-                    length -= len([i for i in stage[state] if "failed" not in i.flags])
+                    length -= len([i for i in stage[state]
+                                                  if "failed" not in i.flags])
                     if not length:
                         continue
                 msg.append("%i %s" % (length, status))
@@ -274,7 +279,8 @@ class Top(Monitor):
             stage_name = stage.stage.name
             scr.addstr(
                     self._offset, 0, "%s:%s%s" %
-                    (stage_name[:8], " " * (9 - min(8, len(stage_name))), ", ".join(msg)))
+                        (stage_name[:8],
+                         " " * max(1, 9 - len(stage_name)), ", ".join(msg)))
             self._offset += 1
 
     def _update_rows(self, scr, stages):
@@ -288,7 +294,8 @@ class Top(Monitor):
                 if self._skip:
                     length = len(stat)
                     if status == Builder.FAILED and not self._indirect:
-                        length -= len([i for i in stat if "failed" not in i.flags])
+                        length -= len([i for i in stat
+                                                  if "failed" not in i.flags])
                     if self._skip >= length:
                         self._skip -= length
                         continue

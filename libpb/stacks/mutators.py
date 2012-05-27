@@ -6,7 +6,7 @@ behaviour of Stages.
 import abc
 import functools
 
-from libpb import env, log, make, pkg
+from libpb import env, event, log, make, pkg
 from libpb.stacks import base
 
 __all__ = [
@@ -102,7 +102,8 @@ class PackageInstaller(base.Stage):
 
     def _do_stage(self):  # pylint: disable-msg=E0202
         """Issue a pkg.add() to install the package from a repo."""
-        log.debug("PackageInstaller._do_stage()", "Port '%s': building stage %s" %
+        log.debug("PackageInstaller._do_stage()",
+                  "Port '%s': building stage %s" %
                       (self.port.origin, self.name))
 
 

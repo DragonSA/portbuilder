@@ -5,7 +5,7 @@ The stacks.package module.  This module contains the Stage that makes up the
 
 import os
 
-from libpb import env, log, make, pkg
+from libpb import env, pkg
 from libpb.stacks import common, mutators
 
 __all__ = []
@@ -25,4 +25,5 @@ class PkgInstall(mutators.Deinstall, mutators.Packagable, mutators.PostFetch,
         return os.path.isfile(env.flags["chroot"] + port.attr["pkgfile"])
 
     def _add_pkg(self):
+        """Install a package from the local package directory."""
         return pkg.add(self.port)

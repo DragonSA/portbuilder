@@ -70,7 +70,7 @@ def make_target(port, targets, pipe=None, **kwargs):
 
     if pipe is True:
         # Give access to subprocess output
-        stdin, stdout, stderr = subprocess.PIPE, subprocess.PIPE, subprocess.PIPE
+        stdin, stdout, stderr = (subprocess.PIPE,) * 3
     elif pipe is False:
         # No piping of output (i.e. interactive)
         stdin, stdout, stderr = None, None, None

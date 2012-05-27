@@ -28,15 +28,17 @@ def load_defaults():
     keys = set(menv + master_keys)
 
     args = ["make", "-f/dev/null"] + ["-V%s" % i for i in keys]
-    args += ["-D%s" % k if v is True else "%s=%s" % (k, v) for k, v in env.env.items()]
+    args += ["-D%s" % k if v is True else "%s=%s" % (k, v)
+                                                  for k, v in env.env.items()]
     if env.flags["chroot"]:
         args = ["chroot", env.flags["chroot"]] + args
-    pmake = subprocess.Popen(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-                            stderr=subprocess.PIPE, close_fds=True)
+    pmake = subprocess.Popen(args, stdin=subprocess.PIPE, close_fds=True,
+                             stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     pmake.stdin.close()
     pmake.stderr.close()
     if pmake.wait() == 0:
-        make_env = dict((i, j.strip()) for i, j in zip(keys, pmake.stdout.readlines()))
+        make_env = dict((i, j.strip())
+                               for i, j in zip(keys, pmake.stdout.readlines()))
     else:
         make_env = dict((i, "") for i in keys)
 
@@ -145,7 +147,8 @@ class Attr(signal.Signal):
             args.append('-V')
             args.append(i[0])
 
-        return make.make_target(self.origin, args, True).connect(self.parse_attr)
+        pmake = make.make_target(self.origin, args, True)
+        return pmake.connect(self.parse_attr)
 
     def parse_attr(self, pmake):
         """Parse the attributes from a port and call the requested function."""
@@ -270,7 +273,8 @@ ports_attr = {
 } #: The attributes of the given port
 
 # The following are 'fixes' for various attributes
-ports_attr["depends"].append(lambda x: [i[len(env.env["PORTSDIR"]) + 1:] for i in x])
+ports_attr["depends"].append(lambda x: [i[len(env.env["PORTSDIR"]) + 1:]
+                                                                   for i in x])
 ports_attr["depends"].append(lambda x: ([x.remove(i) for i in x
                                          if x.count(i) > 1], x)[1])
 ports_attr["distfiles"].append(lambda x: [i.split(':', 1)[0] for i in x])
