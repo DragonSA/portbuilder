@@ -5,6 +5,8 @@ from __future__ import absolute_import
 
 import os
 
+from libpb import env
+
 __all__ = ["add", "change", "info", "query", "remove"]
 
 suffix = ".txz"
@@ -57,6 +59,9 @@ def change(port, prop, value):
 
 def info(repo=False):
     """List all installed packages with their respective port origin."""
+    pkg_info = env.flags["chroot"] + "/usr/local/sbin/pkg"
+    if not os.path.isfile(pkg_info):
+        return False
     if repo:
         return ("pkg", "rquery", "%n-%v:%o")
     else:
