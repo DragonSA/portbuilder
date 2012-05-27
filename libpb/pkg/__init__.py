@@ -175,15 +175,15 @@ class PKGDB(object):
     def get(self, port):
         """Get a list of packages installed for a port."""
         if port.origin in self.ports:
-            portname = port.attr["pkgname"].rsplit('-', 1)[0]
-            for pkgname in self.ports[port.origin]:
-                if pkgname.rsplit('-', 1)[0] == portname:
-                    yield pkgname
+            return self.ports[port.origin]
+        else:
+            return []
 
     def status(self, port):
         """Query the install status of a port."""
         pstatus = ABSENT
         if port.origin in self.ports:
+            pstatus = OLDER
             portname = port.attr["pkgname"].rsplit('-', 1)[0]
             for pkgname in self.ports[port.origin]:
                 if pkgname.rsplit('-', 1)[0] == portname:
