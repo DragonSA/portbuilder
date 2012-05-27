@@ -91,7 +91,7 @@ flags = {
   "buildstatus" : 0,                    # The minimum level for build
   "chroot"      : "",                   # Chroot directory of system
   "config"      : "changed",            # Configure ports based on criteria
-  "debug"       : False,                # Print extra debug messages
+  "debug"       : True,                 # Print extra debug messages
   "fetch_only"  : False,                # Only fetch ports
   "log_dir"     : "/tmp/portbuilder",   # Directory for logging information
   "log_file"    : "portbuilder",        # General log file
