@@ -148,11 +148,11 @@ class Fetch(Distfiles, mutators.MakeStage):
         # Go through all the pending fetch jobs and see if any have been
         # resolved due to this job:
         for q in (queue.fetch.stalled, queue.fetch.queue):
-            for i in range(len(q), -1, -1):
+            for i in range(len(q) - 1, -1, -1):
                 j = q[i]
-                if (isinstance(Fetch, j) and
+                if (isinstance(j, Fetch) and
                         not distfiles.isdisjoint(j.port.attr["distfiles"]) and
-                        (not j.check(port) or j.complete())):
+                        (not j.check(j.port) or j.complete())):
                     del q[i]
                     j.run()
         return status
