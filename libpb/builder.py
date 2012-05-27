@@ -2,7 +2,8 @@
 
 from __future__ import absolute_import
 
-from abc import ABCMeta, abstractmethod
+import abc
+import collections
 
 from libpb import env, event, job, log, queue, signal, stacks
 
@@ -142,7 +143,7 @@ class DependLoader(object):
 class Builder(object):
     """Common code from building stages."""
 
-    __metaclass__ = ABCMeta
+    __metaclass__ = abc.ABCMeta
 
     ADDED     = 0
     QUEUED    = 1
@@ -166,13 +167,13 @@ class Builder(object):
         self.ports = {}
         self.succeeded = []
 
-    @abstractmethod
+    @abc.abstractmethod
     def __call__(self, port):
         """Add port to this builder, where this builder is the primary builder
         for the port."""
         return self.add(port)
 
-    @abstractmethod
+    @abc.abstractmethod
     def add(self, port):
         """Add port to this builder."""
         pass
@@ -183,6 +184,7 @@ class ConfigBuilder(Builder):
 
     def __init__(self):
         """Initialise config builder."""
+        assert stacks.Config.prev is None
         Builder.__init__(self, stacks.Config, queue.config)
 
     def __call__(self, port):
@@ -200,22 +202,24 @@ class ConfigBuilder(Builder):
             return self.ports[port]
         else:
             # Create a config stage job and add it to the queue
-            stagejob = self.stage(port)
-            stagejob.connect(self._cleanup)
-            self.ports[port] = stagejob
+            configjob = self.stage(port).connect(self._cleanup)
+            self.ports[port] = configjob
             self.update.emit(self, Builder.ADDED, port)
-            self.queue.add(stagejob)
-            self.update.emit(self, Builder.QUEUED, port)
-            return stagejob
+            if not self.stage.check(port) or configjob.complete():
+                configjob.run()
+            else:
+                self.queue.add(configjob)
+                self.update.emit(self, Builder.QUEUED, port)
+            return configjob
 
-    def _cleanup(self, stagejob):
+    def _cleanup(self, configjob):
         """Cleanup after the port was configured."""
-        if stagejob.stack.failed:
-            self.failed.append(stagejob.port)
-            self.update.emit(self, Builder.FAILED, stagejob.port)
+        if configjob.stack.failed:
+            self.failed.append(configjob.port)
+            self.update.emit(self, Builder.FAILED, configjob.port)
         else:
-            self.update.emit(self, Builder.SUCCEEDED, stagejob.port)
-        del self.ports[stagejob.port]
+            self.update.emit(self, Builder.SUCCEEDED, configjob.port)
+        del self.ports[configjob.port]
 
 
 class DependBuilder(Builder):
@@ -223,6 +227,7 @@ class DependBuilder(Builder):
 
     def __init__(self):
         """Initialise depend builder"""
+        assert stacks.Depend.prev is stacks.Config
         Builder.__init__(self, stacks.Depend)
 
     def __call__(self, port):
@@ -238,14 +243,14 @@ class DependBuilder(Builder):
         if port in self.ports:
             return self.ports[port]
         else:
-            sig = signal.Signal()
-            self.ports[port] = sig
+            dependjob = self.stage(port).connect(self._loaded)
+            self.ports[port] = dependjob
             self.update.emit(self, Builder.ADDED, port)
             if self.stage.prev not in port.stages:
                 builders[self.stage.prev].add(port).connect(self._add)
             else:
                 self._add(port=port)
-            return sig
+            return dependjob
 
     def _add(self, configjob=None, port=None):
         """Load a ports dependencies."""
@@ -253,7 +258,7 @@ class DependBuilder(Builder):
             port = configjob.port
         self.update.emit(self, Builder.QUEUED, port)
         self.update.emit(self, Builder.ACTIVE, port)
-        self.stage(port).connect(self._loaded).run()
+        self.ports[port].run()
 
     def _loaded(self, dependjob):
         """Port has finished loading dependency."""
@@ -267,7 +272,7 @@ class DependBuilder(Builder):
         else:
             self.succeeded.append(port)
             self.update.emit(self, Builder.SUCCEEDED, port)
-        self.ports.pop(port).emit(port)
+        del self.ports[port]
 
 
 class StageBuilder(Builder):
@@ -299,8 +304,7 @@ class StageBuilder(Builder):
             return self.ports[port]
         else:
             # Create stage job
-            stagejob = self.stage(port)
-            stagejob.connect(self._cleanup)
+            stagejob = self.stage(port).connect(self._cleanup)
             self.ports[port] = stagejob
             self.update.emit(self, Builder.ADDED, port)
 
@@ -310,11 +314,14 @@ class StageBuilder(Builder):
             else:
                 assert port not in depend.ports
                 # self._add() needs to be asynchronous to self.add()
-                event.post_event(self._add, port)
+                event.post_event(self._add, port=port)
             return stagejob
 
-    def _add(self, port, pending=0):
+    def _add(self, dependjob=None, port=None, pending=0):
         """Add a ports dependencies and prior stage to be built."""
+
+        if dependjob is not None:
+            port = dependjob.port
 
         # Don't try and build a port that has already failed
         # or cannot be built
@@ -339,10 +346,6 @@ class StageBuilder(Builder):
         if self.stage.prev not in port.stages and self._port_check(port):
             self._pending[port] += 1
             builders[self.stage.prev].add(port).connect(self._stage_resolv)
-
-        log.debug("StageBuilder._add()",
-                  "Port '%s': added job for stage %s, waiting on %d" %
-                      (port.origin, self.stage.name, self._pending[port]))
 
         # Build stage if port is ready
         if not self._pending[port]:
@@ -413,7 +416,7 @@ class StageBuilder(Builder):
     def _port_ready(self, port):
         """Add a port to the stage queue."""
         assert not self._pending[port]
-        assert not self.ports[port].stack.failed or port.dependency.fail
+        assert not self.ports[port].stack.failed
         assert not port.dependency.check(self.stage)
         del self._pending[port]
         stagejob = self.ports[port]
@@ -450,12 +453,14 @@ class StageBuilder(Builder):
 class BuildBuilder(StageBuilder):
     """Implement build stage specific handling."""
 
-    def _add(self, port, pending=0):
+    def _add(self, dependjob=None, port=None, pending=0):
         """Add a port to be built."""
+        if dependjob is not None:
+            port = dependjob.port
         if env.flags["target"][0] == "clean" and self._port_check(port):
             pending += 1
             queue.clean.add(job.CleanJob(port, True).connect(self._port_clean))
-        super(BuildBuilder, self)._add(port, pending)
+        super(BuildBuilder, self)._add(dependjob, port, pending)
 
     def _port_clean(self, cleanjob):
         """A port has finished cleaning."""
@@ -480,19 +485,19 @@ class PackageBuilder(StageBuilder):
 
 depend_resolve = DependLoader()
 
-builders = {
-        stacks.Config:      ConfigBuilder(),
-        stacks.Depend:      DependBuilder(),
-        stacks.Checksum:    StageBuilder(stacks.Checksum, queue.checksum),
-        stacks.Fetch:       StageBuilder(stacks.Fetch, queue.fetch),
-        stacks.Build:       BuildBuilder(stacks.Build, queue.build),
-        stacks.Install:     StageBuilder(stacks.Install, queue.install),
-        stacks.Package:     PackageBuilder(stacks.Package, queue.package),
-        stacks.PkgInstall:  StageBuilder(stacks.PkgInstall, queue.install),
-        stacks.RepoConfig:  StageBuilder(stacks.RepoConfig, queue.attr),
-        stacks.RepoFetch:   StageBuilder(stacks.RepoFetch, queue.fetch),
-        stacks.RepoInstall: StageBuilder(stacks.RepoInstall, queue.install),
-    }
+builders = collections.OrderedDict((
+        (stacks.Config,      ConfigBuilder()),
+        (stacks.Depend,      DependBuilder()),
+        (stacks.Checksum,    StageBuilder(stacks.Checksum, queue.checksum)),
+        (stacks.Fetch,       StageBuilder(stacks.Fetch, queue.fetch)),
+        (stacks.Build,       BuildBuilder(stacks.Build, queue.build)),
+        (stacks.Install,     StageBuilder(stacks.Install, queue.install)),
+        (stacks.Package,     PackageBuilder(stacks.Package, queue.package)),
+        (stacks.PkgInstall,  StageBuilder(stacks.PkgInstall, queue.install)),
+        (stacks.RepoConfig,  StageBuilder(stacks.RepoConfig, queue.attr)),
+        (stacks.RepoFetch,   StageBuilder(stacks.RepoFetch, queue.fetch)),
+        (stacks.RepoInstall, StageBuilder(stacks.RepoInstall, queue.install)),
+    ))
 
 # Head of stack "common"
 depend = builders[stacks.Depend]
