@@ -6,7 +6,7 @@ The stacks.build module.  This module contains the Stages that make up the
 import contextlib
 import os
 
-from libpb import env, job, log, pkg
+from libpb import env, job, log, pkg, queue
 from libpb.stacks import base, common, mutators
 
 __all__ = ["Checksum", "Fetch", "Build", "Install", "Package"]
@@ -129,7 +129,7 @@ class Fetch(Distfiles, mutators.MakeStage):
 
     def _post_make(self, status):
         """Process the results of make.target()."""
-        distfiles = self.port.attr["distfiles"]
+        distfiles = set(self.port.attr["distfiles"])
         self._fetch_lock.release(distfiles)
         if status:
             self._bad_checksum.difference_update(distfiles)
@@ -141,6 +141,20 @@ class Fetch(Distfiles, mutators.MakeStage):
                           (self.port.origin, files))
             self._bad_checksum.update(distfiles)
             self._fetch_failed.update(distfiles)
+        # TODO:
+        # - extend queue to handle non-active "done" jobs
+        # - make queue finish via signal, not direct call to queue.done
+        # ? track which jobs are handling which distfiles (cleanup with done())
+        # Go through all the pending fetch jobs and see if any have been
+        # resolved due to this job:
+        for q in (queue.fetch.stalled, queue.fetch.queue):
+            for i in range(len(q), -1, -1):
+                j = q[i]
+                if (isinstance(Fetch, j) and
+                        not distfiles.isdisjoint(j.port.attr["distfiles"]) and
+                        (not j.check(port) or j.complete())):
+                    del q[i]
+                    j.run()
         return status
 
 
