@@ -8,6 +8,9 @@ X.Y.Z - YYYY MMM DD:
     installed directly from repo or package if --method prescribes that)
  * Fixes:
    * Partial fix for bug 0.1.3.1-0 (superseded by bug 0.1.5-0)
+   * Fix the "0 failed" Top-interface bug
+   * Properly display information about failed ports
+   * Mark dependencies as such (-DINSTALLS_DEPENDS, `pkg set -a 1`)
 
 0.1.4.1 - 2012 April 23:
  * Fixes:
