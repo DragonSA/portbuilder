@@ -6,6 +6,7 @@ from __future__ import absolute_import
 import errno
 import collections
 import select
+import time
 
 from libpb import log, queue
 
@@ -99,10 +100,10 @@ class EventManager(object):
     def post_event(self, func, *args, **kwargs):
         """Add an event to be called asynchronously."""
         if not callable(func):
-            assert(len(func) == 4)
-            self._events.append(func + (log.get_tb(1),))
+            assert(len(func) == 5)
+            self._events.append(func + (log.get_tb(1), time.time()))
         else:
-            self._events.append((func, args, kwargs, None, log.get_tb()))
+            self._events.append((func, args, kwargs, None, 0, log.get_tb(), time.time()))
 
     def run(self):
         """Run the currently queued events."""
@@ -119,9 +120,9 @@ class EventManager(object):
                         self._queue(0)
                         events = 0
                     self.event_count += 1
-                    func, args, kwargs, tb_slot, tb_call = self._events.popleft()
-                    self._construct_tb((tb_slot, "signal connect"),
-                                       (tb_call, "signal caller"))
+                    func, args, kwargs, tb_slot, tbs_time, tb_call, tbc_time = self._events.popleft()
+                    self._construct_tb((tb_slot, "signal connection <%.4f>" % (tbs_time - log.start_time)),
+                                       (tb_call, "signal emitter <%.4f>" % (tbc_time - log.start_time)))
                     func(*args, **kwargs)
                     self._clear_tb()
 

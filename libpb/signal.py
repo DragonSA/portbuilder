@@ -2,6 +2,7 @@
 
 from __future__ import absolute_import
 
+import time
 import weakref
 
 from libpb import log
@@ -25,7 +26,7 @@ class Signal(object):
         """Connect a callback function to the signal."""
         if slot is not None:
             self._slots.append(slot)
-            self._tb[slot] =  log.get_tb()
+            self._tb[slot] =  (log.get_tb(), time.time())
         return self
 
     def disconnect(self, slot):
@@ -62,7 +63,7 @@ class Signal(object):
         from .event import post_event
 
         for slot in self._slots:
-            post_event((slot, args, kwargs, self._tb[slot]))
+            post_event((slot, args, kwargs) + self._tb[slot])
 
 
 class InlineSignal(Signal):
