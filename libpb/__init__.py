@@ -67,8 +67,9 @@ class StateTracker(object):
             from .builder import Builder
 
             if status == Builder.ADDED:
-                assert (port not in self.ports and port not in self.failed and
-                        port not in self.done)
+                assert port not in self.ports
+                assert port not in self.failed
+                assert port not in self.done
                 if self._state.stage_started(self, port):
                     bisect.insort(self.pending, port)
                 self.ports.add(port)
@@ -150,8 +151,8 @@ class StateTracker(object):
                 if port in self.stages[stage].ports:
                     if port in self.stages[stage].failed:
                         continue
-                    assert (port not in self.stages[stage].pending and
-                            port not in self.stages[stage].done)
+                    assert port not in self.stages[stage].pending
+                    assert port not in self.stages[stage].done
                     if self._resort:
                         self.stages[stage].pending.append(port)
                     else:
