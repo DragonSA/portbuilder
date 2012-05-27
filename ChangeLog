@@ -1,10 +1,16 @@
 X.Y.Z - YYYY MMM DD:
  * Added '-j' option to tune concurrency
  * Removed '--force' and '--force-all' option to simplify code
+ * Major rewrite of stage handling code
+ * Initial work for splitting the repo method into multiple stages
+ * Use a separate log directory for chroot builds.
  * Use the DependHandler to install ports (i.e. explicit ports can now be
     installed directly from repo or package if --method prescribes that)
  * Fixes:
    * Partial fix for bug 0.1.3.1-0 (superseded by bug 0.1.5-0)
+   * Fix the "0 failed" Top-interface bug
+   * Properly display information about failed ports
+   * Mark dependencies as such (-DINSTALLS_DEPENDS, `pkg set -a 1`)
 
 0.1.4.1 - 2012 April 23:
  * Fixes:

@@ -68,17 +68,21 @@ def main():
     if len(options.args) == 0 and not options.all and not options.ports_file:
         print parser.get_usage()
         return
-    print "Loading /etc/make.conf (defaults)...",
+    sys.stderr.write("Loading /etc/make.conf (defaults)...")
     mk.load_defaults()
-    print "done"
-    print "Loading package datebase...",
+    sys.stderr.write("done\n")
+    sys.stderr.write("Loading package datebase...")
     pkg.db.load()
-    print "done"
+    sys.stderr.write("done\n")
     set_options(options)
-    print "Caching variables...",
+    if "repo" in env.flags["method"]:
+        sys.stderr.write("Loading repository database...")
+        pkg.repo_db.load()
+        sys.stderr.write("done\n")
+    sys.stderr.write("Caching variables...")
     mk.clean()
     mk.cache()
-    print "done"
+    sys.stderr.write("done\n")
 
     # Make sure log_dir is available
     mkdir(flags["log_dir"])
@@ -109,13 +113,19 @@ def mkdir(directory):
     """Make a given directory if needed."""
     if os.path.exists(directory):
         if not os.path.isdir(directory):
-            print "%s: not a directory" % directory
+            sys.stderr.write("%s: not a directory\n" % directory)
             exit(1)
     else:
         try:
+            base = os.path.dirname(directory)
+            if os.path.exists(base):
+                if not os.path.isdir(base):
+                    print "%s: not a directory\n" % base
+                else:
+                    mkdir(base)
             os.mkdir(directory)
         except OSError, e:
-            print "%s: unable to create directory (%s)" % (directory, e)
+            sys.stderr.write("%s: unable to create directory (%s)\n" % (directory, e))
             exit(2)
 
 
@@ -151,52 +161,64 @@ def run_loop(options):
 def report():
     """Print report about failed ports"""
     from libpb.port.port import Port
-    from libpb.monitor import STAGE
     from libpb.port import get_ports
 
-    stage = dict((k, v.lower()) for k, v in STAGE)
-
-    noport, failed, didepends, independs = [], [], [], []
+    noport, failed, depends, nomethod = [], [], [], []
     for port in get_ports():
         if not isinstance(port, Port):
             noport.append(port)
-        elif port.failed:
+        elif "failed" in port.flags:
             failed.append(port)
         elif port.dependency and port.dependency.failed:
-            for depend in port.dependency.get():
-                if depend.failed:
-                    didepends.append(port)
-                    break
-            else:
-                independs.append(port)
+            depends.append(port)
+        elif port.dependent.failed:
+            nomethod.append(port)
 
     noport.sort()
     failed.sort()
-    didepends.sort()
-    independs.sort()
+    depends.sort()
+    nomethod.sort()
 
-    # TODO independs
-
-    if len(didepends):
-        def bad_depends(ports):
+    if len(depends):
+        def bad_depends(port, _cache=dict()):
             """Return all bad dependencies by pkgname."""
-            for port in ports.dependency.get():
+            if port in _cache:
+                return _cache[port]
+            _cache[port] = bad = set()
+            for port in port.dependency.get():
                 if not isinstance(port, Port):
-                    yield port
-                elif port.failed:
-                    yield port.attr["pkgname"]
-        print ("Failed due to direct dependency:\n\t%s" %
+                    bad.add(port)
+                elif "failed" in port.flags:
+                    bad.add(port.attr["pkgname"])
+                elif port.dependency and port.dependency.failed:
+                    bad.update(bad_depends(port))
+            return bad
+        sys.stderr.write("Failed due to dependency:\n\t%s\n" %
             "\n\t".join("%s (%s)" % (i.attr["pkgname"],
-                                     ", ".join(bad_depends(i))) for i in
-                                        reversed(didepends)))
+                                     ", ".join(bad_depends(i)))
+                                                   for i in reversed(depends)))
 
     if len(failed):
-        print ("Failed to complete port:\n\t%s" %
+        def bad_stacks(port):
+            prev_stages = set(stage.prev for stage in port.stages if stage)
+            tips = port.stages.difference(prev_stages)
+            for stage in tips:
+                if port.stacks[stage.stack].failed:
+                    yield stage.name.lower()
+
+        sys.stderr.write("Failed to complete port:\n\t%s\n" %
             "\n\t".join("%s (%s)" % (i.attr["pkgname"],
-                                     stage[i.stage]) for i in reversed(failed)))
+                                     ", ".join(bad_stacks(i)))
+                                                    for i in reversed(failed)))
+
+    if len(nomethod):
+        sys.stderr.write("Failed due to no valid method%s (%s):\n\t%s\n" %
+            ("%s" if len(env.flags["method"]) > 1 else "",
+             ", ".join(env.flags["method"]),
+             "\n\t".join(i.attr["pkgname"] for i in reversed(nomethod))))
 
     if len(noport):
-        print "No port found for:\n\t%s" % "\n\t".join(noport)
+        sys.stderr.write("No port found for:\n\t%s\n" % "\n\t".join(noport))
 
 
 def gen_parser():
@@ -325,6 +347,7 @@ def set_early_options(options):
         env.flags["chroot"] = os.path.join(os.getcwd(), options.chroot)
         if os.getuid() != 0:
             options.parser.error("chroot option only works with root account")
+        env.flags["log_dir"] += options.chroot.replace("/", "__")
 
     # Use pkgng for ports-mgmt (--pkgng)
     if options.pkgng:
@@ -333,7 +356,6 @@ def set_early_options(options):
 
 def set_options(options):
     """Set all the global options."""
-    from libpb.port.port import Port
 
     # Force 'none' config mode if in batch mode
     if options.batch:
@@ -374,6 +396,10 @@ def set_options(options):
     if options.fetch:
         env.flags["fetch_only"] = True
         queue.checksum.load = env.CPUS
+        if env.flags["target"][0] == "clean":
+            env.flags["target"].pop(0)
+        if env.flags["target"][-1] == "clean":
+            env.flags["target"].pop()
 
     # Fetch ports list from file
     if options.ports_file:
@@ -415,7 +441,7 @@ def set_options(options):
 
     # Upgrade all ports (-U)
     if options.upgradeA:
-        env.flags["stage"] = max(env.flags["stage"], Port.OLDER)
+        env.flags["stage"] = max(env.flags["stage"], pkg.OLDER)
         env.flags["mode"] = "recursive"
 
     # Pre-clean before building ports

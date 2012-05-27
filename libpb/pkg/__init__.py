@@ -15,40 +15,31 @@ OLDER   = 1
 CURRENT = 2
 NEWER   = 3
 
-__all__ = ["add", "db", "version"]
+__all__ = ["add", "change", "db", "query", "remove", "version"]
 
-def add(port, repo=False):
+mgmt = {
+        "pkg":   pkg,
+        "pkgng": pkgng,
+    }
+
+def add(port, repo=False, pkg_dir=None):
     """Add a package for port."""
-    if env.flags["pkg_mgmt"] == "pkg":
-        args = pkg.add(port, repo)
-    elif env.flags["pkg_mgmt"] == "pkgng":
-        args = pkgng.add(port, repo)
-    else:
-        assert not "Unknown pkg_mgmt"
+    args = mgmt[env.flags["pkg_mgmt"]].add(port, repo, pkg_dir)
+    return cmd(port, args)
+
+
+def change(port, prop, value):
+    """Change a property of a package,"""
+    args = mgmt[env.flags["pkg_mgmt"]].change(port, prop, value)
+    return cmd(port, args)
+
+
+def info(repo=False):
+    """List all installed packages with their respective port origin."""
+    args = mgmt[env.flags["pkg_mgmt"]].info(repo)
 
     if not args:
-        return args
-    if env.flags["chroot"]:
-        args = ("chroot", env.flags["chroot"]) + args
-    if env.flags["no_op"]:
-        pkg_add = make.PopenNone(args, port)
-    else:
-        logfile = open(port.log_file, "a")
-        logfile.write("# %s\n" % " ".join(args))
-        pkg_add = make.Popen(args, port, subprocess.PIPE, logfile, logfile)
-        pkg_add.stdin.close()
-    return pkg_add
-
-
-def info():
-    """List all installed packages with their respective port origin."""
-    if env.flags["pkg_mgmt"] == "pkg":
-        args = pkg.info()
-    elif env.flags["pkg_mgmt"] == "pkgng":
-        args = pkgng.info()
-    else:
-        assert not "Unknown pkg_mgmt"
-
+        return {}
     if env.flags["chroot"]:
         args = ("chroot", env.flags["chroot"]) + args
 
@@ -66,6 +57,35 @@ def info():
             else:
                 pkgdb[origin] = set((pkgname,))
     return pkgdb
+
+
+def query(port, prop, repo=False):
+    """Query a property of a package."""
+    args = mgmt[env.flags["pkg_mgmt"]].query(port, prop, repo)
+    return cmd(port, args, do_op=True)
+
+
+def remove(port):
+    """Remove a package for a port."""
+    pkgs = tuple(db.get(port))
+    args = mgmt[env.flags["pkg_mgmt"]].remove(pkgs)
+    return cmd(port, args)
+
+
+def cmd(port, args, do_op=False):
+    """Issue a mgmt command and log the command to the port's logfile."""
+    if not args:
+        return args
+    if env.flags["chroot"]:
+        args = ("chroot", env.flags["chroot"]) + args
+    if env.flags["no_op"] and not do_op:
+        pkg_cmd = make.PopenNone(args, port)
+    else:
+        logfile = open(port.log_file, "a")
+        logfile.write("# %s\n" % " ".join(args))
+        pkg_cmd = make.Popen(args, port, subprocess.PIPE, logfile, logfile)
+        pkg_cmd.stdin.close()
+    return pkg_cmd
 
 
 def version(old, new):
@@ -120,42 +140,56 @@ def cmp_attr(old, new, sym):
 
 
 class PKGDB(object):
-    """A package database that tracks the installed status of packages."""
+    """A package database that tracks the installed packages."""
 
-    def __init__(self):
+    def __init__(self, repo=False):
         super(PKGDB, self).__init__()
-        self.db = {}
+        self.ports = {}
+        self.repo = repo
+
+    def __contains__(self, port):
+        return (port.origin in self.ports and
+                port.attr["pkgname"] in self.ports[port.origin])
 
     def add(self, port):
         """Indicate that a port has been installed."""
-        if port.origin in self.db:
-            self.db[port.origin].add(port.attr['pkgname'])
+        if port.origin in self.ports:
+            self.ports[port.origin].add(port.attr["pkgname"])
         else:
-            self.db[port.origin] = set([port.attr['pkgname']])
+            self.ports[port.origin] = set([port.attr["pkgname"]])
 
     def load(self):
-        """(Re)Load the package database."""
-        self.db = info()
+        """(Re)load the package database."""
+        self.ports = info(self.repo)
 
     def remove(self, port):
         """Indicate that a port has been uninstalled."""
-        if port.origin in self.db:
-            portname = port.attr['pkgname'].rsplit('-', 1)[0]
+        if port.origin in self.ports:
+            portname = port.attr["pkgname"].rsplit('-', 1)[0]
             pkgs = set()
-            for pkgname in self.db[port.origin]:
+            for pkgname in self.ports[port.origin]:
                 if pkgname.rsplit('-', 1)[0] == portname:
                     pkgs.add(pkgname)
-            self.db[port.origin] -= pkgs
+            self.ports[port.origin] -= pkgs
+
+    def get(self, port):
+        """Get a list of packages installed for a port."""
+        if port.origin in self.ports:
+            portname = port.attr["pkgname"].rsplit('-', 1)[0]
+            for pkgname in self.ports[port.origin]:
+                if pkgname.rsplit('-', 1)[0] == portname:
+                    yield pkgname
 
     def status(self, port):
         """Query the install status of a port."""
         pstatus = ABSENT
-        if port.origin in self.db:
-            portname = port.attr['pkgname'].rsplit('-', 1)[0]
-            for pkgname in self.db[port.origin]:
+        if port.origin in self.ports:
+            portname = port.attr["pkgname"].rsplit('-', 1)[0]
+            for pkgname in self.ports[port.origin]:
                 if pkgname.rsplit('-', 1)[0] == portname:
                     pstatus = max(pstatus,
-                                  version(pkgname, port.attr['pkgname']))
+                                  version(pkgname, port.attr["pkgname"]))
         return pstatus
 
 db = PKGDB()
+repo_db = PKGDB(repo=True)

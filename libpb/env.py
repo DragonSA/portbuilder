@@ -11,13 +11,13 @@ __all__ = [
 
 CPUS = os.sysconf("SC_NPROCESSORS_ONLN")
 
-PKG_DBDIR = "/var/db/pkg"
 PORTSDIR = "/usr/ports"
+PKG_CACHEDIR = "/var/cache/pkg"
 
 env = {}
 env_master = {
-  "PKG_DBDIR" : PKG_DBDIR,  # Package database directory
-  "PORTSDIR"  : PORTSDIR,   # Ports directory
+  "PORTSDIR"     : PORTSDIR,     # Ports directory
+  "PKG_CACHEDIR" : PKG_CACHEDIR  # Local cache of remote repositories
 }
 
 ###############################################################################

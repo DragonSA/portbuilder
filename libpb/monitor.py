@@ -2,12 +2,13 @@
 
 from __future__ import absolute_import
 
-from abc import ABCMeta, abstractmethod
+import abc
+import collections
 import curses, curses.ascii
 import sys
 import time
 
-from libpb import queue
+from libpb import env, event, queue, stacks
 
 from .port.port import Port
 from .builder import Builder
@@ -18,7 +19,7 @@ __all__ = ["Monitor", "Top"]
 class Monitor(object):
     """The monitor abstract super class."""
 
-    __metaclass__ = ABCMeta
+    __metaclass__ = abc.ABCMeta
 
     def __init__(self):
         """Initialise the monitor"""
@@ -51,7 +52,7 @@ class Monitor(object):
             self._running = False
             self._deinit()
 
-    @abstractmethod
+    @abc.abstractmethod
     def run(self):
         """Refresh the display."""
         pass
@@ -64,28 +65,27 @@ class Monitor(object):
         """Run any denitialisation required."""
         pass
 
-
-STAGE_NAME = ("config", "config", "depend", "chcksm", "fetch", "build",
-              "install", "package", "pkginst", "repoins")
-STAGE = (
-    (Port.DEPEND,      "Depend"),
-    (Port.CHECKSUM,    "Checksum"),
-    (Port.FETCH,       "Fetch"),
-    (Port.BUILD,       "Build"),
-    (Port.INSTALL,     "Install"),
-    (Port.PKGINSTALL,  "Pkginst"),
-    (Port.REPOINSTALL, "repoins"),
-    (Port.PACKAGE,     "Package"),
+# when altering check "fetch_only" code below.
+STAGES = (
+    stacks.Depend,
+    stacks.RepoConfig,
+    stacks.Checksum,
+    stacks.Fetch,
+    stacks.RepoFetch,
+    stacks.Build,
+    stacks.Install,
+    stacks.PkgInstall,
+    stacks.RepoInstall,
+    stacks.Package,
   )
 
-STATUS_NAME = ("pending", "queued", "active", "failed", None, "done")
-STATUS = (
+STATUS = collections.OrderedDict((
     (Builder.ACTIVE, "active"),
     (Builder.QUEUED, "queued"),
     (Builder.ADDED,  "pending"),
     (Builder.FAILED, "failed"),
     (Builder.DONE,   "done"),
-  )
+  ))
 
 
 def get_name(port):
@@ -116,14 +116,13 @@ class Top(Monitor):
 
     def run(self):
         """Refresh the display."""
-        from .env import flags
         from . import state
 
         state.sort()
-        if flags["fetch_only"]:
-            stages = state[:Port.FETCH + 1]
+        if env.flags["fetch_only"]:
+            stages = tuple(state[i] for i in STAGES[:5])
         else:
-            stages = tuple(state[i[0]] for i in STAGE)
+            stages = tuple(state[i] for i in STAGES)
         self._curr_time = time.time()
         self._stdscr.erase()
         self._update_header(self._stdscr, stages)
@@ -133,8 +132,6 @@ class Top(Monitor):
 
     def _init(self):
         """Initialise the curses library."""
-        from .event import event
-
         self._stdscr = curses.initscr()
         self._stdscr.keypad(1)
         self._stdscr.nodelay(1)
@@ -142,12 +139,10 @@ class Top(Monitor):
         curses.cbreak()
         curses.noecho()
 
-        event(sys.stdin).connect(self._userinput)
+        event.event(sys.stdin).connect(self._userinput)
 
     def _deinit(self):
         """Shutdown the curses library."""
-        from .event import event
-
         self._stdscr.move(self._stdscr.getmaxyx()[0] - 1, 0)
         self._stdscr.clrtoeol()
         self._stdscr.refresh()
@@ -157,7 +152,7 @@ class Top(Monitor):
         curses.echo()
         curses.endwin()
 
-        event(sys.stdin, clear=True)
+        event.event(sys.stdin, clear=True)
 
     def _userinput(self):
         """Get user input and change display options."""
@@ -208,8 +203,6 @@ class Top(Monitor):
 
     def _update_header(self, scr, stages):
         """Update the header details."""
-        from .event import event_count
-
         self._offset = 0
         self._update_ports(scr)
         self._update_summary(scr, stages)
@@ -223,7 +216,7 @@ class Top(Monitor):
         running = "running %i+%02i:%02i:%02i  " % (days, hours, mins, secs)
         # Display current time
         running += time.strftime("%H:%M:%S")
-        events, self._last_event_count = self._last_event_count, event_count()
+        events, self._last_event_count = self._last_event_count, event.event_count()
         events = self._last_event_count - events - 1
         if events > 0:
             # Display pending events
@@ -248,18 +241,17 @@ class Top(Monitor):
 
     def _update_summary(self, scr, stages):
         """Update the summary information."""
-        msg = dict((status[1], 0) for status in STATUS)
+        msg = dict((i, 0) for i in STATUS.values())
         ports = 0
         for stage in stages:
-            for stat, status in STATUS:
+            for stat, status in STATUS.items():
                 msg[status] += len(stage[stat])
                 if stat not in (Builder.FAILED, Builder.DONE):
                     ports += len(stage[stat])
                 if stat == Builder.FAILED and not self._indirect:
-                    msg[status] -= len([i for i in stage[stat] if not i.failed])
+                    msg[status] -= len([i for i in stage[stat] if "failed" not in i.flags])
 
-        msg = ", ".join("%i %s" % (msg[status[1]], status[1])
-                        for status in STATUS if msg[status[1]])
+        msg = ", ".join("%i %s" % (msg[i], i) for i in STATUS.values() if msg[i])
         scr.addstr(
                 self._offset, 0, "%i port%s remaining: %s" %
                 (ports, " " if ports == 1 else "s", msg))
@@ -269,18 +261,20 @@ class Top(Monitor):
     def _update_stage(self, scr, stage):
         """Update various stage details."""
         msg = []
-        for state, status in STATUS[:-1]:
+        for state, status in STATUS.items()[:-1]:
             if stage.status[state]:
                 length = len(stage[state])
                 if state == Builder.FAILED and not self._indirect:
-                    length -= len([i for i in stage[state] if not i.failed])
+                    length -= len([i for i in stage[state] if "failed" not in i.flags])
+                    if not length:
+                        continue
                 msg.append("%i %s" % (length, status))
 
         if msg:
-            stage_name = STAGE_NAME[stage.stage]
+            stage_name = stage.stage.name
             scr.addstr(
                     self._offset, 0, "%s:%s%s" %
-                    (stage_name, " " * (9 - len(stage_name)), ", ".join(msg)))
+                    (stage_name[:8], " " * (9 - min(8, len(stage_name))), ", ".join(msg)))
             self._offset += 1
 
     def _update_rows(self, scr, stages):
@@ -294,7 +288,7 @@ class Top(Monitor):
                 if self._skip:
                     length = len(stat)
                     if status == Builder.FAILED and not self._indirect:
-                        length -= len([i for i in stat if not i.failed])
+                        length -= len([i for i in stat if "failed" not in i.flags])
                     if self._skip >= length:
                         self._skip -= length
                         continue
@@ -303,7 +297,7 @@ class Top(Monitor):
                         self._skip = 0
                 for port in stat:
                     if (status == Builder.FAILED and not self._indirect and
-                        not port.failed):
+                        "failed" not in port.flags):
                         continue
                     yield port, stage.stage
 
@@ -314,21 +308,21 @@ class Top(Monitor):
         if self._failed_only:
             status = (Builder.FAILED,)
         elif self._idle:
-            status = tuple(status[0] for status in STATUS)
+            status = tuple(i for i in STATUS)
         else:
             status = (Builder.ACTIVE,)
 
         if Builder.ACTIVE == status[0]:
             status = status[1:]
             for port, stage in ports(stages, Builder.ACTIVE):
-                if not port.working:
+                if not port.stacks[stage.stack].working:
                     continue
 
-                offtime = self._curr_time - port.working
+                offtime = self._curr_time - port.stacks[stage.stack].working
                 active = '%3i:%02i' % (offtime / 60, offtime % 60)
                 scr.addnstr(
                         offset, 0, ' %7s  active %s %s' %
-                        (STAGE_NAME[stage], active, get_name(port)),
+                        (stage.name[:6].lower(), active, get_name(port)),
                         columns)
                 offset += 1
                 lines -= 1
@@ -346,7 +340,8 @@ class Top(Monitor):
                 self._skip -= len(clean)
             else:
                 for job in clean[self._skip:]:
-                    if job.port.working:
+                    # TODO: Currently clean jobs don't show progress
+                    if False and job.port.working:
                         offtime = self._curr_time - job.port.working
                         active = '%3i:%02i' % (offtime / 60, offtime % 60)
                         state = "active"
@@ -367,7 +362,7 @@ class Top(Monitor):
             for port, stage in ports(stages, status):
                 scr.addnstr(
                         offset, 0, ' %7s %7s        %s' %
-                        (STAGE_NAME[stage], STATUS_NAME[status],
+                        (stage.name[:6].lower(), STATUS[status],
                          get_name(port)), columns)
                 offset += 1
                 lines -= 1

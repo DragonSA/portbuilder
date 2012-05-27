@@ -36,7 +36,14 @@ class Job(Signal):
     def __lt__(self, other):
         return self.priority > other.priority
 
-    def run(self, manager):
+    @abstractmethod
+    def work(self):
+        """Do the hard work.
+
+        This method should be subclassed so as to do something useful."""
+        pass
+
+    def run(self, manager=None):
         """Run the job.
 
         The method may throw StalledJob, indicating the job should be placed on
@@ -51,13 +58,6 @@ class Job(Signal):
         if self.__manager:
             self.__manager.done(self)
         self.emit(self)
-
-    @abstractmethod
-    def work(self):
-        """Do the hard work.
-
-        This method should be subclassed so as to do something useful."""
-        pass
 
 
 class AttrJob(Job):
@@ -107,59 +107,3 @@ class CleanJob(Job):
         from .make import SUCCESS
         self.status = make.wait() == SUCCESS
         self.done()
-
-
-class PortJob(Job):
-    """A port stage job.  Runs a port stage."""
-
-    def __init__(self, port, stage):
-        from .port.port import Port
-
-        Job.__init__(self, port.load if stage == Port.BUILD else 1, None)
-        self.pid = None
-        self.port = port
-        self.stage = stage
-        self._stage_done = False
-
-    def __repr__(self):
-        return "<PortJob(port=%s, stage=%i)>" % (self.port.origin, self.stage)
-
-    @property
-    def priority(self):  # pylint: disable-msg=E0202
-        """Priority of port.  Port's priority may change without notice."""
-        return self.port.dependent.priority
-
-    def __lt__(self, other):
-        return self.port.dependent.priority > other.port.dependent.priority
-
-    def work(self):
-        """Run the required port stage."""
-        from .port.port import Port
-
-        assert not self.port.working
-
-        self.port.stage_completed.connect(self.stage_done)
-        try:
-            if self.stage == Port.PKGINSTALL:
-                status = self.port.pkginstall()
-            elif self.stage == Port.REPOINSTALL:
-                status = self.port.repoinstall()
-            else:
-                status = self.port.build_stage(self.stage)
-            assert status is not False
-            if not isinstance(status, bool) and status is not None:
-                self.pid = status.pid
-        except StalledJob:
-            self.port.stage_completed.disconnect(self.stage_done)
-            raise
-
-    def stage_done(self, port=None):
-        """Handle the completion of a port stage."""
-        assert not self._stage_done
-        self._stage_done = True
-        if port is None:
-            from .event import post_event
-            post_event(self.done)
-        elif port.stage >= self.stage:
-            self.port.stage_completed.disconnect(self.stage_done)
-            self.done()

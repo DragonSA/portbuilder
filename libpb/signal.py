@@ -19,7 +19,7 @@ class Signal(object):
         self._name = name
 
     def __repr__(self):
-        return "<Signal(%s)>" % self._name
+        return "<%s(%s)>" % (self.__class__.__name__, self._name)
 
     def connect(self, slot):
         """Connect a callback function to the signal."""

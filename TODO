@@ -98,7 +98,7 @@ Future release:
  + Port:
    * Add logging of port targets
    - Handle pkg-message
-   - Check need for status
+   * Check need for status
    - Attributes:
      - Check for a need of PATCHFILES
      - ALWAYS_KEEP_DISTFILES
@@ -132,12 +132,14 @@ Future release:
  - cleanup/refactor mk.py
  - update pkgng repo ('pkg update') when it is specified in env.flags["method"]
  - add support for licenses (accepting licenses...)
- * don't install depends when installing from package or repo (pkgng)
- - only install package if it matches port's options
  - add support for jails
  - split repo fetch and repo install stage
  - add soft dependency (aka, conditional dependency, on depend if another port
                         actually needs it).
+ - prioritise ports with resolved dependencies over non-resolved
+ - read PKG_CACHEDIR from pkg.conf (pkgng)
+ - make the port cache allow instantaneous retrieval (i.e. dict mixin + __in__)
+ - move flags["target"] to set() based
 
 0.2 - Milestone 4 (Command line controller):
  - Create target to build INDEX
@@ -145,10 +147,10 @@ Future release:
    - Add the describe method (same as the ports version)
  - Create progress monitor type 2 (aka stat mode)
  * Implement build logging for the ports
- - Fix preparation for stages
+ * Fix preparation for stages
  * Implement logging (using logging library?)
- - Use Port when referring to defined flags (i.e. INSTALL, BUILD)
- - Use MOVED for port.mk.status (fallback)
+ * don't install depends when installing from package or repo (pkgng)
+ - Use MOVED for port.pkg.db.status (fallback)
  * pkg_mgmt interface (vs direct file inspection)
  * make compatible with pkgng
  - display skipped ports (with toggle)
@@ -168,7 +170,9 @@ Future release:
    - signal / event
    - job / queue
    - subprocess (and others)
+   - create oneshot signals
    ? split into own project
+   - delayed signal (aka event.post(signal.emit)...)
  * support `reinstall' target
  * add support for installing from different package sources (repo, local)
  * refactor/improve make.conf dynamic configuration:
@@ -180,20 +184,22 @@ Future release:
  * implement clean flags["target"]
  * refactor env/mk code
  * remove reinstall from flags["target"]
- - implement sysctl using ctypes
+ - implement sysctl using ctypes (waiting on FFI from pypy)
  + cleanup namespace
- - add support to verify if stage is possible (can_do_stage)
+ * add support to verify if stage is possible (can_do_stage)
  - allow pkg.version to use "pkg_version" as alternative
  - periodically check that the state tracked pkgdb agrees with pkg_info
  * document libpb initialisation procedure (cache/clean env, load defaults, db init)
  * make pre/post cleaning the default
  * refactor all env.flags (like CONFIG) for better handling
  - rename/refactor make target (move into mk?)
- - fix module level definitions used by port (install status, build stage)
+ + fix module level definitions used by port (install status, build stage)
  - eliminate bottleneck in portbuilder for loading attr
  * fix cleaning of ports (why is make call in CleanJob?)
  * fix `job' names in builder
- - use pkg.remove instead of `make deinstall`
+ * use pkg.remove instead of `make deinstall`
+ * fix fetch-only mode when using repo method (aka REPOFETCH)
+ * only install package if it matches port's options
  - rename flags["stage"] to flags["(inst)status"]
 
 0.1.3 - Milestone 3 (Target Builders):

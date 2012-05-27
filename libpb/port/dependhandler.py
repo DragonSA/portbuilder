@@ -4,9 +4,7 @@ from __future__ import absolute_import
 
 import collections
 
-from .port import Port
-
-from libpb import log
+from libpb import env, event, log, pkg, signal, stacks
 
 __all__ = ['Dependent', 'Dependency']
 
@@ -25,15 +23,17 @@ class DependHandler(object):
 
     #: The dependencies for a given stage
     STAGE2DEPENDS = {
-      Port.CONFIG:      (),
-      Port.DEPEND:      (),
-      Port.CHECKSUM:    (),
-      Port.FETCH:       (FETCH,),
-      Port.BUILD:       (EXTRACT, PATCH, LIB, BUILD, PKG),
-      Port.INSTALL:     (LIB, RUN, PKG),
-      Port.PACKAGE:     (LIB, RUN, PKG),
-      Port.PKGINSTALL:  (LIB, RUN, PKG),
-      Port.REPOINSTALL: (LIB, RUN, PKG),
+      stacks.Config:      (),
+      stacks.Depend:      (),
+      stacks.Checksum:    (),
+      stacks.Fetch:       (FETCH,),
+      stacks.Build:       (EXTRACT, PATCH, LIB, BUILD, PKG),
+      stacks.Install:     (LIB, RUN, PKG),
+      stacks.Package:     (LIB, RUN, PKG),
+      stacks.PkgInstall:  (LIB, RUN, PKG),
+      stacks.RepoConfig:  (PKG,),
+      stacks.RepoFetch:   (PKG,),
+      stacks.RepoInstall: (LIB, RUN, PKG),
     }
 
 
@@ -47,14 +47,11 @@ class Dependent(DependHandler):
 
     def __init__(self, port):
         """Initialise the databases of dependants."""
-        from ..env import flags
-
         DependHandler.__init__(self)
         self._dependants = [[], [], [], [], [], [], []]  #: All dependants
         self.port = port  #: The port whom we handle
         self.priority = port.priority
-        self.propogate = True
-        if port.install_status > flags["stage"]:
+        if port.install_status > env.flags["stage"]:
             self.status = Dependent.RESOLV
             # TODO: Change to actually check if we are resolved
         else:
@@ -90,17 +87,13 @@ class Dependent(DependHandler):
         """Shorthand for self.status() == Dependent.FAILURE."""
         return self.status == Dependent.FAILURE
 
-    def status_changed(self):
+    def status_changed(self, exhausted=False):
         """Indicates that our port's status has changed."""
-        from ..env import flags
-
-        if ((self.propogate and self.port.failed) or
-            (self.port.dependency and self.port.dependency.failed)):
+        if (self.failed or
+                (self.port.dependency and self.port.dependency.failed)):
             status = Dependent.FAILURE
             # TODO: We might have failed and yet still satisfy our dependants
-        elif flags["fetch_only"]:
-            status = Dependent.RESOLV
-        elif self.port.install_status > flags["stage"]:
+        elif self.port.install_status > env.flags["stage"]:
             status = Dependent.RESOLV
             if not self._verify():
                 # TODO: We may satisfy some dependants, but not others,
@@ -108,7 +101,7 @@ class Dependent(DependHandler):
                 # failed?
                 status = Dependent.FAILURE
         else:
-            status = Dependent.UNRESOLV
+            status = Dependent.FAILURE if exhausted else Dependent.UNRESOLV
 
         if status != self.status:
             self.status = status
@@ -123,7 +116,7 @@ class Dependent(DependHandler):
         """Check if a dependent has been resolved."""
         from ..env import flags
 
-        if flags["fetch_only"] and self.port.stage >= Port.FETCH:
+        if flags["fetch_only"] and stacks.Fetch in self.port.stages:
             return True
 
         if typ == DependHandler.BUILD:
@@ -141,7 +134,7 @@ class Dependent(DependHandler):
         elif typ == DependHandler.PKG:
             pass
 
-        return self.port.install_status != Port.ABSENT
+        return self.port.install_status != pkg.ABSENT
 
     def _verify(self):
         """Check that we actually satisfy all dependants."""
@@ -154,6 +147,8 @@ class Dependent(DependHandler):
 
 class Dependency(DependHandler):
     """Tracks the dependencies for a Port."""
+
+    loaded = signal.SignalProperty()
 
     def __init__(self, port, depends=None):
         """Initialise the databases of dependencies."""
@@ -182,9 +177,8 @@ class Dependency(DependHandler):
                 self._loading += 1
                 get_port(j[1]).connect(adder(j[0], i))
         if not self._loading:
-            from ..event import post_event
             self._update_priority()
-            post_event(self.port._post_depend, True)
+            event.post_event(self.loaded.emit, True)
 
     def __repr__(self):
         return "<Dependency(port=%s)>" % self.port.origin
@@ -217,7 +211,7 @@ class Dependency(DependHandler):
 
         if self._loading == 0:
             self._update_priority()
-            self.port._post_depend(not self._bad)
+            self.loaded.emit(not self._bad)
 
     def get(self, stage=None):
         """Retrieve a list of dependencies."""
