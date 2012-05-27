@@ -50,8 +50,9 @@ class Port(object):
         # TODO: use Dependent.RESOLV (current import issues)
         RESOLV = 1
         assert (self.dependent.status != RESOLV or
-          (self.install_status > env.flags["stage"] or "upgrade" in self.flags))
-        status = env.flags["stage"]
+                (self.install_status > env.flags["buildstatus"] or
+                    "upgrade" in self.flags))
+        status = env.flags["buildstatus"]
         if "upgrade" in self.flags and status < pkg.OLDER:
             status = pkg.OLDER
         return (self.install_status > status and

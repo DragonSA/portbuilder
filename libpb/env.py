@@ -23,6 +23,9 @@ env_master = {
 ###############################################################################
 # LIBPB STATE FLAGS
 ###############################################################################
+# buildstatus - The minimum install stage required before a port will be build.
+#       This impacts when a dependency is considered resolved.
+#
 # chroot - The chroot directory to use.  If blank then the current root
 #       (i.e. /) is used.  A mixture of `chroot' and direct file inspection is
 #       used when an actual chroot is specified.
@@ -71,9 +74,6 @@ env_master = {
 #               pkg     - The package tools shipped with FreeBSD base
 #               pkgng   - The next generation package tools shipped with ports
 #
-# stage - The minimum install stage required before a port will be build.  This
-#       impacts when a dependency is considered resolved.
-#
 # target - The dependency targets when building a port required by a dependant.
 #       The currently supported targets are:
 #               install   - install the port
@@ -88,6 +88,7 @@ PKG_MGMT = ("pkg", "pkgng")
 STAGE    = (0, 1, 2, 3)
 TARGET   = ("clean", "install", "package")
 flags = {
+  "buildstatus" : 0,                    # The minimum level for build
   "chroot"      : "",                   # Chroot directory of system
   "config"      : "changed",            # Configure ports based on criteria
   "debug"       : False,                # Print extra debug messages
@@ -99,6 +100,5 @@ flags = {
   "no_op"       : False,                # Do nothing
   "no_op_print" : False,                # Print commands instead of execution
   "pkg_mgmt"    : "pkg",                # The package system used ('pkg(ng)?')
-  "stage"       : 0,                    # The minimum level for build
   "target"      : ["install", "clean"]  # Dependency target (aka DEPENDS_TARGET)
 }

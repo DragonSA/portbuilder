@@ -441,7 +441,7 @@ def set_options(options):
 
     # Upgrade all ports (-U)
     if options.upgradeA:
-        env.flags["stage"] = max(env.flags["stage"], pkg.OLDER)
+        env.flags["buildstatus"] = max(env.flags["buildstatus"], pkg.OLDER)
         env.flags["mode"] = "recursive"
 
     # Pre-clean before building ports
