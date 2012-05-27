@@ -148,16 +148,11 @@ def run_loop(options):
     except BaseException:
         from libpb import stop
 
-        msg = "".join(log.format_tb(tb, name) for tb, name in event.traceback())
-        msg += traceback.format_exc()
-        log.exception()
+        msg = log.exception()
 
-        event.post_event(stop)
-        try:
-            run()
-        finally:
-            report()
-            sys.stderr.write(msg + "\n")
+        sys.stderr.write("\n")
+        report()
+        sys.stderr.write(msg + "\n")
 
 def report():
     """Print report about failed ports"""
