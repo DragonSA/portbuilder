@@ -200,7 +200,7 @@ Future release:
  * use pkg.remove instead of `make deinstall`
  * fix fetch-only mode when using repo method (aka REPOFETCH)
  * only install package if it matches port's options
- - rename flags["stage"] to flags["(inst)status"]
+ * rename flags["stage"] to flags["(inst)status"]
 
 0.1.3 - Milestone 3 (Target Builders):
  * Finish call documentation

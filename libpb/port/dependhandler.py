@@ -51,7 +51,7 @@ class Dependent(DependHandler):
         self._dependants = [[], [], [], [], [], [], []]  #: All dependants
         self.port = port  #: The port whom we handle
         self.priority = port.priority
-        if port.install_status > env.flags["stage"]:
+        if port.install_status > env.flags["buildstatus"]:
             self.status = Dependent.RESOLV
             # TODO: Change to actually check if we are resolved
         else:
@@ -93,7 +93,7 @@ class Dependent(DependHandler):
                 (self.port.dependency and self.port.dependency.failed)):
             status = Dependent.FAILURE
             # TODO: We might have failed and yet still satisfy our dependants
-        elif self.port.install_status > env.flags["stage"]:
+        elif self.port.install_status > env.flags["buildstatus"]:
             status = Dependent.RESOLV
             if not self._verify():
                 # TODO: We may satisfy some dependants, but not others,

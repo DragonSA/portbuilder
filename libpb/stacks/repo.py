@@ -5,7 +5,7 @@ stack.
 
 import os
 
-from libpb import env, event, log, make, pkg
+from libpb import env, event, make, pkg
 from libpb.stacks import common, mutators
 
 __all__ = ["RepoConfig", "RepoFetch", "RepoInstall"]
@@ -90,4 +90,5 @@ class RepoInstall(mutators.Deinstall, mutators.PostFetch, mutators.Repo,
     stack = "repo"
 
     def _add_pkg(self):
+        """Install a package from a repository."""
         return pkg.add(self.port, True)

@@ -125,7 +125,8 @@ def mkdir(directory):
                     mkdir(base)
             os.mkdir(directory)
         except OSError, e:
-            sys.stderr.write("%s: unable to create directory (%s)\n" % (directory, e))
+            sys.stderr.write("%s: unable to create directory (%s)\n" %
+                             (directory, e))
             exit(2)
 
 
@@ -200,6 +201,7 @@ def report():
 
     if len(failed):
         def bad_stacks(port):
+            """Return all bad stacks by name."""
             prev_stages = set(stage.prev for stage in port.stages if stage)
             tips = port.stages.difference(prev_stages)
             for stage in tips:
@@ -363,7 +365,7 @@ def set_options(options):
 
     # Add all installed ports to port list
     if options.all:
-        options.args.extend(pkg.db.db.keys())
+        options.args.extend(pkg.db.ports.keys())
 
     # Architecture flag
     if not options.arch and "ARCH" in os.environ:
@@ -441,7 +443,7 @@ def set_options(options):
 
     # Upgrade all ports (-U)
     if options.upgradeA:
-        env.flags["stage"] = max(env.flags["stage"], pkg.OLDER)
+        env.flags["buildstatus"] = max(env.flags["buildstatus"], pkg.OLDER)
         env.flags["mode"] = "recursive"
 
     # Pre-clean before building ports
