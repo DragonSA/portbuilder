@@ -171,12 +171,12 @@ def report():
             nomethod.append(port)
 
     noport.sort()
-    failed.sort()
-    depends.sort()
-    nomethod.sort()
+    failed.sort(key=lambda x: x.attr["pkgname"])
+    depends.sort(key=lambda x: x.attr["pkgname"])
+    nomethod.sort(key=lambda x: x.attr["pkgname"])
 
     if len(depends):
-        def bad_depends(port, _cache=dict()):
+        def bad_depends(port, recursive=False, _cache=dict()):
             """Return all bad dependencies by pkgname."""
             if port in _cache:
                 return _cache[port]
@@ -187,12 +187,17 @@ def report():
                 elif "failed" in port.flags:
                     bad.add(port.attr["pkgname"])
                 elif port.dependency and port.dependency.failed:
-                    bad.update(bad_depends(port))
-            return bad
+                    bad.update(bad_depends(port, True))
+            if recursive:
+                return bad
+            else:
+                bad = list(bad)
+                bad.sort()
+                return bad
         sys.stderr.write("Failed due to dependency:\n\t%s\n" %
             "\n\t".join("%s (%s)" % (i.attr["pkgname"],
                                      ", ".join(bad_depends(i)))
-                                                   for i in reversed(depends)))
+                                                   for i in depends))
 
     if len(failed):
         def bad_stacks(port):
@@ -206,13 +211,13 @@ def report():
         sys.stderr.write("Failed to complete port:\n\t%s\n" %
             "\n\t".join("%s (%s)" % (i.attr["pkgname"],
                                      ", ".join(bad_stacks(i)))
-                                                    for i in reversed(failed)))
+                                                    for i in failed))
 
     if len(nomethod):
         sys.stderr.write("Failed due to no valid method%s (%s):\n\t%s\n" %
             ("%s" if len(env.flags["method"]) > 1 else "",
              ", ".join(env.flags["method"]),
-             "\n\t".join(i.attr["pkgname"] for i in reversed(nomethod))))
+             "\n\t".join(i.attr["pkgname"] for i in nomethod)))
 
     if len(noport):
         sys.stderr.write("No port found for:\n\t%s\n" % "\n\t".join(noport))
