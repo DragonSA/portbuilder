@@ -229,7 +229,7 @@ class Top(Monitor):
         """Update the ports details."""
         from .port import ports
 
-        msg = "port count: %i" % ports()
+        msg = "Port count: %i" % ports()
         if len(queue.attr):
             if len(queue.attr.queue):
                 msg += "; retrieving %i (of %i)" % (len(queue.attr.active),
@@ -328,8 +328,8 @@ class Top(Monitor):
                 offtime = self._curr_time - port.stacks[stage.stack].working
                 active = '%3i:%02i' % (offtime / 60, offtime % 60)
                 scr.addnstr(
-                        offset, 0, ' %7s  active %s %s' %
-                        (stage.name[:6].lower(), active, get_name(port)),
+                        offset, 0, '%8s  active %s %s' %
+                        (stage.name[:8].lower(), active, get_name(port)),
                         columns)
                 offset += 1
                 lines -= 1
@@ -368,8 +368,8 @@ class Top(Monitor):
         for status in status:
             for port, stage in ports(stages, status):
                 scr.addnstr(
-                        offset, 0, ' %7s %7s        %s' %
-                        (stage.name[:6].lower(), STATUS[status],
+                        offset, 0, '%8s %7s        %s' %
+                        (stage.name[:8].lower(), STATUS[status],
                          get_name(port)), columns)
                 offset += 1
                 lines -= 1
