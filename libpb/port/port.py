@@ -71,9 +71,6 @@ class Port(object):
 
     def _post_clean(self, _pmake=None):
         """Remove log file."""
-        if stacks.Build in self.stages:
-            self.stages.difference_update((stacks.Build, stacks.Install,
-                                           stacks.Package))
         if not self.dependent.failed and os.path.isfile(self.log_file) and \
                 (env.flags["mode"] == "clean" or stacks.Build in self.stages or
                  (self.dependency and self.dependency.failed)):
