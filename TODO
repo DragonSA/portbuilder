@@ -163,7 +163,7 @@ Future release:
  * rename queues
  - rename signals
  + start moving library imports to module level (vs method/function)
- + make portbuilder indicate what is happening before Top monitor starts
+ * make portbuilder indicate what is happening before Top monitor starts
  - handle queue with stalled job and no active job (not possible with current code)
  - make builds more persistent (i.e. no abort on dependency failure)
  - refactor signal/event code (into own library)

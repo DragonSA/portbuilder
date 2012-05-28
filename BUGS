@@ -14,3 +14,6 @@
     When multiple ports are specified for update (non-recursive) it could cause
     extra ports to be installed.  This will happen if a port's run or library
     dependencies have changed (preciously, added).
+
+[0.1.5-1] Handling of $PREFIX and $DESTDIR
+    Portbuilder does not handle $PREFIX!=$LOCALBASE nor does it handle $DESTDIR.

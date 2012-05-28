@@ -11,6 +11,7 @@ X.Y.Z - YYYY MMM DD:
    * Fix the "0 failed" Top-interface bug
    * Properly display information about failed ports
    * Mark dependencies as such (-DINSTALLS_DEPENDS, `pkg set -a 1`)
+   * Properly detect installed ports (only match port origin)
 
 0.1.4.1 - 2012 April 23:
  * Fixes:
