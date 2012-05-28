@@ -1,4 +1,6 @@
 X.Y.Z - YYYY MMM DD:
+
+0.1.5 - 2012 May 28:
  * Added '-j' option to tune concurrency
  * Removed '--force' and '--force-all' option to simplify code
  * Major rewrite of stage handling code
