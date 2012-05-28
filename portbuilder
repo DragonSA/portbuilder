@@ -9,7 +9,6 @@ import os
 import re
 import signal
 import sys
-import traceback
 
 from libpb import builder, env, event, log, mk, pkg, queue
 
@@ -146,10 +145,7 @@ def run_loop(options):
     except SystemExit:
         raise
     except BaseException:
-        from libpb import stop
-
         msg = log.exception()
-
         sys.stderr.write("\n")
         report()
         sys.stderr.write(msg + "\n")

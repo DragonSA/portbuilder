@@ -128,7 +128,6 @@ class StateTracker(object):
 
     def stage_started(self, stage, port):
         """Indicate if the stage is the current primary for port."""
-        stage_no = stage.stage
         stages = set((stage.stage,))
         stage = stage.stage.prev
         while stage:
