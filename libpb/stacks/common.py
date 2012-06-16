@@ -57,19 +57,25 @@ class Config(mutators.MakeStage):
             return True
         elif env.flags["config"] == "all":
             return False
-
         optionfile = env.flags["chroot"] + self.port.attr["optionsfile"]
         pkgname = self.port.attr["pkgname"]
+        config_pkgname = ""
         options = set()
         if os.path.isfile(optionfile):
             with open(optionfile, 'r') as optionfile:
                 for i in optionfile:
-                    if i.startswith('_OPTIONS_READ='):
+                    if i.startswith("_OPTIONS_READ="):
                         # The option set to the last pkgname this config file
                         # was set for
                         config_pkgname = i[14:-1]
-                    elif i.startswith('WITH'):
-                        options.add(i.split('_', 1)[1].split('=', 1)[0])
+                    elif i.startswith("WITHOUT_"):
+                        options.add(i[8:-6])
+                    elif i.startswith("OPTIONS_FILE_UNSET+="):
+                        options.add(i[20:-1])
+                    elif i.startswith("WITH_"):
+                        options.add(i[5:-6])
+                    elif i.startswith("OPTIONS_FILE_SET+="):
+                        options.add(i[18:-1])
         if (env.flags["config"] == "changed" and
                 options != set(self.port.attr["options"])):
             return False
