@@ -4,9 +4,19 @@ from __future__ import absolute_import
 
 import abc
 import collections
-import curses, curses.ascii
 import sys
 import time
+
+try:
+    import _curses
+except ImportError:
+    try:
+        import _minimal_curses as _curses
+        sys.modules["_curses"] = _curses
+        del _curses
+    except ImportError:
+        pass
+import curses, curses.ascii
 
 from libpb import env, event, queue, stacks
 
