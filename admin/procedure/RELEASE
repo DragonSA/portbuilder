@@ -28,7 +28,7 @@ Update documentation:
 2.5) Commit changes
 
 
-3. Prepare Release
+3. Pre-Release
 ------------------
 Prepare the code for release:
 
@@ -51,16 +51,20 @@ Prepare the code for release:
 3.4) Commit changes
 
 
-4. Tag and Release
+4. Release
 ------------------
 Tag and release portbuilder
 
 4.1) Create release tarball (excluding ./port)
 4.2) Update port distinfo (and commit data)
-4.3) Tag annotated release (with ChangeLog for comment)
-4.4) Post release cleanup:
-4.4.1) Add entry for next release in ChangeLog
-4.5) Create patch for FreeBSD port
-4.6) Push all changes to github
-4.7) Upload release tarball to github
-4.8) Update FreeBSD port
+4.3) Merge release branch into master
+4.4) Tag annotated release (with ChangeLog for comment)
+
+5. Post-Release
+---------------
+5.1) Create patch for FreeBSD port
+5.2) Merge branch into develop
+5.2.1) Add entry for next release in ChangeLog
+5.3) Push all changes to github
+5.4) Upload release tarball to github
+5.5) Update FreeBSD port
