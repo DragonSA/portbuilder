@@ -72,7 +72,7 @@ def query(port, prop, repo=False):
     """Query q property of a package."""
     args = ("pkg", "rquery" if repo else "query", "-F", port.attr["pkgname"])
     if prop == "config":
-        args += ("%Ok%Ov",)
+        args += ("%Ok %Ov",)
     else:
         assert not "unknown package property '%s'" % prop
     return args
