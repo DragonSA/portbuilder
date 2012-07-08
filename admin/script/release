@@ -1,5 +1,8 @@
 #!/bin/sh
 
+TAG_BRANCH="master"
+DEVELOP_BRANCH="develop"
+
 usage() {
 
   cat << __EOF
@@ -10,9 +13,9 @@ __EOF
 }
 
 
-prepare_release() {
+pre_release() {
 
-  echo "3. Prepare Release"
+  echo "3. Pre-Release"
 
   echo "3.1) Versioning:"
   versioning
@@ -45,7 +48,7 @@ __EOF
 
 do_release() {
 
-  echo "4. Tag and Release"
+  echo "4. Release"
 
   echo "4.1) Create release tarball (excluding ./port)"
   git archive 'HEAD^{tree}' --prefix=portbuilder-$TAG/ | xz -9 > portbuilder-$TAG.tar.xz
@@ -58,7 +61,11 @@ Update distinfo for $TAG release tarball
 __EOF
   ) | git commit -F -
 
-  echo "4.3) Tag annotated release (with ChangeLog for comment)"
+  echo "4.3) Merge release branch into master"
+  git checkout $TAG_BRANCH
+  git merge --no-ff $BRANCH
+
+  echo "4.4) Tag annotated release (with ChangeLog for comment)"
   (python -c "import sys; exec sys.stdin.read()" << __EOF
 print "Tag release for version $TAG\n"
 lines = []
@@ -71,25 +78,33 @@ print "".join(lines)[:-1]
 __EOF
   ) | git tag -sF - $TAG
 
-  git archive "$TAG^{tree}" --prefix=portbuilder-$TAG/ | xz -9 > /tmp/portbuilder-check-$TAG.tar.xz
-  if [ `sha256 -q portbuilder-$TAG.tar.xz` != `sha256 -q /tmp/portbuilder-check-$TAG.tar.xz` ]
-  then
-    echo "!!!> Release tarball not the same as tags content"
-  fi
-  rm /tmp/portbuilder-check-$TAG.tar.xz
+  git checkout $BRANCH
 
-  echo "4.4) Post release cleanup:"
-  echo "4.4.1) Add entry for next release in ChangeLog"
+}
+
+
+post_release() {
+
+  echo "5. Post-Release"
+
+  echo "5.1) Create patch for FreeBSD port"
+  git checkout $TAG_BRANCH
+  diff -uNr /usr/ports/ports-mgmt/portbuilder port | sed 's/^+++ port/+++ portbuilder/g' > portbuilder-$TAG.diff
+
+  echo "5.2) Merge branch into develop:"
+  git checkout $DEVELOP_BRANCH
+  git merge --no-ff --no-commit $BRANCH
+
+  echo "5.2.1) Add entry for next release in ChangeLog"
   (echo "X.Y.Z - YYYY MMM DD:"; echo; cat ChangeLog) > /tmp/portbuilder-ChangeLog-$TAG
   mv /tmp/portbuilder-ChangeLog-$TAG ChangeLog
   git add ChangeLog
-  (cat << __EOF
-Add template entry for next release's ChangeLog
-__EOF
-  ) | git commit -F -
-
-  echo "4.5) Create patch for FreeBSD port"
-  diff -uNr /usr/ports/ports-mgmt/portbuilder port | sed 's/^+++ port/+++ portbuilder/g' > portbuilder-$TAG.diff
+  if git commit --no-edit
+  then
+    git branch -d $BRANCH
+  else
+    echo "!!!> Manually merge commit"
+  fi
 
 }
 
@@ -196,7 +211,9 @@ then
 fi
 
 TAG=$1
+BRANCH=$(git branch | grep '\*' | cut -f 2 -d ' ')
 
 cd `pwd | sed -e 's|/script$||' -e 's|/admin$||'`
-prepare_release
+pre_release
 do_release
+post_release
