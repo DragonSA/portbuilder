@@ -39,8 +39,8 @@ class RepoConfig(mutators.Repo):
         self.pid = None
         if pkg_query.wait() == make.SUCCESS:
             for opt in pkg_query.stdout.readlines():
-                optn, optv = opt.split(':', 1)
-                self._pkgconfig[optn] = optv.strip()
+                optn, optv = opt.split()
+                self._pkgconfig[optn] = optv
             args = []
             for opt in self.port.attr["options"]:
                 args.append("-V")
