@@ -68,12 +68,15 @@ class Config(mutators.MakeStage):
                         # The option set to the last pkgname this config file
                         # was set for
                         config_pkgname = i[14:-1]
+                    elif i.startswith("_FILE_COMPLETE_OPTIONS_LIST"):
+                        options.update(i[28:].split())
+                        break
                     elif i.startswith("WITHOUT_"):
                         options.add(i[8:-6])
-                    elif i.startswith("OPTIONS_FILE_UNSET+="):
-                        options.add(i[20:-1])
                     elif i.startswith("WITH_"):
                         options.add(i[5:-6])
+                    elif i.startswith("OPTIONS_FILE_UNSET+="):
+                        options.add(i[20:-1])
                     elif i.startswith("OPTIONS_FILE_SET+="):
                         options.add(i[18:-1])
         if (env.flags["config"] == "changed" and
