@@ -20,7 +20,6 @@ class RepoConfig(mutators.Repo):
 
     def __init__(self, port):
         super(RepoConfig, self).__init__(port)
-        self._pkgconfig = {}
 
     def complete(self):
         """Check if the package's configuration needs to be validated."""
@@ -38,32 +37,13 @@ class RepoConfig(mutators.Repo):
         """Process the pkg.query() command and issue a make(1) command."""
         self.pid = None
         if pkg_query.wait() == make.SUCCESS:
+            pkgconfig = {}
             for opt in pkg_query.stdout.readlines():
                 optn, optv = opt.split()
-                self._pkgconfig[optn] = optv
-            args = []
-            for opt in self.port.attr["options"]:
-                args.append("-V")
-                if self.port.attr["options"][opt][1] == "on":
-                    yesno = "OUT"
-                else:
-                    yesno = ""
-                args.append("WITH%s_%s" % (yesno, opt))
-            pmake = make.make_target(self.port, args, pipe=True)
-            self.pid = pmake.connect(self._post_make).pid
+                pkgconfig[optn] = optv
+            self._finalise(self.port.attr["options"] == pkgconfig)
         else:
             self._finalise(False)
-
-    def _post_make(self, pmake):
-        """Process the make() command."""
-        self.pid = None
-        config = {}
-        for opt, val in zip(self.port.attr["options"], pmake.readlines()):
-            yesno = bool(len(val.strip()))
-            if self.port.attr["options"][opt][1] == "on":
-                yesno = not yesno
-            config[opt] = "on" if yesno else "off"
-        self._finalise(config == self._pkgconfig)
 
 
 class RepoFetch(mutators.Repo):

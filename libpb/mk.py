@@ -173,7 +173,7 @@ class Attr(signal.Signal):
                 # Get the string (stripped)
                 attr_map[name] = pmake.stdout.readline().strip()
             else:
-                # Pass the string through a special processing (like list/tuple)
+                # Pass the string through a special processor (like list/tuple)
                 attr_map[name] = value[1](pmake.stdout.readline().split())
             # Apply all filters for the attribute
             for i in value[2:]:
@@ -185,6 +185,10 @@ class Attr(signal.Signal):
                                   (self.origin, str(e)))
                     self.emit(self.origin, None)
                     return
+
+        # Process the global option filters
+        for fltr in ports_fltr:
+            fltr(attr_map)
 
         self.emit(self.origin, attr_map)
 
@@ -241,12 +245,13 @@ ports_attr = {
 "depend_package": ["PKG_DEPENDS",     tuple], # The port's package dependencies
 
 # Sundry port information
-"category":   ["CATEGORIES", tuple], # The port's categories
-"descr":      ["_DESCR",     str],   # The port's description file
-"comment":    ["COMMENT",    str],   # The port's comment
-"maintainer": ["MAINTAINER", str],   # The port's maintainer
-"options":    ["OPTIONS",    str],   # The port's options
-"prefix":     ["PREFIX",     str],   # The port's install prefix
+"category":   ["CATEGORIES", tuple],              # The port's categories
+"descr":      ["_DESCR",     str],                # The port's description file
+"comment":    ["COMMENT",    str],                # The port's comment
+"maintainer": ["MAINTAINER", str],                # The port's maintainer
+"options":    ["_COMPLETE_OPTIONS_LIST", tuple],  # The port's options
+"_options":   ["PORT_OPTIONS",           tuple],  # The port's active options
+"prefix":     ["PREFIX",                 str],    # The port's install prefix
 
 # Distribution information
 "distfiles": ["DISTFILES",    tuple], # The port's distfiles
@@ -272,44 +277,14 @@ ports_attr = {
 "wrkdir":      ["WRKDIR",         str],   # The ports working directory
 } #: The attributes of the given port
 
+ports_fltr = []  # Clean-up functions for the ports attributes
+
 # The following are 'fixes' for various attributes
 ports_attr["depends"].append(lambda x: [i[len(env.env["PORTSDIR"]) + 1:]
                                                                    for i in x])
 ports_attr["depends"].append(lambda x: ([x.remove(i) for i in x
                                          if x.count(i) > 1], x)[1])
 ports_attr["distfiles"].append(lambda x: [i.split(':', 1)[0] for i in x])
-
-
-def parse_options(optionstr):
-    """Convert options string into something easier to use."""
-    # TODO: make ordered dict
-    options = {}
-    order = 0
-    while len(optionstr):
-        # Get the name component
-        name, optionstr = optionstr.split(None, 1)
-
-        # Get the description component
-        start = optionstr.index('"')
-        end = start
-        while True:
-            end = optionstr.index('"', end + 1)
-            if optionstr[end - 1] != '\\':
-                break
-        descr, optionstr = optionstr[start + 1:end], optionstr[end + 1:]
-
-        # Get the default component
-        optionstr = optionstr.split(None, 1)
-        if len(optionstr) > 1:
-            dflt, optionstr = optionstr
-        else:
-            dflt, optionstr = optionstr[0], ""
-        #dflt = dflt == "on"
-
-        options[name] = (descr, dflt, order)
-        order += 1
-    return options
-ports_attr["options"].append(parse_options)
 
 
 def parse_jobs_number(jobs_number):
@@ -342,3 +317,13 @@ ports_attr["depend_run"].extend((strip_depends, tuple))
 ports_attr["depend_patch"].extend((strip_depends, tuple))
 ports_attr["depend_package"].extend((strip_depends, tuple))
 ports_attr["makefiles"].append(lambda x: [i for i in x if i != '..'])
+
+
+def ports_options(attr):
+    """Convert _COMPLETE_OPTIONS_LIST and PORT_OPTIONS into an option dict."""
+    options = {}
+    for opt in attr["options"]:
+        options[opt] = "on" if opt in attr["_options"] else "off"
+    attr["options"] = options
+    del attr["_options"]
+ports_fltr.append(ports_options)
