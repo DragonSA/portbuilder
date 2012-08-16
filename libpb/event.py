@@ -15,6 +15,12 @@ from .signal import InlineSignal, SignalProperty
 __all__ = ["alarm", "event", "pending_events", "post_event", "resume", "run",
            "start", "stop", "suspend", "traceback"]
 
+try:
+    select.kevent(0, 0, 0, KQ_NOTE_EXIT, 0, 0)
+    ISSUE11973 = False
+except OverflowError:
+    ISSUE11973 = True
+
 
 class EventManager(object):
     """Handles Events that need to be called asynchronously."""
@@ -73,8 +79,11 @@ class EventManager(object):
             elif "e" in mode[1:]:
                 note |= select.KQ_NOTE_EXEC
             elif "-" in mode[1:]:
-                # HACK: work around python bug!!!
-                note -= select.KQ_NOTE_EXIT
+                if ISSUE11973:
+                    # HACK: work around python bug!!!
+                    note -= select.KQ_NOTE_EXIT
+                else:
+                    note |= select.KQ_NOTE_EXIT
         elif mode == "s":
             event = (obj, select.KQ_FILTER_SIGNAL)
         else:
