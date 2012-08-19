@@ -17,13 +17,13 @@ WWW: http://github.com/DragonSA/portbuilder/
 """
 
 setup(name='portbuilder',
-      version="0.1.5.2",
+      version="0.1.5.3",
       description="Concurrent FreeBSD port builder",
       long_description=long_description,
       author="David Naylor",
       author_email="naylor.b.david@gmail.com",
       url="http://github.com/DragonSA/portbuilder/",
-      download_url="http://cloud.github.com/downloads/DragonSA/portbuilder/portbuilder-0.1.5.2.tar.xz",
+      download_url="http://cloud.github.com/downloads/DragonSA/portbuilder/portbuilder-0.1.5.3.tar.xz",
       packages=["libpb", "libpb/port", "libpb/pkg", "libpb/stacks",],
       scripts=["portbuilder",],
       classifiers=[
