@@ -93,13 +93,13 @@ post_release() {
 
   echo "5.2) Merge branch into develop:"
   git checkout $DEVELOP_BRANCH
-  git merge --no-ff --no-commit $BRANCH
+  git merge --no-ff --no-commit $BRANCH || NOMERGE=yes
 
   echo "5.2.1) Add entry for next release in ChangeLog"
   (echo "X.Y.Z - YYYY MMM DD:"; echo; cat ChangeLog) > /tmp/portbuilder-ChangeLog-$TAG
   mv /tmp/portbuilder-ChangeLog-$TAG ChangeLog
   git add ChangeLog
-  if git commit --no-edit
+  if [ -z "$NOMERGE" ] && git commit --no-edit
   then
     git branch -d $BRANCH
   else
