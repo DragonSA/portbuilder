@@ -30,15 +30,15 @@ tree.  For example, to build all of KDE specify x11/kde4, or for VLC specify
 multimedia/vlc
 
 
-Usage:  portbuilder [-abdnpruFNU] [-c CONFIG] [-C CHROOT] [-D variable]
+Usage:  portbuilder [-abdnpruFNPU] [-c CONFIG] [-C CHROOT] [-D variable]
                     [-f PORTS_FILE] [-j J] [long-options] [variable=value]
                     port ...
 
 Options:
   --version             show program's version number and exit
   -h, --help            show this help message and exit
-  -a, --all             Add all installed ports to the list (aka `pkg_info-
-                        aoq`)
+  -a, --all             Add all installed ports to the list, requires either
+                        -u or -U
   --arch=ARCH           Set the architecture environment variables (for cross
                         building)
   -b, --batch           Batch mode.  Skips the config stage
@@ -52,7 +52,7 @@ Options:
   -f PORTS_FILE, --ports-file=PORTS_FILE
                         Use ports from file
   -F, --fetch-only      Only fetch the distribution files for the ports
-  -j J                  Set the queue loads [defaults: attr=#CPU,
+  -j J                  Set the queue loads [defaults: attr=CPU,
                         checksum=CPU/2, fetch=1, build=CPU*2, install=1,
                         package=1]
   --method=METHOD       Comma separated list of methods to resolve
@@ -62,13 +62,15 @@ Options:
   -N                    Do not execute any commands.
   --no-clean            Do not clean a port after it it has been
                         installed/packaged.
-  -p, --package         Create packages for specified ports.
-  -P, --package-all     Create packages for all installed ports
+  -p, --package         Create packages for specified ports that get
+                        installed.
+  -P, --package-all     Create packages for all ports that get installed
+                        (including indirect ports)
   --pkgng               Use pkgng as the package manager.
   --preclean            Pre-clean before building a port
   --profile=PROFILE     Produce a profile of a run saved to file PROFILE
   -u, --upgrade         Upgrade specified ports.
-  -U, --upgrade-all     Upgrade specified ports and all its dependencies.
+  -U, --upgrade-all     Upgrade specified ports and all indirect ports.
 
 
 EXAMPLES
@@ -130,9 +132,9 @@ q    - Quit portbuilder (once to send SIGTERM to all jobs,
 
 NOTES
 -----
- * Build log files are stored in /tmp/portbuilder, check there if a port failed.
+ * Build log-files are stored in /tmp/portbuilder, check there if a port failed.
  * Ensure the program runs as root, or has write access to build area (and
-   /usr/ports/distfiles if ports need to fetch).
+   /usr/ports/distfiles if ports need to fetch distfiles).
  * The load per stage can be seen under libpb/queue.py (at end of file).
    Default values (build load can be as high as cpus * 3 - 1, or more):
       attr     = CPUS
@@ -143,4 +145,8 @@ NOTES
       build    = CPUS * 2
       install  = 1
       package  = 1
-   NOTE: pkginstall stage shares the install queue
+   NOTE:
+      pkginstall stage shares the install queue
+      repoconfig stage shares the attr queue
+      repofetch stage shares the fetch queue
+      repoinstall stages shares the install queue

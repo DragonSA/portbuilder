@@ -221,7 +221,7 @@ def report():
 
 def gen_parser():
     """Create the options parser object."""
-    usage = ("\t%prog [-abdnpruFNU] [-c CONFIG] [-C CHROOT] [-D variable] "
+    usage = ("\t%prog [-abdnpruFNPU] [-c CONFIG] [-C CHROOT] [-D variable] "
              "[-f PORTS_FILE] [-j J] [long-options] [variable=value] port ...")
 
     parser = optparse.OptionParser(usage, version="%prog 0.1.5.3")
@@ -283,11 +283,12 @@ def gen_parser():
                       "it has been installed/packaged.")
 
     parser.add_option("-p", "--package", action="store_true", default=False,
-                      help="Create packages for specified ports.")
+                      help="Create packages for specified ports that get "
+                      "installed.")
 
     parser.add_option("-P", "--package-all", dest="packageA", default=False,
                       action="store_true", help="Create packages for all "
-                      "installed ports")
+                      "ports that get installed (including indirect ports)")
 
     parser.add_option("--pkgng", dest="pkgng", default=False,
                       action="store_true", help="Use pkgng as the package "
@@ -306,7 +307,7 @@ def gen_parser():
 
     parser.add_option("-U", "--upgrade-all", dest="upgradeA", default=False,
                       action="store_true", help="Upgrade specified ports and "
-                      "all its dependencies.")
+                      "all indirect ports.")
 
     #parser.add_option("--index", action="store_true", default=False,
     #                  help="Create the INDEX file for the ports "
