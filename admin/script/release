@@ -63,7 +63,7 @@ __EOF
 
   echo "4.3) Merge release branch into master"
   git checkout $TAG_BRANCH
-  git merge --no-ff $BRANCH
+  git merge --no-ff --no-edit $BRANCH
 
   echo "4.4) Tag annotated release (with ChangeLog for comment)"
   (python -c "import sys; exec sys.stdin.read()" << __EOF
