@@ -227,8 +227,8 @@ def gen_parser():
     parser = optparse.OptionParser(usage, version="%prog 0.1.5.3")
 
     parser.add_option("-a", "--all", action="store_true", default=False,
-                      help="Add all installed ports to the list (aka `pkg_info"
-                      "-aoq`)")
+                      help="Add all installed ports to the list, requires "
+                      "either -u or -U")
 
     parser.add_option("--arch", action="store", type="string", default="",
                       help="Set the architecture environment variables (for "
@@ -263,7 +263,7 @@ def gen_parser():
 
     parser.add_option("-j", action="callback", type="string",
                       callback=parse_jobs, help="Set the queue loads [defaults:"
-                      " attr=#CPU, checksum=CPU/2, fetch=1, build=CPU*2, "
+                      " attr=CPU, checksum=CPU/2, fetch=1, build=CPU*2, "
                       "install=1, package=1]")
 
     parser.add_option("--method", action="store", type="string", default="",
@@ -361,6 +361,8 @@ def set_options(options):
 
     # Add all installed ports to port list
     if options.all:
+        if not (options.upgrade or options.upgradeA):
+            options.parser.error("-a requires either -u or -U")
         options.args.extend(pkg.db.ports.keys())
 
     # Architecture flag
