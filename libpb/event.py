@@ -16,7 +16,7 @@ __all__ = ["alarm", "event", "pending_events", "post_event", "resume", "run",
            "start", "stop", "suspend", "traceback"]
 
 try:
-    select.kevent(0, 0, 0, KQ_NOTE_EXIT, 0, 0)
+    select.kevent(0, 0, 0, select.KQ_NOTE_EXIT, 0, 0)
     ISSUE11973 = False
 except OverflowError:
     ISSUE11973 = True
