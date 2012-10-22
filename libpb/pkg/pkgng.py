@@ -52,7 +52,7 @@ def change(port, prop, value):
     """Change a property of a package,"""
     if prop == "explicit":
         auto = "0" if value else "1"
-        return ("pkg", "set", "-ya", auto, port.attr["pkgname"])
+        return ("pkg", "set", "-yA", auto, port.attr["pkgname"])
     else:
         assert not "unknown package property '%s'" % prop
 
