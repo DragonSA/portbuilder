@@ -249,7 +249,7 @@ ports_attr = {
 "descr":      ["_DESCR",     str],                # The port's description file
 "comment":    ["COMMENT",    str],                # The port's comment
 "maintainer": ["MAINTAINER", str],                # The port's maintainer
-"options":    ["_COMPLETE_OPTIONS_LIST", tuple],  # The port's options
+"options":    ["COMPLETE_OPTIONS_LIST", tuple],  # The port's options
 "_options":   ["PORT_OPTIONS",           tuple],  # The port's active options
 "prefix":     ["PREFIX",                 str],    # The port's install prefix
 
