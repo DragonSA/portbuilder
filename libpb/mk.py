@@ -245,16 +245,16 @@ ports_attr = {
 "depend_package": ["PKG_DEPENDS",     tuple], # The port's package dependencies
 
 # Sundry port information
-"category":   ["CATEGORIES", tuple],              # The port's categories
-"descr":      ["_DESCR",     str],                # The port's description file
-"comment":    ["COMMENT",    str],                # The port's comment
-"maintainer": ["MAINTAINER", str],                # The port's maintainer
+"category":   ["CATEGORIES", tuple],             # The port's categories
+"descr":      ["_DESCR",     str],               # The port's description file
+"comment":    ["COMMENT",    str],               # The port's comment
+"maintainer": ["MAINTAINER", str],               # The port's maintainer
 "options":    ["COMPLETE_OPTIONS_LIST", tuple],  # The port's options
-"_options":   ["PORT_OPTIONS",           tuple],  # The port's active options
-"prefix":     ["PREFIX",                 str],    # The port's install prefix
+"_options":   ["PORT_OPTIONS",          tuple],  # The port's active options
+"prefix":     ["PREFIX",                str],    # The port's install prefix
 
 # Distribution information
-"distfiles": ["DISTFILES",    tuple], # The port's distfiles
+"distfiles": ["DISTFILES",     tuple], # The port's distfiles
 "distdir":   ["_DISTDIR",      str],   # The port's distfile's sub-directory
 "distinfo":  ["DISTINFO_FILE", str],   # The port's distinfo file
 
@@ -320,7 +320,7 @@ ports_attr["makefiles"].append(lambda x: [i for i in x if i != '..'])
 
 
 def ports_options(attr):
-    """Convert _COMPLETE_OPTIONS_LIST and PORT_OPTIONS into an option dict."""
+    """Convert COMPLETE_OPTIONS_LIST and PORT_OPTIONS into an option dict."""
     options = {}
     for opt in attr["options"]:
         options[opt] = "on" if opt in attr["_options"] else "off"
