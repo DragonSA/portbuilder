@@ -67,7 +67,10 @@ def main():
     if len(options.args) == 0 and not options.all and not options.ports_file:
         print parser.get_usage()
         return
-    sys.stderr.write("Loading /etc/make.conf (defaults)...")
+    sys.stderr.write("Bootstrapping /etc/make.conf (defaults)...")
+    mk.bootstrap_master()
+    sys.stderr.write("done\n")
+    sys.stderr.write("Loading bsd.ports.mk (defaults)...")
     mk.load_defaults()
     sys.stderr.write("done\n")
     sys.stderr.write("Loading package datebase...")
