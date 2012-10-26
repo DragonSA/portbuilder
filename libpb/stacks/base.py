@@ -54,10 +54,7 @@ class Stage(job.Job):
     @property
     def priority(self):  # pylint: disable-msg=E0202
         """The priority of the job, inherited from the port's priority."""
-        return self.port.priority
-
-    def __le__(self, other):
-        return self.port < other.port
+        return self.port.dependent.priority
 
     def work(self):
         assert not self.stack.working
