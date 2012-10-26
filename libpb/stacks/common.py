@@ -69,7 +69,7 @@ class Config(mutators.MakeStage):
                         # was set for
                         config_pkgname = i[14:-1]
                     elif i.startswith("_FILE_COMPLETE_OPTIONS_LIST"):
-                        options.update(i[28:].split())
+                        options.update(i[28:-1].split())
                         break
                     elif i.startswith("WITHOUT_"):
                         options.add(i[8:-6])
@@ -138,7 +138,7 @@ class Depend(base.Stage):
                         if name in distfiles:
                             priority += int(size)
         self.port.priority = priority
-        self.port.dependent.priority += self.priority
+        self.port.dependent.priority += priority
         depends = ("depend_build", "depend_extract", "depend_fetch",
                    "depend_lib", "depend_run", "depend_patch", "depend_package")
         depends = [self.port.attr[i] for i in depends]

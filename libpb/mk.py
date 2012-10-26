@@ -11,23 +11,44 @@ from libpb import env, job, log, make, queue, signal
 __all__ = ["Attr", "attr", "cache", "clean", "load_defaults"]
 
 
+def bootstrap_master():
+    args = ["make", "-f", "/dev/null"] + ["-V%s" % i for i in env.master]
+    if env.flags["chroot"]:
+        args = ["chroot", env.flags["chroot"]] + args
+    pmake = subprocess.Popen(args, stdin=subprocess.PIPE, close_fds=True,
+                             stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    pmake.stdin.close()
+    pmake.stderr.close()
+    if pmake.wait() == 0:
+        make_env = dict((i, j.strip())
+                               for i, j in zip(env.master, pmake.stdout.readlines()))
+    else:
+        make_env = dict((i, "") for i in keys)
+
+    # Update master with predefined values from make.conf
+    for k in env.master:
+        if k in env.env:
+            env.master[k] = None
+        elif make_env[k]:
+            env.env[k] = env.master[k] = make_env[k]
+        else:
+            env.env[k] = env.master[k]
+
 def load_defaults():
     """
     Load the defaults as specified from /etc/make.conf.
 
     Requires flags["chroot"] and env.env to be initialised.
     """
-    menv = [
+    keys = set([
             # DEPENDS_TARGET modifiers
             "DEPENDS_CLEAN", "DEPENDS_PRECLEAN", "DEPENDS_TARGET",
             # Sundry items
             "BATCH", "USE_PACKAGE_DEPENDS", "WITH_DEBUG", "WITH_PKGNG"
-        ]
+        ])
 
-    master_keys = env.env_master.keys()
-    keys = set(menv + master_keys)
-
-    args = ["make", "-f/dev/null"] + ["-V%s" % i for i in keys]
+    bsd_ports_mk = os.path.join(env.env["PORTSDIR"], "Mk", "bsd.ports.mk")
+    args = ["make", "-f", bsd_ports_mk] + ["-V%s" % i for i in keys]
     args += ["-D%s" % k if v is True else "%s=%s" % (k, v)
                                                   for k, v in env.env.items()]
     if env.flags["chroot"]:
@@ -41,15 +62,6 @@ def load_defaults():
                                for i, j in zip(keys, pmake.stdout.readlines()))
     else:
         make_env = dict((i, "") for i in keys)
-
-    # Update env_master with predefined values from make.conf
-    for k in master_keys:
-        if k in env.env:
-            env.env_master[k] = None
-        elif make_env[k]:
-            env.env[k] = env.env_master[k] = make_env[k]
-        else:
-            env.env[k] = env.env_master[k]
 
     # DEPENDS_TARGET / flags["target"] modifiers
     if make_env["DEPENDS_TARGET"]:
@@ -245,16 +257,16 @@ ports_attr = {
 "depend_package": ["PKG_DEPENDS",     tuple], # The port's package dependencies
 
 # Sundry port information
-"category":   ["CATEGORIES", tuple],              # The port's categories
-"descr":      ["_DESCR",     str],                # The port's description file
-"comment":    ["COMMENT",    str],                # The port's comment
-"maintainer": ["MAINTAINER", str],                # The port's maintainer
-"options":    ["_COMPLETE_OPTIONS_LIST", tuple],  # The port's options
-"_options":   ["PORT_OPTIONS",           tuple],  # The port's active options
-"prefix":     ["PREFIX",                 str],    # The port's install prefix
+"category":   ["CATEGORIES", tuple],             # The port's categories
+"descr":      ["_DESCR",     str],               # The port's description file
+"comment":    ["COMMENT",    str],               # The port's comment
+"maintainer": ["MAINTAINER", str],               # The port's maintainer
+"options":    ["COMPLETE_OPTIONS_LIST", tuple],  # The port's options
+"_options":   ["PORT_OPTIONS",          tuple],  # The port's active options
+"prefix":     ["PREFIX",                str],    # The port's install prefix
 
 # Distribution information
-"distfiles": ["DISTFILES",    tuple], # The port's distfiles
+"distfiles": ["DISTFILES",     tuple], # The port's distfiles
 "distdir":   ["_DISTDIR",      str],   # The port's distfile's sub-directory
 "distinfo":  ["DISTINFO_FILE", str],   # The port's distinfo file
 
@@ -320,7 +332,7 @@ ports_attr["makefiles"].append(lambda x: [i for i in x if i != '..'])
 
 
 def ports_options(attr):
-    """Convert _COMPLETE_OPTIONS_LIST and PORT_OPTIONS into an option dict."""
+    """Convert COMPLETE_OPTIONS_LIST and PORT_OPTIONS into an option dict."""
     options = {}
     for opt in attr["options"]:
         options[opt] = "on" if opt in attr["_options"] else "off"
