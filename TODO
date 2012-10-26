@@ -12,6 +12,10 @@ Low Handing Fruit:
  - fine tune queue lengths
  - manual page
  - wiki page
+ + cache variables (with != assignment) from $PORTSDIR/Mk/bsd.*.mk:
+   * bsd.ports.mk
+   ! bsd.ports.subdirs.mk
+   - ...
 
 Future release:
  - Speed up port_version()

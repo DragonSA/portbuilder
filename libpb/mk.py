@@ -8,7 +8,7 @@ import subprocess
 
 from libpb import env, job, log, make, queue, signal
 
-__all__ = ["Attr", "attr", "cache", "clean", "load_defaults"]
+__all__ = ["Attr", "attr", "bootstrap_master", "clean", "load_defaults"]
 
 
 def bootstrap_master():
@@ -40,17 +40,25 @@ def load_defaults():
 
     Requires flags["chroot"] and env.env to be initialised.
     """
-    keys = set([
+    cache = [
+            "ARCH", "OPSYS", "OSREL", "OSVERSION", "HAVE_COMPAT_IA32_KERN",
+            "LINUX_OSRELEASE", "UID", "CONFIGURE_MAX_CMD_LEN", "_OSVERSION"
+        ]
+    cache_defines = [
+            "USE_LINUX"
+        ]
+    keys = cache + [
             # DEPENDS_TARGET modifiers
             "DEPENDS_CLEAN", "DEPENDS_PRECLEAN", "DEPENDS_TARGET",
             # Sundry items
             "BATCH", "USE_PACKAGE_DEPENDS", "WITH_DEBUG", "WITH_PKGNG"
-        ])
+        ]
 
     bsd_ports_mk = os.path.join(env.env["PORTSDIR"], "Mk", "bsd.ports.mk")
     args = ["make", "-f", bsd_ports_mk] + ["-V%s" % i for i in keys]
     args += ["-D%s" % k if v is True else "%s=%s" % (k, v)
                                                   for k, v in env.env.items()]
+    args += ["-D%s" % k for k in cache]
     if env.flags["chroot"]:
         args = ["chroot", env.flags["chroot"]] + args
     pmake = subprocess.Popen(args, stdin=subprocess.PIPE, close_fds=True,
@@ -90,6 +98,9 @@ def load_defaults():
     if make_env["WITH_PKGNG"]:
         env.flags["pkg_mgmt"] = "pkgng"
 
+    for k in cache:
+        os.environ[k] = make_env[k]
+
 
 def clean():
     """Clean the env and os.environ.."""
@@ -104,35 +115,6 @@ def clean():
             del os.environ[key]
         except KeyError:
             pass
-
-
-def cache():
-    """Cache commonly used variables. which are expensive to compute."""
-    # Variables conditionally set in ports/Mk/bsd.port.mk
-    uname = os.uname()
-    if "ARCH" not in os.environ:
-        os.environ["ARCH"] = uname[4]
-    if "OPSYS" not in os.environ:
-        os.environ["OPSYS"] = uname[0]
-    if "OSREL" not in os.environ:
-        os.environ["OSREL"] = uname[2].split('-', 1)[0].split('(', 1)[0]
-    if "OSVERSION" not in os.environ:
-        os.environ["OSVERSION"] = _get_os_version()
-    if (uname[4] in ("amd64", "ia64") and
-        "HAVE_COMPAT_IA32_KERN" not in os.environ):
-        # TODO: create ctypes wrapper around sysctl(3)
-        has_compact = "YES" if _sysctl("compat.ia32.maxvmem") else ""
-        os.environ["HAVE_COMPAT_IA32_KERN"] = has_compact
-    if "LINUX_OSRELEASE" not in os.environ:
-        os.environ["LINUX_OSRELEASE"] = _sysctl("compat.linux.osrelease")
-    if "UID" not in os.environ:
-        os.environ["UID"] = str(os.getuid())
-    if "CONFIGURE_MAX_CMD_LEN" not in os.environ:
-        os.environ["CONFIGURE_MAX_CMD_LEN"] = _sysctl("kern.argmax")
-
-    # Variables conditionally set in ports/Mk/bsd.port.subdir.mk
-    if "_OSVERSION" not in os.environ:
-        os.environ["_OSVERSION"] = uname[2]
 
 
 def attr(origin):
@@ -204,30 +186,6 @@ class Attr(signal.Signal):
 
         self.emit(self.origin, attr_map)
 
-
-def _sysctl(name):
-    """Retrieve the string value of a sysctlbyname(3)."""
-    # TODO: create ctypes wrapper around sysctl(3)
-    sysctl = subprocess.Popen(("sysctl", "-n", name), stdout=subprocess.PIPE,
-                              stderr=subprocess.PIPE, close_fds=True)
-    if sysctl.wait() == 0:
-        return sysctl.stdout.read()[:-1]
-    else:
-        return ""
-
-
-def _get_os_version():
-    """Get the OS Version.  Based on how ports/Mk/bsd.port.mk sets OSVERSION"""
-    # XXX: platform specific code
-    for path in (env.flags["chroot"] + "/usr/include/sys/param.h",
-                 env.flags["chroot"] + "/usr/src/sys/sys/param.h"):
-        if os.path.isfile(path):
-            # We have a param.h
-            osversion = re.search('^#define\s+__FreeBSD_version\s+([0-9]*).*$',
-                                open(path, "r").read(), re.MULTILINE)
-            if osversion:
-                return osversion.groups()[0]
-    return _sysctl("kern.osreldate")
 
 #=============================================================================#
 #                          PORTS ATTRIBUTE SECTION                            #
