@@ -1,4 +1,4 @@
-X.Y.Z - YYYY MMM DD:
+0.1.5.4 - 2012 October 26:
  * Fixes:
    * ordering of jobs
    * auto (dependency) flag for pkgng
