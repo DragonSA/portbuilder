@@ -1,3 +1,6 @@
+X.Y.Z - YYYY MMM DD:
+ * Fix ordering of jobs
+
 0.1.5.3 - 2012 August 19:
  * Dynamically work around python issue 11973
 

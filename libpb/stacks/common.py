@@ -138,7 +138,7 @@ class Depend(base.Stage):
                         if name in distfiles:
                             priority += int(size)
         self.port.priority = priority
-        self.port.dependent.priority += self.priority
+        self.port.dependent.priority += priority
         depends = ("depend_build", "depend_extract", "depend_fetch",
                    "depend_lib", "depend_run", "depend_patch", "depend_package")
         depends = [self.port.attr[i] for i in depends]
