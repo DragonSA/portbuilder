@@ -6,7 +6,7 @@ import os
 
 __all__ = [
         "CPUS", "CONFIG", "DEPEND", "MODE", "PKG_MGMT", "STAGE", "TARGET",
-        "env", "env_master", "flags",
+        "env", "master", "flags",
     ]
 
 CPUS = os.sysconf("SC_NPROCESSORS_ONLN")
@@ -15,7 +15,7 @@ PORTSDIR = "/usr/ports"
 PKG_CACHEDIR = "/var/cache/pkg"
 
 env = {}
-env_master = {
+master = {
   "PORTSDIR"     : PORTSDIR,     # Ports directory
   "PKG_CACHEDIR" : PKG_CACHEDIR  # Local cache of remote repositories
 }
