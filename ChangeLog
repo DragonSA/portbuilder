@@ -4,6 +4,7 @@ X.Y.Z - YYYY MMM DD:
    * auto (dependency) flag for pkgng
    * deadlock between OS pipes and wait()
    * options detection (track changes in Port's infrastructure)
+   * detection of pkgng mode (aka ${OSVERSION} > 1000017)
 
 0.1.5.3 - 2012 August 19:
  * Dynamically work around python issue 11973
