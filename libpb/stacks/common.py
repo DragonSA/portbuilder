@@ -69,7 +69,7 @@ class Config(mutators.MakeStage):
                         # was set for
                         config_pkgname = i[14:-1]
                     elif i.startswith("_FILE_COMPLETE_OPTIONS_LIST"):
-                        options.update(i[28:].split())
+                        options.update(i[28:-1].split())
                         break
                     elif i.startswith("WITHOUT_"):
                         options.add(i[8:-6])

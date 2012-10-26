@@ -52,7 +52,7 @@ def change(port, prop, value):
     """Change a property of a package,"""
     if prop == "explicit":
         auto = "0" if value else "1"
-        return ("pkg", "set", "-ya", auto, port.attr["pkgname"])
+        return ("pkg", "set", "-yA", auto, port.attr["pkgname"])
     else:
         assert not "unknown package property '%s'" % prop
 
@@ -70,7 +70,7 @@ def info(repo=False):
 
 def query(port, prop, repo=False):
     """Query q property of a package."""
-    args = ("pkg", "rquery" if repo else "query", "-F", port.attr["pkgname"])
+    args = ("pkg", "rquery" if repo else "query", port.attr["pkgname"])
     if prop == "config":
         args += ("%Ok %Ov",)
     else:
