@@ -2,7 +2,7 @@
 # Date created:				2011/04/03
 # Whom:					David Naylor <naylor.b.david@gmail.com>
 #
-# $FreeBSD$
+# $FreeBSD: ports/ports-mgmt/portbuilder/Makefile,v 1.10 2012/09/11 01:16:01 tj Exp $
 
 PORTNAME=	portbuilder
 DISTVERSION=	0.1.5.4
@@ -20,8 +20,10 @@ USE_XZ=		yes
 
 PORTDOCS=	BUGS ChangeLog COPYRIGHT README
 
+.include <bsd.port.options.mk>
+
 post-install:
-.if !defined(NOPORTDOCS)
+.if ${PORT_OPTIONS:MDOCS}
 	${MKDIR} ${DOCSDIR}
 .for file in ${PORTDOCS}
 	${INSTALL_DATA} ${WRKSRC}/${file} ${DOCSDIR}
