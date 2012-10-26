@@ -1,5 +1,9 @@
 X.Y.Z - YYYY MMM DD:
- * Fix ordering of jobs
+ * Fixes:
+   * ordering of jobs
+   * auto (dependency) flag for pkgng
+   * deadlock between OS pipes and wait()
+   * options detection (track changes in Port's infrastructure)
 
 0.1.5.3 - 2012 August 19:
  * Dynamically work around python issue 11973
