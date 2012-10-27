@@ -56,7 +56,7 @@ def load_defaults():
     args = ["make", "-f", bsd_ports_mk] + ["-V%s" % i for i in keys]
     args += ["-D%s" % k if v is True else "%s=%s" % (k, v)
                             for k, v in env.env.items() if k not in env.master]
-    args += ["-D%s" % k for k in cache_defines]
+    args += ["%s=yes" % k for k in cache_defines]
     if env.flags["chroot"]:
         args = ["chroot", env.flags["chroot"]] + args
     pmake = subprocess.Popen(args, stdin=subprocess.PIPE, close_fds=True,
