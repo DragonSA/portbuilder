@@ -70,7 +70,7 @@ def main():
     sys.stderr.write("Bootstrapping /etc/make.conf (defaults)...")
     mk.bootstrap_master()
     sys.stderr.write("done\n")
-    sys.stderr.write("Loading bsd.ports.mk (defaults)...")
+    sys.stderr.write("Loading bsd.port.mk (state variables)...")
     mk.load_defaults()
     mk.clean()
     sys.stderr.write("done\n")

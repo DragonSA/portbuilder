@@ -42,23 +42,21 @@ def load_defaults():
     """
     cache = [
             "ARCH", "OPSYS", "OSREL", "OSVERSION", "HAVE_COMPAT_IA32_KERN",
-            "LINUX_OSRELEASE", "UID", "CONFIGURE_MAX_CMD_LEN", "_OSVERSION"
+            "LINUX_OSRELEASE", "UID", "CONFIGURE_MAX_CMD_LEN",
         ]
     cache_defines = [
-            "USE_LINUX"
+            "GNU_CONFIGURE", "USE_LINUX",
         ]
     keys = cache + [
-            # DEPENDS_TARGET modifiers
-            "DEPENDS_CLEAN", "DEPENDS_PRECLEAN", "DEPENDS_TARGET",
-            # Sundry items
-            "BATCH", "USE_PACKAGE_DEPENDS", "WITH_DEBUG", "WITH_PKGNG"
+            "DEPENDS_TARGET", "BATCH", "USE_PACKAGE_DEPENDS", "WITH_DEBUG",
+            "WITH_PKGNG",
         ]
 
-    bsd_ports_mk = os.path.join(env.env["PORTSDIR"], "Mk", "bsd.ports.mk")
+    bsd_ports_mk = os.path.join(env.env["PORTSDIR"], "Mk", "bsd.port.mk")
     args = ["make", "-f", bsd_ports_mk] + ["-V%s" % i for i in keys]
     args += ["-D%s" % k if v is True else "%s=%s" % (k, v)
-                                                  for k, v in env.env.items()]
-    args += ["-D%s" % k for k in cache]
+                            for k, v in env.env.items() if k not in env.master]
+    args += ["-D%s" % k for k in cache_defines]
     if env.flags["chroot"]:
         args = ["chroot", env.flags["chroot"]] + args
     pmake = subprocess.Popen(args, stdin=subprocess.PIPE, close_fds=True,
@@ -71,24 +69,15 @@ def load_defaults():
     else:
         make_env = dict((i, "") for i in keys)
 
-    # DEPENDS_TARGET / flags["target"] modifiers
-    if make_env["DEPENDS_TARGET"]:
-        env.flags["target"] = make_env["DEPENDS_TARGET"].split()
-        for i in env.flags["target"]:
-            if i == "reinstall":
-                i = env.flags["target"][env.flags["target"].find(i)] = "install"
-            if i not in env.TARGET:
-                raise ValueError("unsupported DEPENDS_TARGET: '%s'" % i)
-        if "install" not in env.flags["target"] and \
-                "package" not in env.flags["target"]:
-            raise ValueError("DEPENDS_TARGET must have install or package")
-    else:
-        if make_env["DEPENDS_CLEAN"] and env.flags["target"][-1] != "clean":
-            env.flags["target"] = env.flags["target"] + ["clean"]
-        if make_env["DEPENDS_PRECLEAN"] and env.flags["target"][0] != "clean":
-            env.flags["target"] = ["clean"] + env.flags["target"]
+    targets = make_env["DEPENDS_TARGET"].replace("reinstall", "install")
+    env.flags["target"] = targets.split()
+    bad_target = [i for i in env.flags["target"] if i not in env.TARGET]
+    if bad_target:
+        raise ValueError("unsupported DEPENDS_TARGET: " + ", ".join(bad_target))
+    if "install" not in env.flags["target"] and \
+            "package" not in env.flags["target"]:
+        raise ValueError("DEPENDS_TARGET must have either install or package")
 
-    # Sundry items
     if make_env["BATCH"]:
         env.flags["config"] = "none"
     if make_env["USE_PACKAGE_DEPENDS"]:
@@ -100,6 +89,8 @@ def load_defaults():
 
     for k in cache:
         os.environ[k] = make_env[k]
+        if not make_env[k]:
+            log.error("load_defaults()", "Cached variable '%s' is empty" % k)
 
 
 def clean():
