@@ -1,18 +1,16 @@
-# New ports collection Makefile for:	portbuilder
-# Date created:				2011/04/03
-# Whom:					David Naylor <naylor.b.david@gmail.com>
-#
-# $FreeBSD: ports/ports-mgmt/portbuilder/Makefile,v 1.10 2012/09/11 01:16:01 tj Exp $
+# Created by: David Naylor <naylor.b.david@gmail.com>
+# $FreeBSD: ports/ports-mgmt/portbuilder/Makefile,v 1.12 2012/10/27 07:36:36 avilla Exp $
 
 PORTNAME=	portbuilder
 DISTVERSION=	0.1.5.4
+PORTREVISION=	1
 CATEGORIES=	ports-mgmt
 MASTER_SITES=	http://cloud.github.com/downloads/DragonSA/portbuilder/
 
 MAINTAINER=	naylor.b.david@gmail.com
 COMMENT=	Concurrent FreeBSD port builder
 
-LICENSES=	BSD
+LICENSE=	BSD
 
 USE_PYTHON=	2.6+
 USE_PYDISTUTILS=yes
