@@ -67,6 +67,10 @@ def main():
     if len(options.args) == 0 and not options.all and not options.ports_file:
         print parser.get_usage()
         return
+    # Make sure log_dir is available
+    mkdir(flags["log_dir"])
+
+    # Initialise libpb
     sys.stderr.write("Bootstrapping /etc/make.conf (defaults)...")
     mk.bootstrap_master()
     sys.stderr.write("done\n")
@@ -82,9 +86,6 @@ def main():
         sys.stderr.write("Loading repository database...")
         pkg.repo_db.load()
         sys.stderr.write("done\n")
-
-    # Make sure log_dir is available
-    mkdir(flags["log_dir"])
 
     # Install signal handlers
     signal.signal(signal.SIGINT, signal.SIG_IGN)
