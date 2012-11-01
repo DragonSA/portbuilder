@@ -125,6 +125,10 @@ versioning() {
   sed -i '' -e "s/$OLD_TAG/$TAG/g" -e '/^PORTREVISION/d' port/Makefile
   rm port/distinfo
   git add port/Makefile
+  if [ -d port/files ]
+  then
+    git rm -r port/files
+  fi
 
   echo "3.1.4) Update version in ./ChangeLog"
   sed -i '' -e "s/X.Y.Z/$TAG/" -e "s/YYYY MMM DD/`date '+%Y %B %d'`/" ChangeLog
