@@ -7,7 +7,7 @@ import threading
 import time
 import Queue
 
-__all__ = ['dispatcher', 'post', 'run', 'Event']
+__all__ = ['dispatch', 'dispatcher', 'event', 'post', 'run', 'Event']
 
 
 def dispatcher(dispatch=None):
@@ -49,13 +49,14 @@ class EventContext(object):
 class Event(object):
     """An event"""
 
-    def __init__(self, func, args=tuple(), kwargs=dict()):
+    def __init__(self, func=None, args=tuple(), kwargs=dict()):
         self.__func = func
         self.__args = args
         self.__kwargs = kwargs
         self.context = None
 
     def dispatch(self):
+        assert(self.__func is not None)
         self.__func(*self.__args, **self.__kwargs)
 
 
@@ -129,7 +130,8 @@ class Dispatcher(object):
 
         Events should not be posted more than once.
         """
-        if args is not None or kwargs is not None:
+        if (args is not None or kwargs is not None or 
+                not isinstance(eventorfunc, Event)):
             assert(callable(eventorfunc))
             if args is None:
                 args = tuple()

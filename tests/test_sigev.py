@@ -7,6 +7,75 @@ import random
 
 import sigev
 
+
+class TestDispatcherContext(unittest.TestCase):
+    """
+    Test dispatcher context manager.
+    """
+
+    def test_exp(self):
+        """Test exceptions raised during a context"""
+        log = []
+        def confirm():
+            log.append(True)
+
+        exc = None
+        try:
+            with sigev.dispatcher():
+                sigev.post_event(confirm)
+                raise RuntimeError()
+        except BaseException, e:
+            exc = e
+
+        self.assertTrue(isinstance(exc, RuntimeError))
+        self.assertEqual(len(log), 0)
+
+    def test_exp_run(self):
+        """Test exceptions raised during run"""
+        log = []
+        def store_and_raise(key):
+            log.append(key)
+            raise RuntimeError()
+
+        exc = None
+        try:
+            with sigev.dispatcher():
+                sigev.post_event(store_and_raise, args=(1,))
+                sigev.post_event(store_and_raise, args=(2,))
+                log.append(0)
+        except BaseException, e:
+            exc = e
+
+        self.assertEqual(len(log), 2)
+        self.assertEqual(log[0], 0)
+        self.assertEqual(log[1], 1)
+        
+    def test_nesting(self):
+        """Test nesting of contexts"""
+        log = []
+        def store(key):
+            log.append(key)
+        def store_and_nest(key):
+            log.append(key)
+            with sigev.dispatcher():
+                sigev.post_event(store, args=(key + 1,))
+            log.append(key + 2)
+
+        with sigev.dispatcher():
+            log.append(0)
+            sigev.post_event(store, args=(6,))
+            sigev.post_event(store_and_nest, args=(7,))
+
+            with sigev.dispatcher():
+                log.append(1)
+                sigev.post_event(store, args=(2,))
+                sigev.post_event(store_and_nest, args=(3,))
+
+        self.assertEqual(len(log), 10)
+        for i in range(10):
+            self.assertEqual(log[i], i)
+
+
 class TestEvent(unittest.TestCase):
     """
     Test events and event properties.
@@ -52,12 +121,28 @@ class TestEvent(unittest.TestCase):
         self.assertIs(log[0], None)
         self.assertIs(log[1], event.context)
 
+    def test_context_exc(self):
+        """Test the context after an exception"""
+        def die():
+            raise RuntimeError()
 
-    def test_event(self):
-        """Test posting and dispatching of events"""
+        event = sigev.Event(die)
+        exc = None
+        try:
+            with sigev.dispatcher() as dispatch:
+                sigev.post_event(event)
+        except RuntimeError, e:
+            exc = e
+        self.assertTrue(isinstance(exc, RuntimeError))
+        self.assertIs(dispatch.context, event.context)
+        
+    def test_Event(self):
+        """Test Event(); posting and dispatching"""
         container = []
         def store(key):
             container.append(key)
+        def storeNone():
+            container.append(None)
 
         key = random.random()
         with sigev.dispatcher():
@@ -67,9 +152,66 @@ class TestEvent(unittest.TestCase):
 
         key = random.random()
         with sigev.dispatcher():
-            sigev.post_event(store, args=(key,))
+            sigev.post_event(sigev.Event(store, kwargs={'key': key}))
         self.assertEqual(len(container), 2)
         self.assertEqual(container[-1], key)
+
+        with sigev.dispatcher():
+            sigev.post_event(sigev.Event(storeNone))
+        self.assertEqual(len(container), 3)
+        self.assertEqual(container[-1], None)
+
+    def test_Event_subclass(self):
+        """Test Event() subclassing; posting and dispatching"""
+        container = []
+        class Store(sigev.Event):
+            def __call__(self, key):
+                container.append(key)
+
+            def dispatch(self):
+                container.append(True)
+
+        with sigev.dispatcher():
+            sigev.post_event(Store())
+        self.assertEqual(len(container), 1)
+        self.assertEqual(container[-1], True)
+
+        key = random.random()
+        with sigev.dispatcher():
+            sigev.post_event(Store(), args=(key,))
+        self.assertEqual(len(container), 2)
+        self.assertEqual(container[-1], key)
+
+        key = random.random()
+        with sigev.dispatcher():
+            sigev.post_event(Store(), kwargs={'key': key})
+        self.assertEqual(len(container), 3)
+        self.assertEqual(container[-1], key)
+
+    def test_post_event(self):
+        """Test post_event(): posting and dispatching"""
+        container = []
+        def store(key):
+            container.append(key)
+        def storeNone():
+            container.append(None)
+
+        key = random.random()
+        with sigev.dispatcher():
+            sigev.post_event(store, args=(key,))
+        self.assertEqual(len(container), 1)
+        self.assertEqual(container[-1], key)
+
+        key = random.random()
+        with sigev.dispatcher():
+            sigev.post_event(store, kwargs={'key': key})
+        self.assertEqual(len(container), 2)
+        self.assertEqual(container[-1], key)
+
+        with sigev.dispatcher():
+            sigev.post_event(storeNone)
+        self.assertEqual(len(container), 3)
+        self.assertEqual(container[-1], None)
 
 
 if __name__ == '__main__':
