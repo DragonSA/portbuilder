@@ -6,6 +6,7 @@ events as done by the Qt graphical library (except all functions are slots).
 import threading
 import time
 import Queue
+import weakref
 
 __all__ = ['dispatch', 'dispatcher', 'event', 'post', 'run', 'Event']
 
@@ -60,6 +61,62 @@ class Event(object):
         self.__func(*self.__args, **self.__kwargs)
 
 
+class Signal(object):
+    """Signal object for listening to, and emitting of, events."""
+
+    def __init__(self):
+        self.__slots = []
+
+    def __contains__(self, obj):
+        return obj in self.__slots
+
+    def __len__(self):
+        return len(self.__slots)
+
+    def connect(self, func):
+        """Add 'func' as a callback function for the signal"""
+        assert(callable(func))
+        self.__slots.append(func)
+        return self
+
+    def disconnect(self, func):
+        """Remove 'func' as a callback function for the signal"""
+        assert(func in self.__slots)
+        self.__slots.remove(func)
+        return self
+
+    def emit(self, *args, **kwargs):
+        """Asynchonously call all callback function with (optional) arguments"""
+        for func in self.__slots:
+            post_event(Event(func, args, kwargs))
+        return self
+            
+
+class SignalProperty(object):
+    """Create a Signal() class property."""
+
+    def __init__(self, signal=Signal):
+        self._signal = Signal
+        self._signals = weakref.WeakKeyDictionary()
+        self._clssig = None
+
+    def __delete__(self, _instance):
+        raise AttributeError('signal property cannot be deleted')
+
+    def __get__(self, instance, _owner):
+        if instance is None:
+            if self._clssig is None:
+                self._clssig = self._signal()
+            return self._clssig
+        else:
+            if instance not in self._signals:
+                self._signals[instance] = self._signal()
+            return self._signals[instance]
+
+    def __set__(self, _instance, _value):
+        raise AttributeError('signal property cannot be overwritten')
+    
+            
 class Dispatcher(object):
     """Event loop for dispatching events, handling external event sources"""
 
@@ -181,6 +238,9 @@ class Dispatcher(object):
             # Get events from the external source
             if self._external is not None:
                 self._external.listen(self, block=self._queue.empty())
+
+        if self._external is not None:
+            self._external.stop()
 
 
 class LocalStack(threading.local):

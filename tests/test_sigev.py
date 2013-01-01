@@ -214,6 +214,79 @@ class TestEvent(unittest.TestCase):
         self.assertEqual(container[-1], None)
 
 
+class TestSignal(unittest.TestCase):
+    """Test the Signal() class"""
+
+    def test_connect_emit(self):
+        """Test connecting and emitting of signals"""
+        log = []
+        def store(key):
+            log.append(key)
+        def storeOne():
+            log.append(1)
+
+        with sigev.dispatcher():
+            sig = sigev.Signal()
+            sig.connect(storeOne)
+            sig.emit()
+            sig = sigev.Signal()
+            sig.connect(store)
+            sig.emit(2)
+            sig.emit(key=3)
+            log.append(0)
+        self.assertEqual(len(log), 4)
+        for i in range(4):
+            self.assertEqual(log[i], i)
+
+    def test_disconnect_chain(self):
+        """Test disconnecting and chaining of signals"""
+        log = []
+        def store(key):
+            log.append(key)
+
+        with sigev.dispatcher():
+            sig = sigev.Signal()
+            sig.connect(store).emit(0).disconnect(store).emit(1)
+        self.assertEqual(len(log), 1)
+        self.assertEqual(log[0], 0)
+
+
+class TestSignalProperty(unittest.TestCase):
+    """Test the SignalProperty() class"""
+
+    def test_sigprop(self):
+        """Test the SignalProperty() as a property"""
+        class AClass(object):
+            sig = sigev.SignalProperty()
+
+        clssig = AClass.sig
+        inst1 = AClass()
+        inst2 = AClass()
+        sig1 = inst1.sig
+        sig2 = inst2.sig
+
+        for obj in (clssig, sig1, sig2):
+            self.assertTrue(isinstance(obj, sigev.Signal))
+        self.assertEqual(len(set((clssig, sig1, sig2))), 3)
+        self.assertIs(clssig, AClass.sig)
+        self.assertIs(sig1, inst1.sig)
+        self.assertIs(sig2, inst2.sig)
+
+    def test_delset(self):
+        """Test the immutability of the SignalProperty()"""
+        class AClass(object):
+            sig = sigev.SignalProperty()
+
+        def setter(obj):
+            obj.sig = True
+        def deleter(obj):
+            del obj.sig
+
+        inst = AClass()
+        self.assertRaises(AttributeError, setter, inst)
+        self.assertRaises(AttributeError, deleter, inst)
+
+
 if __name__ == '__main__':
     unittest.main()
 
