@@ -49,7 +49,7 @@ class TestDispatcherContext(unittest.TestCase):
         self.assertEqual(len(log), 2)
         self.assertEqual(log[0], 0)
         self.assertEqual(log[1], 1)
-        
+
     def test_nesting(self):
         """Test nesting of contexts"""
         log = []
@@ -87,7 +87,7 @@ class TestEvent(unittest.TestCase):
         def inner_context(dispatch, context, parent):
             self.assertIs(dispatch.context, context)
             self.assertIs(context.context, parent)
-            self.assertGreater(context.time_dispatched, 
+            self.assertGreater(context.time_dispatched,
                     context.time_created)
             self.assertIs(context.time_duration, None)
 
@@ -135,7 +135,7 @@ class TestEvent(unittest.TestCase):
             exc = e
         self.assertTrue(isinstance(exc, RuntimeError))
         self.assertIs(dispatch.context, event.context)
-        
+
     def test_Event(self):
         """Test Event(); posting and dispatching"""
         container = []

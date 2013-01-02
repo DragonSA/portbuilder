@@ -3,10 +3,12 @@ The SIGnal and EVent library.  This implements a similar design of signals and
 events as done by the Qt graphical library (except all functions are slots).
 """
 
-import threading
+import abc
 import time
 import Queue
 import weakref
+
+from sigev import util
 
 __all__ = ['dispatch', 'dispatcher', 'event', 'post', 'run', 'Event']
 
@@ -81,16 +83,16 @@ class Signal(object):
 
     def disconnect(self, func):
         """Remove 'func' as a callback function for the signal"""
-        assert(func in self.__slots)
+        assert(func in self._slots)
         self._slots.remove(func)
         return self
 
     def emit(self, *args, **kwargs):
-        """Asynchonously call all callback function with (optional) arguments"""
+        """Asynchronously call all callback function with (optional) arguments"""
         for func in self._slots:
             post_event(Event(func, args, kwargs))
         return self
-            
+
 
 class SignalProperty(object):
     """Create a Signal() class property."""
@@ -129,8 +131,8 @@ class Filter(Signal):
     def fastpath(self):
         """Fastpath callback.
 
-        The fastpath callback is called synchroniously when the external
-        event is received.  
+        The fastpath callback is called synchronously when the external
+        event is received.
         """
         return self._fastpath
 
@@ -218,8 +220,8 @@ class ExternalSource(object):
     def stop(self):
         """Stop and shutdown the event source"""
         raise NotImplementedError()
-    
-            
+
+
 class Dispatcher(object):
     """Event loop for dispatching events, handling external event sources"""
 
@@ -234,8 +236,8 @@ class Dispatcher(object):
     def context(self):
         """
         The current event context.
-        
-        The event context contains information about the event.  See 
+
+        The event context contains information about the event.  See
         EventContext() for more information.
 
         A value of None indicates no event is being run.
@@ -290,7 +292,7 @@ class Dispatcher(object):
 
         Events should not be posted more than once.
         """
-        if (args is not None or kwargs is not None or 
+        if (args is not None or kwargs is not None or
                 not isinstance(eventorfunc, Event)):
             assert(callable(eventorfunc))
             if args is None:
@@ -320,7 +322,7 @@ class Dispatcher(object):
                 reentry = float('inf')
             else:
                 reentry = self._reentry
-            
+
             # Consume events
             while reentry > 0 and not self._queue.empty():
                 event = self._queue.get_nowait()
@@ -337,10 +339,10 @@ class Dispatcher(object):
                     self._queue.task_done()
                 self._context = None
                 reentry -= 1
-        
+
             # Get events from the external source
             if self._external is not None:
-                while len(self._external) and (reentry == 0 or 
+                while len(self._external) and (reentry == 0 or
                         self._queue.empty()):
                     self._external.listen(self, block=self._queue.empty())
 
@@ -348,43 +350,12 @@ class Dispatcher(object):
             self._external.stop()
 
 
-class LocalStack(threading.local):
-    """Thread local stack"""
-
-    def __init__(self, default=list()):
-        super(LocalStack, self).__init__()
-        self._stack = default
-
-    def push(self, item):
-        """Push item to the top of the stack"""
-        self._stack.append(item)
-
-    def get(self):
-        """Return top item of the stack"""
-        return self._stack[-1]
-
-    def pop(self):
-        """Remove top item of the stack"""
-        return self._stack.pop()
-
-
-class Singleton(type):
-    def __init__(cls, name, bases, namespace):
-        super(Singleton, cls).__init__(name, bases, namespace)
-        cls._instance = None
-
-    def __call__(cls, *args, **kwargs):
-        if cls._instance is None:
-            cls._instance = super(Singleton, cls).__call__(*args, **kwargs)
-        return cls._instance
-
-
 class DispatchRegister(object):
     """Register of thread specific event dispatchers with default dispatcher"""
-    __metaclass__ = Singleton
+    __metaclass__ = util.Singleton
 
     def __init__(self):
-        self.stack = LocalStack([Dispatcher()])
+        self.stack = util.LocalStack([Dispatcher()])
 
     def push(self, dispatch):
         """Push a dispatcher to the top of the stack"""
