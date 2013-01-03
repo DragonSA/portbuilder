@@ -4,6 +4,7 @@ events as done by the Qt graphical library (except all functions are slots).
 """
 
 import abc
+import inspect
 import time
 import Queue
 import weakref
@@ -18,6 +19,7 @@ def dispatcher(dispatch=None):
     if dispatch is None:
         dispatch = Dispatcher()
     return DispatchContextManager(dispatch)
+
 
 class DispatchContextManager(object):
     """@contextmanager for a dispatcher"""
@@ -51,16 +53,84 @@ class EventContext(object):
 
 class Event(object):
     """An event"""
+    ___metaclass__ = abc.ABCMeta
 
-    def __init__(self, func=None, args=tuple(), kwargs=dict()):
-        self.__func = func
-        self.__args = args
-        self.__kwargs = kwargs
+    def __init__(self):
         self.context = None
 
+    @abc.abstractmethod
     def dispatch(self):
-        assert(self.__func is not None)
-        self.__func(*self.__args, **self.__kwargs)
+        raise NotImplementedError()
+
+
+class FuncEvent(Event):
+    """An event for calling functions"""
+    ___metaclass__ = abc.ABCMeta
+
+    def __init__(self, func=None, args=tuple(), kwargs=dict()):
+        assert(callable(func))
+        super(FuncEvent, self).__init__()
+        self.func = func
+        self.args = args
+        self.kwargs = kwargs
+
+    def dispatch(self):
+        self.func(*self.args, **self.kwargs)
+
+
+class AdaptFuncEvent(FuncEvent):
+    """An event for calling, and adapting arguments passed to, a function"""
+
+    _argspec = weakref.WeakKeyDictionary()
+
+    def dispatch(self):
+        """Trim the `args' and `kwargs' to what is supported by `func'"""
+        if self.func not in self._argspec:
+            if inspect.isclass(self.func):
+                ismethod = True
+                if inspect.ismethod(self.func.__init__):
+                    spec = inspect.getargspec(self.func.__init__)
+                else:
+                    spec = inspect.ArgSpec(['self'], None, None, None)
+            elif inspect.ismethod(self.func.__call__):
+                ismethod = True
+                spec = inspect.getargspec(self.func.__call__)
+            else:
+                ismethod = inspect.ismethod(self.func)
+                spec = inspect.getargspec(self.func)
+            self._argspec[self.func] = (spec, ismethod)
+        else:
+            spec, ismethod = self._argspec[self.func]
+        if spec.varargs:
+            args = self.args
+        else:
+            args = self.args[:len(spec.args) - ismethod]
+        if spec.keywords:
+            kwargs = self.kwargs
+        else:
+            kwargs = dict((k, self.kwargs[k]) for k in
+                    spec.args[len(args) + ismethod:] if k in self.kwargs)
+        for key in spec.args[:len(args) + ismethod]:
+            if key in self.kwargs:
+                raise TypeError('%s() got multiple values for keyword argument '
+                        '\'%s\'' % (self.__funcname(), key))
+        takes = len(spec.args) - (len(spec.defaults) if spec.defaults else 0)
+        given = len(args) + len(kwargs) + ismethod
+        if takes > given:
+            plural = '' if takes == 1 else 's'
+            raise TypeError('%s() takes at least %i argument%s (%i given)' %
+                    (self.__funcname(), takes, plural, given))
+        self.func(*args, **kwargs)
+
+    def __funcname(self):
+        if inspect.isclass(self.func):
+            return '__init__'
+        elif hasattr(self.func, '__name__'):
+            return self.func.__name__
+        elif inspect.ismethod(self.func.__call__):
+            return '__call__'
+        else:
+            return '<lambda>'
 
 
 class Signal(object):
@@ -90,7 +160,7 @@ class Signal(object):
     def emit(self, *args, **kwargs):
         """Asynchronously call all callback function with (optional) arguments"""
         for func in self._slots:
-            post_event(Event(func, args, kwargs))
+            post_event(AdaptFuncEvent(func, args, kwargs))
         return self
 
 
@@ -299,7 +369,7 @@ class Dispatcher(object):
                 args = tuple()
             if kwargs is None:
                 kwargs = dict()
-            event = Event(eventorfunc, args, kwargs)
+            event = FuncEvent(eventorfunc, args, kwargs)
         else:
             assert(isinstance(eventorfunc, Event))
             event = eventorfunc
@@ -344,7 +414,7 @@ class Dispatcher(object):
             if self._external is not None:
                 while len(self._external) and (reentry == 0 or
                         self._queue.empty()):
-                    self._external.listen(self, block=self._queue.empty())
+                    self._external.listen(block=self._queue.empty())
 
         if self._external is not None:
             self._external.stop()
@@ -385,4 +455,3 @@ post_event = reg.post
 run = reg.run
 
 del reg
-

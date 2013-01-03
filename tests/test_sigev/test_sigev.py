@@ -100,7 +100,7 @@ class TestEvent(unittest.TestCase):
                         parent.time_dispatched + parent.time_duration)
             if len(log) < 7:
                 kwargs = {}
-                event = sigev.Event(inner_context, kwargs=kwargs)
+                event = sigev.FuncEvent(inner_context, kwargs=kwargs)
                 sigev.post_event(event)
                 kwargs['dispatch'] = dispatch
                 kwargs['context'] = event.context
@@ -111,7 +111,7 @@ class TestEvent(unittest.TestCase):
             self.assertIs(dispatch.context, None)
 
             kwargs = {}
-            event = sigev.Event(inner_context, kwargs=kwargs)
+            event = sigev.FuncEvent(inner_context, kwargs=kwargs)
             sigev.post_event(event)
             kwargs['dispatch'] = dispatch
             kwargs['context'] = event.context
@@ -126,7 +126,7 @@ class TestEvent(unittest.TestCase):
         def die():
             raise RuntimeError()
 
-        event = sigev.Event(die)
+        event = sigev.FuncEvent(die)
         exc = None
         try:
             with sigev.dispatcher() as dispatch:
@@ -136,30 +136,84 @@ class TestEvent(unittest.TestCase):
         self.assertTrue(isinstance(exc, RuntimeError))
         self.assertIs(dispatch.context, event.context)
 
-    def test_Event(self):
-        """Test Event(); posting and dispatching"""
-        container = []
-        def store(key):
-            container.append(key)
-        def storeNone():
-            container.append(None)
+    def test_AdaptFuncEvent(self):
+        """Test AdaptFuncEvent() with classes; posting and dispatching"""
+        log = []
+        class AClass(object):
+            def __init__(self, key, defarg=None):
+                log.append(key)
 
-        key = random.random()
-        with sigev.dispatcher():
-            sigev.post_event(sigev.Event(store, args=(key,)))
-        self.assertEqual(len(container), 1)
-        self.assertEqual(container[-1], key)
+        class Class(object):
+            def __call__(self, key, defarg=None):
+                log.append(key)
 
-        key = random.random()
-        with sigev.dispatcher():
-            sigev.post_event(sigev.Event(store, kwargs={'key': key}))
-        self.assertEqual(len(container), 2)
-        self.assertEqual(container[-1], key)
+            def amethod(self, key, defarg=None):
+                log.append(key)
 
-        with sigev.dispatcher():
-            sigev.post_event(sigev.Event(storeNone))
-        self.assertEqual(len(container), 3)
-        self.assertEqual(container[-1], None)
+        def afunc(key, defarg=None):
+            log.append(key)
+
+        alambda = lambda key, defarg=None: log.append(key)
+
+        for obj in (AClass, Class(), Class().amethod, afunc, alambda):
+            self.assertEqual(len(log), 0)
+            with sigev.dispatcher():
+                sig = sigev.Signal().connect(obj)
+                # Normal calls
+                sig.emit(0)
+                sig.emit(1, 1)
+                sig.emit(2, defarg=1)
+                sig.emit(key=3)
+                sig.emit(key=4, defarg=1)
+                # Extra args
+                sig.emit(5, 1, 2)
+                # Extra kwargs
+                sig.emit(6, 1, extra=2)
+                sig.emit(7, defarg=1, extra=2)
+                sig.emit(key=8, defarg=1, extra=2)
+            self.assertEqual(len(log), 9)
+            for i in reversed(range(9)):
+                self.assertEqual(log[i], i)
+                del log[i]
+
+    def test_AdaptFuncEvent_exc(self):
+        """Test AdaptFuncEvent() error messages"""
+        def do_typeerror(func, *args, **kwargs):
+            try:
+                func(*args, **kwargs)
+            except TypeError, e:
+                msg = e.message
+            try:
+                sigev.AdaptFuncEvent(func, args, kwargs).dispatch()
+            except TypeError, e:
+                self.assertEqual(msg, e.message)
+                return True
+            print func, args, kwargs
+
+        class AClass(object):
+            def __init__(self, key, defarg=None):
+                pass
+
+        class Class(object):
+            def __call__(self, key, defarg=None):
+                pass
+
+            def amethod(self, key, defarg=None):
+                pass
+
+        def afunc(key, defarg=None):
+            pass
+
+        def afunc2(key, _key, defarg=None):
+            pass
+
+        alambda = lambda key, defarg=None: key
+
+        for obj in (AClass, Class(), Class().amethod, afunc, alambda):
+            self.assertTrue(do_typeerror(obj))
+            self.assertTrue(do_typeerror(obj, 1, key=1))
+            self.assertTrue(do_typeerror(obj, 1, 2, defarg=2))
+        self.assertTrue(do_typeerror(afunc2, 1, 2, key=1))
 
     def test_Event_subclass(self):
         """Test Event() subclassing; posting and dispatching"""
@@ -187,6 +241,31 @@ class TestEvent(unittest.TestCase):
             sigev.post_event(Store(), kwargs={'key': key})
         self.assertEqual(len(container), 3)
         self.assertEqual(container[-1], key)
+
+    def test_FuncEvent(self):
+        """Test Event(); posting and dispatching"""
+        container = []
+        def store(key):
+            container.append(key)
+        def storeNone():
+            container.append(None)
+
+        key = random.random()
+        with sigev.dispatcher():
+            sigev.post_event(sigev.FuncEvent(store, args=(key,)))
+        self.assertEqual(len(container), 1)
+        self.assertEqual(container[-1], key)
+
+        key = random.random()
+        with sigev.dispatcher():
+            sigev.post_event(sigev.FuncEvent(store, kwargs={'key': key}))
+        self.assertEqual(len(container), 2)
+        self.assertEqual(container[-1], key)
+
+        with sigev.dispatcher():
+            sigev.post_event(sigev.FuncEvent(storeNone))
+        self.assertEqual(len(container), 3)
+        self.assertEqual(container[-1], None)
 
     def test_post_event(self):
         """Test post_event(): posting and dispatching"""
