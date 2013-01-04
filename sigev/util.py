@@ -3,8 +3,35 @@ Utility classes for internal use of sigev.
 """
 
 import threading
+import weakref
 
 __all__ = ['LocalStack', 'Singleton']
+
+
+class FactoryProperty(object):
+    """Create a property based on a factory."""
+
+    def __init__(self, factory):
+        self.factory = factory
+        self.objs = weakref.WeakKeyDictionary()
+        self.clsobj = None
+
+    def __delete__(self, _instance):
+        raise AttributeError('factory property cannot be deleted')
+
+    def __get__(self, instance, _owner):
+        if instance is None:
+            if self.clsobj is None:
+                self.clsobj = self.factory()
+            return self.clsobj
+        else:
+            if instance not in self.objs:
+                self.objs[instance] = self.factory()
+            return self.objs[instance]
+
+    def __set__(self, _instance, _value):
+        raise AttributeError('factory property cannot be overwritten')
+
 
 class LocalStack(threading.local):
     """Thread local stack"""

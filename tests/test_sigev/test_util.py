@@ -7,6 +7,43 @@ import unittest
 
 from sigev import util
 
+
+class TestFactoryProperty(unittest.TestCase):
+    """Test the FactoryProperty() class"""
+
+    def test_delset(self):
+        """Test the immutability of the SignalProperty()"""
+        class AClass(object):
+            obj = util.FactoryProperty(object)
+
+        def setter(obj):
+            obj.obj = True
+        def deleter(obj):
+            del obj.obj
+
+        inst = AClass()
+        self.assertRaises(AttributeError, setter, inst)
+        self.assertRaises(AttributeError, deleter, inst)
+
+    def test_objprop(self):
+        """Test the ObjectProperty() as a property"""
+        class AClass(object):
+            obj = util.FactoryProperty(object)
+
+        clsobj = AClass.obj
+        inst1 = AClass()
+        inst2 = AClass()
+        obj1 = inst1.obj
+        obj2 = inst2.obj
+
+        for obj in (clsobj, obj1, obj2):
+            self.assertTrue(isinstance(obj, object))
+        self.assertEqual(len(set((clsobj, obj1, obj2))), 3)
+        self.assertIs(clsobj, AClass.obj)
+        self.assertIs(obj1, inst1.obj)
+        self.assertIs(obj2, inst2.obj)
+
+
 class TestLocalStack(unittest.TestCase):
     """Test the LocalStack() class"""
 

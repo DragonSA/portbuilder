@@ -338,32 +338,8 @@ class TestSignalProperty(unittest.TestCase):
         class AClass(object):
             sig = sigev.SignalProperty()
 
-        clssig = AClass.sig
-        inst1 = AClass()
-        inst2 = AClass()
-        sig1 = inst1.sig
-        sig2 = inst2.sig
-
-        for obj in (clssig, sig1, sig2):
+        for obj in (AClass.sig, AClass().sig):
             self.assertTrue(isinstance(obj, sigev.Signal))
-        self.assertEqual(len(set((clssig, sig1, sig2))), 3)
-        self.assertIs(clssig, AClass.sig)
-        self.assertIs(sig1, inst1.sig)
-        self.assertIs(sig2, inst2.sig)
-
-    def test_delset(self):
-        """Test the immutability of the SignalProperty()"""
-        class AClass(object):
-            sig = sigev.SignalProperty()
-
-        def setter(obj):
-            obj.sig = True
-        def deleter(obj):
-            del obj.sig
-
-        inst = AClass()
-        self.assertRaises(AttributeError, setter, inst)
-        self.assertRaises(AttributeError, deleter, inst)
 
 
 if __name__ == '__main__':

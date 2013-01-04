@@ -164,29 +164,11 @@ class Signal(object):
         return self
 
 
-class SignalProperty(object):
+class SignalProperty(util.FactoryProperty):
     """Create a Signal() class property."""
 
     def __init__(self, signal=Signal):
-        self._signal = Signal
-        self._signals = weakref.WeakKeyDictionary()
-        self._clssig = None
-
-    def __delete__(self, _instance):
-        raise AttributeError('signal property cannot be deleted')
-
-    def __get__(self, instance, _owner):
-        if instance is None:
-            if self._clssig is None:
-                self._clssig = self._signal()
-            return self._clssig
-        else:
-            if instance not in self._signals:
-                self._signals[instance] = self._signal()
-            return self._signals[instance]
-
-    def __set__(self, _instance, _value):
-        raise AttributeError('signal property cannot be overwritten')
+        super(SignalProperty, self).__init__(signal)
 
 
 class Filter(Signal):
