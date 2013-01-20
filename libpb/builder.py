@@ -58,7 +58,7 @@ class DependLoader(object):
 
     def _clean(self, stagejob):
         """Cleanup after a port has finished."""
-        if stagejob.stack.failed:
+        if stagejob.failed:
             # If the port failed and there is another method to try
             if self._find_method(stagejob.port):
                 return
@@ -363,7 +363,7 @@ class StageBuilder(Builder):
                   "Port '%s': completed job for stage %s" %
                       (stagejob.port.origin, self.stage.name))
 
-        failed = stagejob.stack.failed or env.flags["mode"] == "clean"
+        failed = stagejob.failed or env.flags["mode"] == "clean"
         del self.ports[port]
         if port in self.cleanup and not env.flags["mode"] == "clean":
             self.cleanup.remove(port)
@@ -400,12 +400,13 @@ class StageBuilder(Builder):
     def _stage_resolv(self, stagejob):
         """Update pending structures for resolved prior stage."""
         port = stagejob.port
-        if not stagejob.stack.failed and env.flags["mode"] != "clean":
-            self._pending[port] -= 1
-            if not self._pending[port]:
-                self._port_ready(port)
-        else:
-            self._port_failed(stagejob.port)
+        if port not in self.failed:
+            if not stagejob.failed and env.flags["mode"] != "clean":
+                self._pending[port] -= 1
+                if not self._pending[port]:
+                    self._port_ready(port)
+            else:
+                self._port_failed(port)
 
     def _port_failed(self, port):
         """Cleanup after a failed port."""
