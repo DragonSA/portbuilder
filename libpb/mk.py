@@ -23,7 +23,7 @@ def bootstrap_master():
         make_env = dict((i, j.strip())
                                for i, j in zip(env.master, pmake.stdout.readlines()))
     else:
-        make_env = dict((i, "") for i in keys)
+        make_env = dict((i, "") for i in env.master)
 
     # Update master with predefined values from make.conf
     for k in env.master:
