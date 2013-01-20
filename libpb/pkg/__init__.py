@@ -4,6 +4,7 @@ tools.
 """
 from __future__ import absolute_import
 
+import os
 import subprocess
 
 from libpb import env, make
@@ -181,6 +182,9 @@ class PKGDB(object):
 
     def status(self, port):
         """Query the install status of a port."""
+        if (env.flags["tinderbox"] and
+                os.path.isfile(env.flags["chroot"] + port.attr["pkgfile"])):
+            return CURRENT
         pstatus = ABSENT
         if port.origin in self.ports:
             pstatus = OLDER
@@ -188,7 +192,7 @@ class PKGDB(object):
             for pkgname in self.ports[port.origin]:
                 if pkgname.rsplit('-', 1)[0] == portname:
                     pstatus = max(pstatus,
-                                  version(pkgname, port.attr["pkgname"]))
+                                version(pkgname, port.attr["pkgname"]))
         return pstatus
 
 db = PKGDB()

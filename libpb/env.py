@@ -101,4 +101,5 @@ flags = {
   "no_op_print" : False,                # Print commands instead of execution
   "pkg_mgmt"    : "pkg",                # The package system used ('pkg(ng)?')
   "target"      : ["install", "clean"]  # Dependency target (aka DEPENDS_TARGET)
+  "tinderbox"   : False,                # Indicates a tinderbox build
 }
