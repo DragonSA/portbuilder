@@ -14,6 +14,7 @@ from libpb.stacks.common import Config, Depend
 from libpb.stacks.build import Checksum, Fetch, Build, Install, Package
 from libpb.stacks.package import PkgInstall
 from libpb.stacks.repo import RepoConfig, RepoFetch, RepoInstall
+from libpb.stacks.tinderbox import Tinderbox
 
 __all__ = [
         # The base elements
@@ -26,4 +27,6 @@ __all__ = [
         "PkgInstall",
         # "Repo" stack
         "RepoConfig", "RepoFetch", "RepoInstall",
+        # Tinderbox stack
+        "Tinderbox",
     ]

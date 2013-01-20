@@ -114,20 +114,21 @@ class DependLoader(object):
                 stagejob = install(port)
             else:
                 assert not "Unknown dependency target"
-        elif method == "package":
-            if not pkginstall.stage.check(port):
-                pkginstall.update.emit(pkginstall, Builder.ADDED, port)
-                pkginstall.update.emit(pkginstall, Builder.SKIPPED, port)
-                return False
-            stagejob = pkginstall(port)
-        elif method == "repo":
-            if not repoinstall.stage.check(port):
-                repoinstall.update.emit(repoinstall, Builder.ADDED, port)
-                repoinstall.update.emit(repoinstall, Builder.SKIPPED, port)
-                return False
-            stagejob = repoinstall(port)
         else:
-            assert not "Unknown port resolve method"
+            if method == "package":
+                installer = pkginstall
+            elif method == "repo":
+                installer = repoinstall
+            elif method == "tinderbox":
+                installer = tinderboxinstall
+            else:
+                assert not "Unknown port resolve method"
+
+            if not installer.stage.check(port):
+                installer.update.emit(pkginstall, Builder.ADDED, port)
+                installer.update.emit(pkginstall, Builder.SKIPPED, port)
+                return False
+            stagejob = installer(port)
         stagejob.connect(self._clean)
         return True
 
@@ -445,7 +446,7 @@ class StageBuilder(Builder):
         # The port needs to be built if:
         # 1) The port isn't "complete", and
         # 2) The port hasn't completed this stage
-        # 3) It is possible for the pot to complete this stage
+        # 3) It is possible for the port to complete this stage
         return (not port.resolved() and self.stage not in port.stages and
                 self.stage.check(port))
 
@@ -497,6 +498,7 @@ builders = collections.OrderedDict((
         (stacks.RepoConfig,  StageBuilder(stacks.RepoConfig, queue.attr)),
         (stacks.RepoFetch,   StageBuilder(stacks.RepoFetch, queue.fetch)),
         (stacks.RepoInstall, StageBuilder(stacks.RepoInstall, queue.install)),
+        (stacks.Tinderbox,   StageBuilder(stacks.Tinderbox, queue.build))
     ))
 
 # Head of stack "common"
@@ -511,3 +513,6 @@ pkginstall = builders[stacks.PkgInstall]
 
 # Head of stack "repo"
 repoinstall = builders[stacks.RepoInstall]
+
+# Head of stack "tinderbox"
+tinderboxinstall = builders[stacks.Tinderbox]

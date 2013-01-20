@@ -41,7 +41,7 @@ def env2args(environ):
             yield "%s=%s" % (key, value)
 
 
-def make_target(port, targets, pipe=None, **kwargs):
+def make_target(port, targets, pipe=None, chroot=None, **kwargs):
     """Build a make target and call a function when finished."""
     if isinstance(port, str):
         assert pipe is True
@@ -65,7 +65,9 @@ def make_target(port, targets, pipe=None, **kwargs):
             del environ[key]
     args += tuple(env2args(environ))
 
-    if env.flags["chroot"]:
+    if chroot:
+        args = ("chroot", chroot) + args
+    elif env.flags["chroot"]:
         args = ("chroot", env.flags["chroot"]) + args
 
     if pipe is True:

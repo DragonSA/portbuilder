@@ -207,3 +207,4 @@ class Package(mutators.MakeStage, mutators.Packagable, mutators.PostFetch):
     def _pre_make(self):
         """Issue a make.target() to package the port,"""
         self._make_target("package", BATCH=True, NO_DEPENDS=True)
+

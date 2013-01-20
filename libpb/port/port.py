@@ -32,7 +32,8 @@ class Port(object):
         self.priority = 0
         self.stages = set((None,))
         self.stacks = dict((i, stacks.Stack(i)) for i in ("common", "build",
-                                                          "package", "repo"))
+                                                          "package", "repo",
+                                                          "tinderbox"))
 
         self.install_status = pkg.db.status(self)
 
