@@ -83,6 +83,7 @@ STAGES = (
     stacks.Fetch,
     stacks.RepoFetch,
     stacks.Build,
+    stacks.Tinderbox,
     stacks.Install,
     stacks.PkgInstall,
     stacks.RepoInstall,
