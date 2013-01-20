@@ -10,7 +10,7 @@ import re
 import signal
 import sys
 
-from libpb import builder, env, event, log, mk, pkg, queue
+from libpb import builder, env, event, log, mk, pkg, queue, stacks
 
 VAR_NAME = "^[a-zA-Z_][a-zA-Z0-9_]*$"
 
@@ -309,6 +309,21 @@ def gen_parser():
                       action="store_true", help="Upgrade specified ports and "
                       "all its dependencies.")
 
+    parser.add_option("--tinderbox", default=False, action="store_true",
+                      help="Tinderbox build mode")
+
+    parser.add_option("--tinderbox-make", action="store", type="string",
+                      default=None, dest="chroot_make",
+                      help="Chroot creation script")
+
+    parser.add_option("--tinderbox-clean", action="store", type="string",
+                      default=None, dest="chroot_clean",
+                      help="Chroot cleaning script")
+
+    parser.add_option("--tinderbox-dir", action="store", type="string",
+                      default=None, dest="chroot_dir",
+                      help="Chroot base directory")
+
     #parser.add_option("--index", action="store_true", default=False,
     #                  help="Create the INDEX file for the ports "
     #                  "infrastructure.")
@@ -355,6 +370,33 @@ def set_early_options(options):
 
 def set_options(options):
     """Set all the global options."""
+    if options.tinderbox:
+        if (not options.chroot_make or not options.chroot_clean or
+                not options.chroot_dir):
+            options.parser.error("--tinderbox requires all --tinderbox-{clear, "
+                                 "dir, make} options set"
+        if options.method:
+            sys.stderr.write("warn: ignoring `--method' argument")
+            options.method = ""
+        if options.no_clean:
+            sys.stderr.write("warn: ignoring `--no-clean' argument")
+            options.no_clean = False
+        if options.preclean:
+            sys.stderr.write("warn: ignoring `--preclean' argument")
+            options.preclean = True
+        if options.package:
+            sys.stderr.write("warn: ignoring `--package' argument")
+            options.package = True
+        if options.packageA:
+            sys.stderr.write("warn: ignoring `--package-all' argument")
+            options.packageA = False
+
+        stacks.Tinderbox.chroot_clean = options.chroot_clean
+        stacks.Tinderbox.chroot_dir = options.chroot_dir
+        stacks.Tinderbox.chroot_make = options.chroot_make
+
+        env.flags["method"] = "tinderbox"
+        env.env["WRKDIRPREFIX"] = "/tmp"
 
     # Force 'none' config mode if in batch mode
     if options.batch:
