@@ -374,7 +374,7 @@ def set_options(options):
         if (not options.chroot_make or not options.chroot_clean or
                 not options.chroot_dir):
             options.parser.error("--tinderbox requires all --tinderbox-{clear, "
-                                 "dir, make} options set"
+                                 "dir, make} options set")
         if options.method:
             sys.stderr.write("warn: ignoring `--method' argument")
             options.method = ""
@@ -395,7 +395,7 @@ def set_options(options):
         stacks.Tinderbox.chroot_dir = options.chroot_dir
         stacks.Tinderbox.chroot_make = options.chroot_make
 
-        env.flags["method"] = "tinderbox"
+        env.flags["method"] = ["tinderbox"]
         env.env["WRKDIRPREFIX"] = "/tmp"
 
     # Force 'none' config mode if in batch mode
@@ -516,12 +516,13 @@ def parse_config(_option, _opt_str, value, _parser):
 def parse_jobs(_option, _opt_str, value, _parser):
     """Set the queue loads."""
     queues = {
-            "attr":     queue.attr,
-            "checksum": queue.checksum,
-            "fetch":    queue.fetch,
-            "build":    queue.build,
-            "install":  queue.install,
-            "package":  queue.package,
+            "attr":      queue.attr,
+            "checksum":  queue.checksum,
+            "fetch":     queue.fetch,
+            "build":     queue.build,
+            "install":   queue.install,
+            "package":   queue.package,
+            "tinderbox": queue.build,
         }
     values = [i.split("=", 2) for i in value.split(",")]
     for i in values:

@@ -34,6 +34,7 @@ class DependHandler(object):
       stacks.RepoConfig:  (PKG,),
       stacks.RepoFetch:   (PKG,),
       stacks.RepoInstall: (LIB, RUN, PKG),
+      stacks.Tinderbox:   (EXTRACT, PATCH, LIB, BUILD, RUN, PKG),
     }
 
 
