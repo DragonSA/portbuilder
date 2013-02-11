@@ -2,58 +2,6 @@
 
 set -e
 
-abs_path() {
-
-	local cwd
-	local path
-	cwd=$1
-	path=$2
-
-	if [ -n "`echo $path |  cut -f 1 -d '/'`" ]
-	then
-		echo $cwd/$path
-	else
-		echo $path
-	fi
-
-}
-
-readlink_R() {
-
-	local path
-	local link
-	local newpath
-	path=`abs_path $PWD $1`
-	
-	set +e
-
-	link=`readlink $path`
-	while [ -n "$link" ]
-	do
-		path=`abs_path $(dirname $path) $link`
-		link=`readlink $path`
-	done
-
-	newpath="/"
-	for part in `echo $path | sed 's|/| |g'`
-	do
-		case $part in
-			.) ;;
-			..) newpath=`dirname $newpath` ;;
-			*) 
-			if [ $newpath = / ]
-			then
-				newpath=/$part
-			else
-				newpath=$newpath/$part
-			fi ;;
-		esac
-	done
-	
-	echo $newpath
-
-}
-
 MASTER_CHROOT="/scratchpad/9.1_pkg_env_amd64"
 
 # Check argument
@@ -62,7 +10,7 @@ then
 	echo "usage: $0 <chroot>"
 	exit 1
 fi
-CHROOT=`readlink_R $1`
+CHROOT=`realpath $1`
 
 # Check for existing chroot
 if [ ! -d $CHROOT ]
