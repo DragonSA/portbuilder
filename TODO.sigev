@@ -1,0 +1,2 @@
+ * clean shutdown of external events (exception)
+ * add exception handler for events
