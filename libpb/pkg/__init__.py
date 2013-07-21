@@ -50,7 +50,10 @@ def info(repo=False):
     for pkg_port in pkg_info.communicate()[0].split('\n'):
         if not pkg_port:
             continue
-        pkgname, origin = pkg_port.split(':')
+        try:
+            pkgname, origin = pkg_port.rsplit(':', 1)
+        except ValueError:
+            continue
         origin = origin.strip()
         if origin in pkgdb:
             pkgdb[origin].add(pkgname)
