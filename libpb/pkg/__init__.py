@@ -45,18 +45,18 @@ def info(repo=False):
 
     pkg_info = subprocess.Popen(args, stdin=subprocess.PIPE,
         stdout=subprocess.PIPE, stderr=subprocess.STDOUT, close_fds=True)
-    pkg_info.stdin.close()
 
     pkgdb = {}
-    if pkg_info.wait() == 0:
-        for pkg_port in pkg_info.stdout.readlines():
-            pkgname, origin = pkg_port.split(':')
-            origin = origin.strip()
-            if origin in pkgdb:
-                pkgdb[origin].add(pkgname)
-            else:
-                pkgdb[origin] = set((pkgname,))
-    return pkgdb
+    for pkg_port in pkg_info.communicate()[0].split('\n'):
+        if not pkg_port:
+            continue
+        pkgname, origin = pkg_port.split(':')
+        origin = origin.strip()
+        if origin in pkgdb:
+            pkgdb[origin].add(pkgname)
+        else:
+            pkgdb[origin] = set((pkgname,))
+    return pkgdb if pkg_info.poll() == 0 else {}
 
 
 def query(port, prop, repo=False):
